@@ -1,0 +1,141 @@
+#!/usr/bin/env bash
+# cloud-init: provision the Palworld dedicated server on first boot.
+# NOTE: this file is rendered by Terraform's templatefile(). $${...} escapes a
+# literal bash brace-expansion; the idle-shutdown script is injected verbatim as
+# a value (its own bash $${...} is safe — not re-processed by the template).
+set -euo pipefail
+export DEBIAN_FRONTEND=noninteractive
+
+# --- 1. Base packages + 32-bit + multiverse (SteamCMD lives in multiverse) ---
+apt-get update -y
+apt-get install -y software-properties-common
+dpkg --add-architecture i386
+add-apt-repository -y multiverse
+apt-get update -y
+
+# Preseed the SteamCMD license prompt so the install is non-interactive.
+echo steam steam/question select "I AGREE" | debconf-set-selections
+echo steam steam/license note '' | debconf-set-selections
+# awscli: the idle watcher reads the Discord webhook and publishes the player
+# roster via SSM Parameter Store.
+apt-get install -y curl jq lib32gcc-s1 steamcmd awscli
+
+# --- 2. Dedicated 'steam' user + install dir ---
+id -u steam >/dev/null 2>&1 || useradd -m -s /bin/bash steam
+install -d -o steam -g steam /home/steam/palworld
+
+# --- 3. Install the Palworld dedicated server (SteamCMD app 2394010) ---
+# SteamCMD self-updates and re-execs on its first run; an +app_update issued in
+# that same invocation races the restart and dies with "Missing configuration".
+# Burn one throwaway run to absorb the bootstrap, then retry the real install:
+# the update can also fail transiently against Steam's CDN.
+sudo -u steam /usr/games/steamcmd +quit || true
+
+steam_install_ok=0
+for steam_attempt in 1 2 3; do
+  if sudo -u steam /usr/games/steamcmd +force_install_dir /home/steam/palworld \
+      +login anonymous +app_update 2394010 validate +quit; then
+    steam_install_ok=1
+    break
+  fi
+  echo "steamcmd app_update attempt $${steam_attempt} failed; retrying in 15s" >&2
+  sleep 15
+done
+
+# Fail loudly rather than proceeding to configure a server that isn't installed.
+if [ "$${steam_install_ok}" -ne 1 ]; then
+  echo "FATAL: steamcmd could not install app 2394010 after 3 attempts" >&2
+  exit 1
+fi
+
+# --- 4. Steamworks SDK shim the server expects at ~/.steam/sdk64 ---
+install -d -o steam -g steam /home/steam/.steam/sdk64
+cp /home/steam/palworld/linux64/steamclient.so /home/steam/.steam/sdk64/steamclient.so || true
+chown steam:steam /home/steam/.steam/sdk64/steamclient.so || true
+
+# --- 5. Server config (RCON + REST API enabled; REST is what the idle watcher polls) ---
+install -d -o steam -g steam /home/steam/palworld/Pal/Saved/Config/LinuxServer
+cat > /home/steam/palworld/Pal/Saved/Config/LinuxServer/PalWorldSettings.ini <<EOF
+[/Script/Pal.PalGameWorldSettings]
+OptionSettings=(ServerName="${server_name}",ServerPassword="${server_password}",AdminPassword="${admin_password}",PublicPort=8211,RCONEnabled=True,RCONPort=${rcon_port},RESTAPIEnabled=True,RESTAPIPort=${rest_api_port})
+EOF
+chown -R steam:steam /home/steam/palworld/Pal/Saved
+
+# --- 6. systemd unit for the server (auto-updates on each start) ---
+cat > /etc/systemd/system/palworld.service <<'EOF'
+[Unit]
+Description=Palworld Dedicated Server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=steam
+Group=steam
+WorkingDirectory=/home/steam/palworld
+ExecStartPre=/usr/games/steamcmd +force_install_dir /home/steam/palworld +login anonymous +app_update 2394010 validate +quit
+ExecStart=/home/steam/palworld/PalServer.sh -useperfthreads -NoAsyncLoadingThread -UseMultithreadForDS
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# --- 7. Idle-shutdown config (root-only; carries the REST admin password) ---
+# The watcher `.`-sources this file, so every value is single-quoted: an unquoted
+# value containing a space (SERVER_LABEL="Pow World") is parsed as a command, and
+# the watcher dies 127 before it can ever poll. Single quotes also neutralize
+# $, backticks, and \ in a generated password.
+# The terminator is quoted so bash performs NO expansion when writing the file:
+# templatefile() has already substituted the values, and a '$' surviving inside a
+# generated password would otherwise be expanded away here.
+#
+# The webhook URL is deliberately NOT here — it lives in SSM and is fetched at
+# runtime, so rotating it doesn't rebuild the instance (user_data_replace_on_change).
+install -d -m 0755 /etc/palworld
+cat > /etc/palworld/idle.conf <<'EOF'
+REST_PORT='${rest_api_port}'
+ADMIN_PASSWORD='${admin_password}'
+THRESHOLD_MIN='${idle_minutes}'
+WARN_BEFORE_MIN='${warn_before_minutes}'
+SERVER_LABEL='${server_name}'
+SERVER_ADDRESS='${server_address}'
+AWS_REGION='${aws_region}'
+WEBHOOK_PARAM='${webhook_param}'
+ROSTER_PARAM='${roster_param}'
+EOF
+chmod 0600 /etc/palworld/idle.conf
+
+# --- 8. Idle-shutdown script (injected verbatim from scripts/idle-shutdown.sh) ---
+cat > /usr/local/bin/palworld-idle.sh <<'PALIDLE'
+${idle_script}
+PALIDLE
+chmod 0755 /usr/local/bin/palworld-idle.sh
+
+# --- 9. Idle timer: first check 5 min after boot, then every 2 min ---
+cat > /etc/systemd/system/palworld-idle.service <<'EOF'
+[Unit]
+Description=palworld idle-shutdown check
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/palworld-idle.sh
+EOF
+
+cat > /etc/systemd/system/palworld-idle.timer <<'EOF'
+[Unit]
+Description=Run the palworld idle check periodically
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=2min
+
+[Install]
+WantedBy=timers.target
+EOF
+
+# --- 10. Enable + start ---
+systemctl daemon-reload
+systemctl enable --now palworld.service
+systemctl enable --now palworld-idle.timer

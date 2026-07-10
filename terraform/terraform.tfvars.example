@@ -1,0 +1,35 @@
+# Copy to terraform.tfvars (gitignored) and fill in. `terraform apply` reads it automatically.
+
+# Your IP for SSH access (admin + mod uploads). Get it with: curl -s ifconfig.me
+# Append /32. Do NOT use 0.0.0.0/0.
+admin_cidr = "203.0.113.7/32"
+
+# Player-facing join password. "" = no password.
+server_password = "change-me-join-pw"
+
+# Server admin password. Also the RCON + REST API credential the idle watcher uses. Make it strong.
+admin_password = "change-me-strong-admin-pw"
+
+# Optional: post an idle-shutdown notice to Discord. Leave as "" to disable for now.
+discord_webhook_url = ""
+
+# Optional overrides (defaults shown):
+# aws_profile           = "aidb-personal"
+# aws_region            = "us-east-1"
+# server_name           = "Pow World"
+# instance_type         = "t3.xlarge"
+# root_volume_gb        = 50
+# idle_shutdown_minutes = 25
+
+# --- Discord start-bot ---
+# Both values come from the Discord developer portal (General Information).
+# Neither is a secret. Leave blank to skip deploying the bot.
+discord_app_id     = ""
+discord_public_key = ""
+
+# Discord user-ID snowflakes allowed to run /pow-start.
+# Discord > Settings > Advanced > Developer Mode, then right-click a user > Copy User ID.
+discord_allowed_user_ids = []
+
+# Alarm when estimated charges exceed this (USD). 0 disables.
+billing_alarm_usd = 30
