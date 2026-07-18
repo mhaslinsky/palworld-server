@@ -1,0 +1,27 @@
+scripts/palworld-idle.ps1
+  s_1fc195a5a47aa4::t_7cc577cdca64c6 1
+  s_1fc195a5a47aa4::t_705ec1f7162943 74-76,80-81,83
+scripts/palworld-launch.ps1
+  s_1fc195a5a47aa4::t_7cc577cdca64c6 1
+terraform/compute.tf
+  s_1fc195a5a47aa4::t_1cd980f1d0eb62 39-44
+  s_1fc195a5a47aa4::t_689c32c3a8f51c 71-87
+terraform/backups_s3.tf
+  s_1fc195a5a47aa4::t_0782d5c14a3d6e 1-108
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "3bfc3a274041fd2e1908c1d01cc1dc643f38a15f",
+  "prompts": {},
+  "sessions": {
+    "s_1fc195a5a47aa4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "93249842-eeb7-4aff-b632-d0468e7a0fc9",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    }
+  }
+}
