@@ -134,7 +134,7 @@ resource "aws_lambda_function_url" "discord_bot" {
 #      sid "FunctionURLInvokeAllowPublicAccess". NOT expressible in aws provider 5.x
 #      (`invoked_via_function_url` first appears in 6.x), so it is applied out of band:
 #
-#        aws lambda add-permission --function-name pow-world-server-discord-bot \
+#        aws lambda add-permission --function-name palworld-server-discord-bot \
 #          --statement-id FunctionURLInvokeAllowPublicAccess \
 #          --action lambda:InvokeFunction --principal '*' --invoked-via-function-url
 #
