@@ -1,0 +1,38 @@
+terraform/windows_instance.tf
+  s_1fc195a5a47aa4::t_b76750b2d111bc 62-63
+  s_1fc195a5a47aa4::t_bf746e3dd35ce3 20
+  s_1fc195a5a47aa4::t_73026508908ca9 84-85
+terraform/windows.tf
+  s_1fc195a5a47aa4::t_853e02a5e8dfff 101-115
+  s_1fc195a5a47aa4::t_5d3f9ca50ce14e 18-24,27-35
+  s_1fc195a5a47aa4::t_36e4d718abc6b8 38-45,51-54,60-81
+  s_1fc195a5a47aa4::t_4ce36668503946 46-50,55-59
+  s_1fc195a5a47aa4::t_b7bf55baa77c5f 36,82-100
+  s_1fc195a5a47aa4::t_1681d8aa123d46 37
+scripts/palworld-idle.ps1
+  s_1fc195a5a47aa4::t_79ed02ffeaf30d 45-54,58
+  s_1fc195a5a47aa4::t_94cc5770262564 102,104-113
+  s_1fc195a5a47aa4::t_dc2bd1ed947e2b 142-155,159-174,179-183
+  s_1fc195a5a47aa4::t_6295b9d51149e4 32-41
+terraform/windows_user_data.ps1.tftpl
+  s_1fc195a5a47aa4::t_500227efbe78bf 155-159
+  s_1fc195a5a47aa4::t_955bf43d7a7933 121-123
+  s_1fc195a5a47aa4::t_e5bbe1ff38c0a4 130-148
+  s_1fc195a5a47aa4::t_70fe8604e47b2c 149
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "ba7df40715e361c1d2f15fd24d059efad6f2f9de",
+  "prompts": {},
+  "sessions": {
+    "s_1fc195a5a47aa4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "93249842-eeb7-4aff-b632-d0468e7a0fc9",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    }
+  }
+}
