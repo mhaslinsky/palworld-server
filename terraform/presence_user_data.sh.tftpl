@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+# cloud-init: provision the Discord presence daemon on a t4g.nano.
+# Rendered by templatefile(); the daemon source is injected verbatim as a value.
+set -euo pipefail
+
+# Amazon Linux 2023's `dnf install nodejs` gives Node 18/20, which have no global
+# WebSocket (added in Node 21). The daemon depends on it, so pull Node 22.
+curl -fsSL https://rpm.nodesource.com/setup_22.x | bash -
+dnf install -y nodejs
+
+install -d -o root -g root /opt/palworld-presence
+cd /opt/palworld-presence
+
+# Only the two AWS SDK clients the daemon imports. `npm init -y` keeps npm from
+# walking up looking for a package.json.
+npm init -y >/dev/null 2>&1
+npm install --omit=dev --no-audit --no-fund @aws-sdk/client-ec2 @aws-sdk/client-ssm
+
+cat > /opt/palworld-presence/index.mjs <<'PRESENCEEOF'
+${presence_script}
+PRESENCEEOF
+
+# 'type: module' so the .mjs imports resolve against the installed SDK packages.
+cat > /opt/palworld-presence/package.json <<'PKGEOF'
+{
+  "name": "palworld-presence",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@aws-sdk/client-ec2": "*",
+    "@aws-sdk/client-ssm": "*"
+  }
+}
+PKGEOF
+
+cat > /etc/systemd/system/palworld-presence.service <<'EOF'
+[Unit]
+Description=Palworld Discord presence daemon
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/node /opt/palworld-presence/index.mjs
+Restart=always
+RestartSec=10
+# The daemon reconnects internally; systemd is the backstop for a hard crash.
+StandardOutput=journal
+StandardError=journal
+EOF
+
+cat > /etc/palworld-presence.env <<'ENVEOF'
+INSTANCE_ID='${instance_id}'
+ROSTER_PARAM='${roster_param}'
+SERVER_ADDRESS='${server_address}'
+TOKEN_PARAM='${token_param}'
+AWS_REGION='${aws_region}'
+ENVEOF
+chmod 0600 /etc/palworld-presence.env
+
+# EnvironmentFile is referenced after the fact so the heredoc above stays quoted
+# (no bash expansion of the terraform-substituted values).
+sed -i '/^\[Service\]$/a EnvironmentFile=/etc/palworld-presence.env' /etc/systemd/system/palworld-presence.service
+
+systemctl daemon-reload
+systemctl enable --now palworld-presence.service
