@@ -1,0 +1,24 @@
+discord-bot/backup-monitor/index.mjs
+  s_1fc195a5a47aa4::t_9086a2e0b530e0 1-127
+scripts/backup-to-s3.sh
+  s_1fc195a5a47aa4::t_f23ca96181d452 1-82
+terraform/backup_monitor.tf
+  s_1fc195a5a47aa4::t_0a8b8fbfeccfdf 1-103,110-141
+  s_1fc195a5a47aa4::t_db968d2e2fa22d 104-109
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "41d010fd4ddcb44f934eb7880441e1be525289a8",
+  "prompts": {},
+  "sessions": {
+    "s_1fc195a5a47aa4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "93249842-eeb7-4aff-b632-d0468e7a0fc9",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    }
+  }
+}
