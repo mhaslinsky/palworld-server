@@ -118,37 +118,45 @@ Set-Content -Path (Join-Path $cfgDir "PalWorldSettings.ini") `
   WarnBeforeMin = ${warn_before_minutes}
   ServerLabel   = '${server_name}'
   ServerAddress = '${server_address}'
+  # Where the watcher looks for Level.sav to PROVE a save reached disk before it
+  # allows the box to power off.
+  SaveRoot      = '${save_drive_letter}:\PalServer\SaveGames'
   AwsRegion     = '${aws_region}'
   WebhookParam  = '${webhook_param}'
   RosterParam   = '${roster_param}'
 } | ConvertTo-Json | Set-Content -Path "C:\PalServer\idle.conf.json" -Encoding UTF8
 
 New-Item -ItemType Directory -Force -Path C:\PalServer\scripts | Out-Null
-# Injected gzip+base64, not a here-string: embedding the scripts literally made the
-# assembled user_data fail to PARSE (MissingEndCurlyBrace at the injected content,
-# 2026-07-18) - nothing ran at all. Plain base64 then blew EC2's 16 KB user_data
-# limit, hence the gzip. Encoded text is pure ASCII with no quoting or line-start
-# semantics, and round-trips the UTF-8 bytes (emoji) exactly.
-function Expand-B64Gzip([string]$encoded, [string]$outPath) {
-  $bytes = [Convert]::FromBase64String($encoded)
-  # NOT $input: that is a reserved automatic variable in PowerShell.
-  $inStream = New-Object IO.MemoryStream(, $bytes)
-  $gzip = New-Object IO.Compression.GZipStream($inStream, [IO.Compression.CompressionMode]::Decompress)
-  $outStream = New-Object IO.MemoryStream
-  $gzip.CopyTo($outStream)
-  $gzip.Dispose(); $inStream.Dispose()
-  [IO.File]::WriteAllBytes($outPath, $outStream.ToArray())
-  $outStream.Dispose()
+# Scripts come from S3, not embedded here: embedding them blew EC2's hard 16 KB
+# user_data limit once the watcher grew a save-verification step. Fetching them
+# also means a script fix does not require an instance rebuild to deploy.
+#
+# The .ps1 files carry a UTF-8 BOM in the repo and s3 cp preserves bytes exactly.
+# The BOM is load-bearing: PowerShell 5.1 reads a BOM-less .ps1 as ANSI, so any
+# non-ASCII byte (an emoji in a Discord message) mangles into something that can
+# contain a quote, breaking the parse so the script never runs.
+$scriptSource = "s3://${backup_bucket}/scripts/windows"
+$awsExe = "C:\Program Files\Amazon\AWSCLIV2\aws.exe"
+foreach ($scriptName in @("palworld-launch.ps1", "palworld-idle.ps1")) {
+  $dest = "C:\PalServer\scripts\$scriptName"
+  & $awsExe s3 cp "$scriptSource/$scriptName" $dest --region ${aws_region} --only-show-errors
+  if (-not (Test-Path $dest) -or (Get-Item $dest).Length -lt 100) {
+    # Loud, because a missing watcher means no idle shutdown (the box then bills
+    # around the clock) and no backups - all of which fail silently otherwise.
+    Write-Output "ERROR: failed to fetch $scriptName from $scriptSource - the server will run WITHOUT its watchdog/idle-shutdown"
+    Write-EventLog -LogName Application -Source "Palworld" -EventId 102 -EntryType Error `
+      -Message "failed to fetch $scriptName from S3" -ErrorAction SilentlyContinue
+  }
 }
-Expand-B64Gzip '${launch_script_b64}' "C:\PalServer\scripts\palworld-launch.ps1"
-Expand-B64Gzip '${idle_script_b64}' "C:\PalServer\scripts\palworld-idle.ps1"
 
 New-EventLog -LogName Application -Source "Palworld" -ErrorAction SilentlyContinue
 
 # --- Scheduled tasks ----------------------------------------------------------
-# Launcher at boot; watcher every 2 min (which also acts as the watchdog, restarting
-# the server if the process is gone). Both run as SYSTEM - the same session-0 context
-# the direct-exe launch was verified under.
+# Launcher at boot; watcher every 2 min. The watcher re-invokes the launcher when the
+# server process is missing, which is what makes it a watchdog - the launcher's own
+# trigger is -AtStartup only, so without that call a crash would go unnoticed until
+# the next reboot. Both run as SYSTEM: the same session-0 context the direct-exe
+# launch was verified under.
 $psExe = "powershell.exe"
 $principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
 

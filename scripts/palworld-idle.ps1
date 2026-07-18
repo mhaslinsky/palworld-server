@@ -29,13 +29,33 @@ $announcedUp = Join-Path $stateDir "announced_up"
 
 $now = [int][double]::Parse((Get-Date -UFormat %s))
 $restBase = "http://127.0.0.1:$($conf.RestPort)/v1/api"
+
+# Watchdog. The launcher's only other trigger is -AtStartup, so without this a
+# crashed PalServer would stay dead until the next reboot. (An earlier version of
+# this file CLAIMED the idle task did this and did not - a comment describing
+# behaviour that does not exist is worse than no comment.)
+if (-not (Get-Process -Name "PalServer-Win64-Shipping" -ErrorAction SilentlyContinue)) {
+  & powershell.exe -NoProfile -ExecutionPolicy Bypass -File "C:\PalServer\scripts\palworld-launch.ps1"
+  # Nothing to poll this cycle; the next run in 2 min sees the started server.
+  exit 0
+}
 $secure = ConvertTo-SecureString $conf.AdminPassword -AsPlainText -Force
 $cred = New-Object System.Management.Automation.PSCredential("admin", $secure)
+
+# Absolute path, NOT bare "aws": the CLI is not on PATH in the Scheduled Task's
+# SYSTEM context, so `& aws ...` resolved to nothing and every SSM call failed
+# silently inside its catch block - the roster simply never published and nothing
+# said so. Verified on the box 2026-07-18.
+$awsExe = "C:\Program Files\Amazon\AWSCLIV2\aws.exe"
+if (-not (Test-Path $awsExe)) {
+  $resolved = (Get-Command aws -ErrorAction SilentlyContinue).Source
+  if ($resolved) { $awsExe = $resolved }
+}
 
 function Get-WebhookUrl {
   if (-not $conf.WebhookParam) { return $null }
   try {
-    $value = & aws ssm get-parameter --name $conf.WebhookParam --with-decryption `
+    $value = & $awsExe ssm get-parameter --name $conf.WebhookParam --with-decryption `
       --region $conf.AwsRegion --query 'Parameter.Value' --output text 2>$null
     # An unset SSM parameter comes back as the literal string "None".
     if ($value -and $value.Trim() -ne "None") { return $value.Trim() }
@@ -79,9 +99,18 @@ if ($conf.RosterParam) {
     $roster = @{ count = $count; names = $names; updated = $now } | ConvertTo-Json -Compress
     $rosterFile = Join-Path $stateDir "roster.json"
     [IO.File]::WriteAllText($rosterFile, $roster, (New-Object Text.UTF8Encoding($false)))
-    & aws ssm put-parameter --name $conf.RosterParam --type String --overwrite `
+    & $awsExe ssm put-parameter --name $conf.RosterParam --type String --overwrite `
       --value "file://$rosterFile" --region $conf.AwsRegion 2>$null | Out-Null
-  } catch { }
+    # Best-effort is fine; SILENT best-effort is not. A publish that never lands
+    # makes /palworld-status quietly report a stale roster forever.
+    if ($LASTEXITCODE -ne 0) {
+      Write-EventLog -LogName Application -Source "Palworld" -EventId 103 -EntryType Warning `
+        -Message "roster publish to $($conf.RosterParam) failed (aws exit $LASTEXITCODE)" -ErrorAction SilentlyContinue
+      Write-Output "WARNING: roster publish failed (aws exit $LASTEXITCODE)"
+    }
+  } catch {
+    Write-Output "WARNING: roster publish threw: $($_.Exception.Message)"
+  }
 }
 
 # --- Announce "up" once per boot ---------------------------------------------
@@ -110,17 +139,48 @@ $warnAtMin = $conf.ThresholdMin - $conf.WarnBeforeMin
 if ($elapsedMin -ge $conf.ThresholdMin) {
   Send-Notify "🛑 **$($conf.ServerLabel)** has been empty for $($conf.ThresholdMin) min — shutting down to save money. Start it again with ``/palworld-start``."
 
-  # Clean-shutdown sequence (BLOCKER 5): save -> verify -> graceful stop -> wait ->
-  # only then power off. Content-Length:0 avoids the documented HTTP 411 on /save.
+  # Clean-shutdown sequence (BLOCKER 5): save -> VERIFY -> graceful stop -> wait for
+  # exit -> only then power off. Content-Length:0 avoids the documented HTTP 411.
+  #
+  # The verification is the point. Pocketpair have said a console-close/terminate is
+  # not reliably a graceful save, so powering off after an unverified save is how a
+  # world gets lost quietly. An HTTP 200 is not proof either: what proves the world
+  # reached disk is Level.sav's mtime advancing. If it did not, this REFUSES to shut
+  # down and says so - an idle box costing a few cents an hour is strictly cheaper
+  # than an unsaved world, and a failure that keeps running gets noticed.
+  $levelSav = Get-ChildItem "$($conf.SaveRoot)\*\*\Level.sav" -ErrorAction SilentlyContinue |
+    Sort-Object LastWriteTime | Select-Object -Last 1
+  $mtimeBefore = if ($levelSav) { $levelSav.LastWriteTimeUtc } else { $null }
+
+  $saveOk = $false
   try {
     Invoke-RestMethod -Uri "$restBase/save" -Method Post -Credential $cred `
       -Headers @{ "Content-Length" = "0" } -TimeoutSec 30 -ErrorAction Stop | Out-Null
-  } catch { }
+    $saveOk = $true
+  } catch {
+    Send-Notify "⚠️ **$($conf.ServerLabel)**: force-save FAILED before idle shutdown ($($_.Exception.Message)). Staying up rather than risking an unsaved world."
+  }
+
+  if ($saveOk -and $levelSav) {
+    Start-Sleep -Seconds 5
+    $after = (Get-Item $levelSav.FullName -ErrorAction SilentlyContinue).LastWriteTimeUtc
+    if ($null -eq $after -or ($mtimeBefore -and $after -le $mtimeBefore)) {
+      Send-Notify "⚠️ **$($conf.ServerLabel)**: save reported success but Level.sav did not change on disk. Staying up - shutting down now could lose the world."
+      exit 1
+    }
+  } elseif (-not $saveOk) {
+    exit 1
+  }
+
   try {
     $body = @{ waittime = 5; message = "Idle shutdown" } | ConvertTo-Json -Compress
     Invoke-RestMethod -Uri "$restBase/shutdown" -Method Post -Credential $cred `
       -ContentType 'application/json' -Body $body -TimeoutSec 30 -ErrorAction Stop | Out-Null
-  } catch { }
+  } catch {
+    # Non-fatal: the save is already verified on disk, so a failed graceful-stop
+    # request only costs us a hard kill below, not the world.
+    Send-Notify "⚠️ **$($conf.ServerLabel)**: graceful /shutdown request failed; stopping the process directly (world already saved)."
+  }
 
   # Wait for the process to exit on its own; only force after a grace period, since a
   # forced kill is exactly what risks an unsaved world.

@@ -15,11 +15,104 @@
 locals {
   windows_enabled = var.enable_windows_migration ? 1 : 0
   windows_name    = "${var.project_name}-windows"
+
+  # The Windows box must NOT publish to the live server's roster parameter while
+  # both are running: its watcher writes every 2 minutes, so presence and
+  # /palworld-status would flap between the real world and this test world. It gets
+  # its own parameter until cutover, when it inherits the real one along with the
+  # Lambda and presence-daemon instance ids (M3).
+  windows_roster_param_name = "/${var.project_name}/roster_windows"
 }
 
-# Latest AWS-published Windows Server 2022 base AMI, via the public SSM parameter.
-data "aws_ssm_parameter" "windows_2022" {
-  name = "/aws/service/ami-windows-latest/Windows_Server-2022-English-Full-Base"
+resource "aws_ssm_parameter" "roster_windows" {
+  count = local.windows_enabled
+  name  = local.windows_roster_param_name
+  type  = "String"
+  value = jsonencode({ count = 0, names = "", updated = 0 })
+
+  lifecycle {
+    ignore_changes = [value] # the instance owns this value
+  }
+}
+
+# --- Bootstrap scripts, shipped via S3 rather than embedded in user_data --------
+#
+# Embedding them (gzip+base64) hit EC2's hard 16 KB user_data limit as soon as the
+# watcher grew a save-verification step. Two other things make S3 the better home:
+# a script edit no longer changes the user_data hash, so shipping one does not
+# force an instance replacement; and the running box can re-pull a fixed script
+# without a rebuild - which matters because user_data_replace_on_change is off.
+resource "aws_s3_object" "windows_launch_script" {
+  count        = local.windows_enabled
+  bucket       = aws_s3_bucket.backups.id
+  key          = "scripts/windows/palworld-launch.ps1"
+  source       = "${path.module}/../scripts/palworld-launch.ps1"
+  etag         = filemd5("${path.module}/../scripts/palworld-launch.ps1")
+  content_type = "text/plain"
+}
+
+resource "aws_s3_object" "windows_idle_script" {
+  count        = local.windows_enabled
+  bucket       = aws_s3_bucket.backups.id
+  key          = "scripts/windows/palworld-idle.ps1"
+  source       = "${path.module}/../scripts/palworld-idle.ps1"
+  etag         = filemd5("${path.module}/../scripts/palworld-idle.ps1")
+  content_type = "text/plain"
+}
+
+# The instance may read its own bootstrap scripts. Deliberately scoped to the
+# scripts prefix: it still cannot read or delete the world backups.
+data "aws_iam_policy_document" "instance_scripts" {
+  count = local.windows_enabled
+
+  statement {
+    sid       = "ReadBootstrapScripts"
+    actions   = ["s3:GetObject"]
+    resources = ["${aws_s3_bucket.backups.arn}/scripts/windows/*"]
+  }
+}
+
+resource "aws_iam_role_policy" "instance_scripts" {
+  count  = local.windows_enabled
+  name   = "${local.windows_name}-scripts"
+  role   = aws_iam_role.instance.id
+  policy = data.aws_iam_policy_document.instance_scripts[0].json
+}
+
+# The shared instance role can publish the LIVE roster but not this one, so without
+# this the Windows watcher's publish would fail silently every 2 minutes.
+data "aws_iam_policy_document" "instance_roster_windows" {
+  count = local.windows_enabled
+
+  statement {
+    sid       = "PublishWindowsRoster"
+    actions   = ["ssm:PutParameter"]
+    resources = [aws_ssm_parameter.roster_windows[0].arn]
+  }
+}
+
+resource "aws_iam_role_policy" "instance_roster_windows" {
+  count  = local.windows_enabled
+  name   = "${local.windows_name}-roster"
+  role   = aws_iam_role.instance.id
+  policy = data.aws_iam_policy_document.instance_roster_windows[0].json
+}
+
+# Windows Server 2022 base AMI, PINNED.
+#
+# `/aws/service/ami-windows-latest/...` moves every Patch Tuesday, and the game
+# instance's ami forces replacement - so leaving it unpinned means an unrelated
+# apply silently rebuilds the game box: players dropped mid-session with no
+# warning, and the rebuild re-runs SteamCMD and pulls whatever Palworld build is
+# current, which the migration plan's BLOCKER 1 says can break the mod outright.
+# This is the exact hazard class that destroyed the Linux world on 2026-07-18
+# (there it was `most_recent = true` on the Ubuntu AMI); Ubuntu and AL2023 were
+# pinned in response and this one was missed.
+#
+# To move to a newer Windows image, change this id deliberately and treat it as a
+# planned rebuild.
+locals {
+  windows_ami_id = "ami-0ed0165f19a049904"
 }
 
 # The subnet the Linux box already uses — the save volume must be in this subnet's AZ.

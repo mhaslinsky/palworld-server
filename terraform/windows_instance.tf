@@ -17,7 +17,7 @@
 
 resource "aws_instance" "server_windows" {
   count         = local.windows_enabled
-  ami           = nonsensitive(data.aws_ssm_parameter.windows_2022.value)
+  ami           = local.windows_ami_id
   instance_type = var.instance_type
   subnet_id     = data.aws_subnets.default.ids[0]
   key_name      = aws_key_pair.server.key_name
@@ -59,7 +59,8 @@ resource "aws_instance" "server_windows" {
     server_address = "${aws_eip.server.public_ip}:8211"
 
     webhook_param = local.webhook_param_name
-    roster_param  = local.roster_param_name
+    # Its OWN roster param, not the live server's - see windows.tf. Repointed at cutover.
+    roster_param = local.windows_roster_param_name
 
     # Mirrors the live Linux OptionSettings so behaviour is identical after cutover.
     option_settings = join(",", [
@@ -80,11 +81,8 @@ resource "aws_instance" "server_windows" {
       "RESTAPIPort=${var.rest_api_port}",
     ])
 
-    # gzip+base64 so the scripts survive templating AND PowerShell parsing intact (a
-    # literal here-string injection broke the assembled user_data's parse), while
-    # staying under EC2's hard 16 KB user_data limit that plain base64 exceeded.
-    launch_script_b64 = base64gzip(file("${path.module}/../scripts/palworld-launch.ps1"))
-    idle_script_b64   = base64gzip(file("${path.module}/../scripts/palworld-idle.ps1"))
+    # Scripts are fetched from S3 at boot rather than embedded - see the template.
+    backup_bucket = aws_s3_bucket.backups.id
   })
 
   # Minimal bootstrap → cheap/safe to rebuild. The world lives on the SEPARATE
