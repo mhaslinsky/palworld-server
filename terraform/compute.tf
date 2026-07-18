@@ -36,6 +36,12 @@ resource "aws_instance" "server" {
     volume_size = var.root_volume_gb
     encrypted   = true
     tags        = { Name = "${var.project_name}-root" }
+
+    # The world lives on this volume, so it must OUTLIVE the instance. On
+    # 2026-07-18 an instance replacement deleted it and took ~4.5 hours of the
+    # group's progress with it. Orphaning the volume costs cents and makes that
+    # failure recoverable by reattaching instead of unrecoverable.
+    delete_on_termination = false
   }
 
   user_data = templatefile("${path.module}/user_data.sh.tftpl", {
@@ -62,8 +68,23 @@ resource "aws_instance" "server" {
     idle_script = file("${path.module}/../scripts/idle-shutdown.sh")
   })
 
-  # New user_data should rebuild the box (fine — world save is snapshotted by DLM; back up first for safety).
-  user_data_replace_on_change = true
+  # DO NOT set this back to true while the world lives on the root volume.
+  #
+  # It was true until 2026-07-18, when a one-word fix to a COMMENT in
+  # user_data.sh.tftpl changed the rendered script's hash, replaced this instance,
+  # and deleted the world with its root volume - about 4.5 hours of the group's
+  # progress, gone. Terraform cannot tell an inert comment from a real change.
+  #
+  # With this false, boot-script edits no longer apply automatically: apply them
+  # on the box (SSM) or do a DELIBERATE, backup-first replacement.
+  user_data_replace_on_change = false
+
+  lifecycle {
+    # A replacement of this instance destroys the world. Make Terraform refuse and
+    # error out instead of doing it quietly; removing this flag is the explicit,
+    # two-step opt-in required to rebuild the box on purpose.
+    prevent_destroy = true
+  }
 
   tags = { Name = var.project_name }
 }

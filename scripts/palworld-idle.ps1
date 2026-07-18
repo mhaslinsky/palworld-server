@@ -1,4 +1,4 @@
-# Palworld idle-shutdown watcher + Discord notifier + roster publisher (Windows).
+﻿# Palworld idle-shutdown watcher + Discord notifier + roster publisher (Windows).
 #
 # PowerShell port of scripts/idle-shutdown.sh. Runs on a Scheduled Task every 2 min
 # as SYSTEM. Same contract as the Linux original:
@@ -71,11 +71,16 @@ $count = @($players.players).Count
 $names = (@($players.players) | ForEach-Object { $_.name }) -join ", "
 
 # --- Publish the roster (best-effort; never blocks shutdown logic) ------------
+# The value goes through a FILE, not an argument: passing the JSON inline strips every
+# quote on the way through cmd.exe, publishing `{count:0,names:}` — invalid JSON that
+# makes the Discord bot's JSON.parse throw. Verified broken that way on 2026-07-18.
 if ($conf.RosterParam) {
   try {
     $roster = @{ count = $count; names = $names; updated = $now } | ConvertTo-Json -Compress
+    $rosterFile = Join-Path $stateDir "roster.json"
+    [IO.File]::WriteAllText($rosterFile, $roster, (New-Object Text.UTF8Encoding($false)))
     & aws ssm put-parameter --name $conf.RosterParam --type String --overwrite `
-      --value $roster --region $conf.AwsRegion 2>$null | Out-Null
+      --value "file://$rosterFile" --region $conf.AwsRegion 2>$null | Out-Null
   } catch { }
 }
 

@@ -1,4 +1,4 @@
-# Palworld Windows launcher + watchdog.
+﻿# Palworld Windows launcher + watchdog.
 #
 # Invoked at boot (Scheduled Task, SYSTEM) and again every 2 min by the idle task,
 # which doubles as the watchdog: if the process is gone, this restarts it.
