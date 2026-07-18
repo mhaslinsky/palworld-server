@@ -119,6 +119,12 @@ variable "idle_warn_before_minutes" {
   }
 }
 
+variable "world_volume_gb" {
+  description = "Dedicated EBS volume for the Linux world save. Separate from the root volume so an instance replacement cannot delete the world (see AIDB postmortem 2026-07-18). The world is ~80 MB; the size is for headroom and local backups, not need."
+  type        = number
+  default     = 20
+}
+
 # --- Windows migration (parallel build; see 2026-07-11-windows-migration-plan) ---
 # All Windows resources are gated on this flag so the default plan is a no-op and the
 # live Linux instance is never in Terraform's create/replace path. Flip to true in
