@@ -1,0 +1,21 @@
+terraform/presence.tf
+  s_1fc195a5a47aa4::t_4e4cec742149f8 24-32,34,37,39,42,54,69,82,101,107,119,151
+  s_1fc195a5a47aa4::t_18f8ff3d3037b5 19,154-158
+  s_1fc195a5a47aa4::t_228c80b3fa327d 1-18,20-23,33,35-36,38,40-41,43-53,55-68,70-81,83-100,102-106,108-118,120-150,152-153,159-176
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "74a12189cd5e5f46a361ac478caca81fe8de9a57",
+  "prompts": {},
+  "sessions": {
+    "s_1fc195a5a47aa4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "93249842-eeb7-4aff-b632-d0468e7a0fc9",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    }
+  }
+}
