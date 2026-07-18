@@ -118,3 +118,39 @@ variable "idle_warn_before_minutes" {
     error_message = "idle_warn_before_minutes must be less than idle_shutdown_minutes, or the warning can never fire."
   }
 }
+
+# --- Windows migration (parallel build; see 2026-07-11-windows-migration-plan) ---
+# All Windows resources are gated on this flag so the default plan is a no-op and the
+# live Linux instance is never in Terraform's create/replace path. Flip to true in
+# terraform.tfvars only when standing up the parallel Windows box.
+variable "enable_windows_migration" {
+  description = "Create the parallel Windows Server 2022 game instance + its own save volume/SG. false = Linux-only, no Windows resources."
+  type        = bool
+  default     = false
+}
+
+variable "windows_root_volume_gb" {
+  description = "Windows game instance root EBS (GB). Bigger than Linux: OS + pagefile + game + UE4SS overhead."
+  type        = number
+  default     = 100
+}
+
+variable "windows_save_volume_gb" {
+  description = "Dedicated persistent EBS volume for SaveGames on the Windows box (survives instance replacement; prevent_destroy)."
+  type        = number
+  default     = 20
+}
+
+# --- Presence daemon (always-on t4g.nano) ---
+variable "enable_presence_bot" {
+  description = "Run the always-on t4g.nano that holds Discord's Gateway socket (~$7.36/mo). false = no instance."
+  type        = bool
+  default     = false
+}
+
+variable "discord_bot_token" {
+  description = "Discord bot token. A full takeover of the bot identity — treat as a credential. Seeded into SSM; rotate there, not here."
+  type        = string
+  default     = ""
+  sensitive   = true
+}

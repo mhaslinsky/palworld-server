@@ -13,9 +13,21 @@ data "aws_subnets" "default" {
 }
 
 # Canonical's official Ubuntu 22.04 LTS (jammy) AMI — most-documented base for SteamCMD + Palworld.
+#
+# PINNED to the id the live instance was launched from. With most_recent=true this
+# data source drifts every time Canonical publishes a new jammy image, and because
+# aws_instance.server.ami forces replacement, ANY `terraform apply` would then destroy
+# and rebuild the running game server (world lives on its root volume). The image-id
+# filter freezes it so the diff is a no-op. To intentionally move to a newer AMI, update
+# the pinned id here and treat it as a deliberate (backup-first) instance replacement.
 data "aws_ami" "ubuntu" {
   most_recent = true
   owners      = ["099720109477"] # Canonical
+
+  filter {
+    name   = "image-id"
+    values = ["ami-0d28727121d5d4a3c"]
+  }
 
   filter {
     name   = "name"

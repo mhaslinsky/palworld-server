@@ -1,0 +1,169 @@
+<powershell>
+# Palworld Windows game-server bootstrap.
+#
+# !! THIS FILE MUST STAY PURE ASCII !!
+# EC2Launch does not decode user_data as UTF-8: any multi-byte character (an em-dash
+# in a COMMENT is enough) arrives mangled, and the replacement bytes can include a
+# quote character, which breaks the PowerShell parse so NOTHING runs. Cost two failed
+# rebuilds on 2026-07-18. Emoji in the injected scripts are safe only because those
+# are gzip+base64'd. Check with: grep -P '[^\x00-\x7F]' on this file.
+#
+# Codifies the sequence proven interactively on 2026-07-18 (see AIDB
+# 2026-07-11-windows-migration-plan). Two findings are load-bearing here:
+#   1. PalServer.exe (the wrapper) HANGS in session 0 - it never spawns its child, so
+#      a headless launch through it yields a running-but-dead server. Launch
+#      Pal\Binaries\Win64\PalServer-Win64-Shipping.exe directly instead.
+#   2. SteamCMD's first invocation only self-updates and silently skips app_update, so
+#      the install needs a retry loop (same as the Linux user_data).
+#
+# Deliberately does NOT run steamcmd on every boot: an unattended update can land a
+# build that breaks the mod (BLOCKER 1). Updates are a separate, deliberate task.
+$ErrorActionPreference = "Continue"
+Start-Transcript -Path "C:\palworld-bootstrap.log" -Append
+
+# --- Persistent SaveGames volume (BLOCKER 4) ---------------------------------
+# The world must never live on the root volume: user_data_replace_on_change would
+# put it one Terraform change away from a wipe. Attach may lag first boot, so this
+# is guarded and idempotent (only ever touches a RAW disk).
+$rawDisk = Get-Disk | Where-Object { $_.PartitionStyle -eq 'RAW' } | Select-Object -First 1
+if ($rawDisk) {
+  $rawDisk | Initialize-Disk -PartitionStyle GPT -PassThru |
+    New-Partition -DriveLetter ${save_drive_letter} -UseMaximumSize |
+    Format-Volume -FileSystem NTFS -NewFileSystemLabel "${save_volume_label}" -Confirm:$false
+}
+New-Item -ItemType Directory -Force -Path "${save_drive_letter}:\PalServer\SaveGames" | Out-Null
+
+# --- Firewall ----------------------------------------------------------------
+# Only the game port faces the internet. REST (8212) and RCON (25575) stay closed
+# here AND in the security group - the watcher polls them on 127.0.0.1 only.
+if (-not (Get-NetFirewallRule -DisplayName "Palworld game ${game_udp_port}/udp" -ErrorAction SilentlyContinue)) {
+  New-NetFirewallRule -DisplayName "Palworld game ${game_udp_port}/udp" -Direction Inbound `
+    -Protocol UDP -LocalPort ${game_udp_port} -Action Allow | Out-Null
+}
+
+Set-Service AmazonSSMAgent -StartupType Automatic -ErrorAction SilentlyContinue
+Start-Service AmazonSSMAgent -ErrorAction SilentlyContinue
+
+# --- AWS CLI (the watcher's SSM reads/writes need it) -------------------------
+# The base AMI ships AWS Tools for PowerShell but not aws.exe; the watcher mirrors
+# the Linux script's aws-cli calls, so install it.
+if (-not (Test-Path "C:\Program Files\Amazon\AWSCLIV2\aws.exe")) {
+  $ProgressPreference = "SilentlyContinue"
+  Invoke-WebRequest -Uri "https://awscli.amazonaws.com/AWSCLIV2.msi" -OutFile "C:\AWSCLIV2.msi"
+  Start-Process msiexec.exe -ArgumentList "/i C:\AWSCLIV2.msi /qn" -Wait
+  $env:Path += ";C:\Program Files\Amazon\AWSCLIV2"
+  [Environment]::SetEnvironmentVariable("Path", $env:Path, [EnvironmentVariableTarget]::Machine)
+}
+
+# --- Palworld dedicated server ------------------------------------------------
+New-Item -ItemType Directory -Force -Path C:\steamcmd | Out-Null
+if (-not (Test-Path C:\steamcmd\steamcmd.exe)) {
+  $ProgressPreference = "SilentlyContinue"
+  Invoke-WebRequest -Uri https://steamcdn-a.akamaihd.net/client/installer/steamcmd.zip -OutFile C:\steamcmd\steamcmd.zip
+  Expand-Archive -Path C:\steamcmd\steamcmd.zip -DestinationPath C:\steamcmd -Force
+}
+if (-not (Test-Path C:\PalServer\Pal\Binaries\Win64\PalServer-Win64-Shipping.exe)) {
+  # Finding 2: first run only self-updates, so retry until the binary exists.
+  for ($attempt = 1; $attempt -le 3; $attempt++) {
+    & C:\steamcmd\steamcmd.exe +force_install_dir C:\PalServer +login anonymous +app_update 2394010 validate +quit | Out-Null
+    if (Test-Path C:\PalServer\Pal\Binaries\Win64\PalServer-Win64-Shipping.exe) { break }
+  }
+}
+
+# --- SaveGames -> persistent volume (junction) --------------------------------
+$saveLink = "C:\PalServer\Pal\Saved\SaveGames"
+$saveTarget = "${save_drive_letter}:\PalServer\SaveGames"
+New-Item -ItemType Directory -Force -Path "C:\PalServer\Pal\Saved" | Out-Null
+if (Test-Path $saveLink) {
+  $item = Get-Item $saveLink -Force
+  if (-not $item.LinkType) { Remove-Item $saveLink -Recurse -Force }  # never clobber an existing junction
+}
+if (-not (Test-Path $saveLink)) {
+  New-Item -ItemType Junction -Path $saveLink -Target $saveTarget | Out-Null
+}
+
+# --- Mod .paks ----------------------------------------------------------------
+# Staged on the persistent volume because Nexus requires a login - they cannot be
+# re-downloaded at boot. Copying (not linking) keeps the game reading a normal local
+# path; the volume copy is the durable master across instance rebuilds.
+$modSource = "${save_drive_letter}:\PalServer\mods"
+$modDest = "C:\PalServer\Pal\Content\Paks\~mods"
+New-Item -ItemType Directory -Force -Path $modSource, $modDest | Out-Null
+$paks = Get-ChildItem $modSource -Filter *.pak -ErrorAction SilentlyContinue
+if ($paks) {
+  $paks | Copy-Item -Destination $modDest -Force
+  Write-Output "restored $($paks.Count) mod pak(s) from $modSource"
+} else {
+  # Not fatal - a vanilla server still runs. But say so loudly rather than booting
+  # "successfully" with the mod silently absent.
+  Write-Output "WARNING: no .pak files staged in $modSource - server will run VANILLA (no relaxed building)"
+}
+
+# --- Server config ------------------------------------------------------------
+$cfgDir = "C:\PalServer\Pal\Saved\Config\WindowsServer"
+New-Item -ItemType Directory -Force -Path $cfgDir | Out-Null
+$opts = '${option_settings}'
+Set-Content -Path (Join-Path $cfgDir "PalWorldSettings.ini") `
+  -Value "[/Script/Pal.PalGameWorldSettings]`r`nOptionSettings=($opts)`r`n" -Encoding UTF8 -NoNewline
+
+# --- Watcher config -----------------------------------------------------------
+# Webhook/roster are SSM parameter NAMES, not values: baking the webhook in would make
+# rotating it rebuild the instance (user_data_replace_on_change).
+@{
+  GamePort      = ${game_udp_port}
+  MaxPlayers    = ${max_players}
+  RestPort      = ${rest_api_port}
+  AdminPassword = '${admin_password}'
+  ThresholdMin  = ${idle_minutes}
+  WarnBeforeMin = ${warn_before_minutes}
+  ServerLabel   = '${server_name}'
+  ServerAddress = '${server_address}'
+  AwsRegion     = '${aws_region}'
+  WebhookParam  = '${webhook_param}'
+  RosterParam   = '${roster_param}'
+} | ConvertTo-Json | Set-Content -Path "C:\PalServer\idle.conf.json" -Encoding UTF8
+
+New-Item -ItemType Directory -Force -Path C:\PalServer\scripts | Out-Null
+# Injected gzip+base64, not a here-string: embedding the scripts literally made the
+# assembled user_data fail to PARSE (MissingEndCurlyBrace at the injected content,
+# 2026-07-18) - nothing ran at all. Plain base64 then blew EC2's 16 KB user_data
+# limit, hence the gzip. Encoded text is pure ASCII with no quoting or line-start
+# semantics, and round-trips the UTF-8 bytes (emoji) exactly.
+function Expand-B64Gzip([string]$encoded, [string]$outPath) {
+  $bytes = [Convert]::FromBase64String($encoded)
+  # NOT $input: that is a reserved automatic variable in PowerShell.
+  $inStream = New-Object IO.MemoryStream(, $bytes)
+  $gzip = New-Object IO.Compression.GZipStream($inStream, [IO.Compression.CompressionMode]::Decompress)
+  $outStream = New-Object IO.MemoryStream
+  $gzip.CopyTo($outStream)
+  $gzip.Dispose(); $inStream.Dispose()
+  [IO.File]::WriteAllBytes($outPath, $outStream.ToArray())
+  $outStream.Dispose()
+}
+Expand-B64Gzip '${launch_script_b64}' "C:\PalServer\scripts\palworld-launch.ps1"
+Expand-B64Gzip '${idle_script_b64}' "C:\PalServer\scripts\palworld-idle.ps1"
+
+New-EventLog -LogName Application -Source "Palworld" -ErrorAction SilentlyContinue
+
+# --- Scheduled tasks ----------------------------------------------------------
+# Launcher at boot; watcher every 2 min (which also acts as the watchdog, restarting
+# the server if the process is gone). Both run as SYSTEM - the same session-0 context
+# the direct-exe launch was verified under.
+$psExe = "powershell.exe"
+$principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
+
+$launchAction = New-ScheduledTaskAction -Execute $psExe `
+  -Argument "-NoProfile -ExecutionPolicy Bypass -File C:\PalServer\scripts\palworld-launch.ps1"
+Register-ScheduledTask -TaskName "PalworldLaunch" -Action $launchAction -Principal $principal `
+  -Trigger (New-ScheduledTaskTrigger -AtStartup) -Force | Out-Null
+
+$idleAction = New-ScheduledTaskAction -Execute $psExe `
+  -Argument "-NoProfile -ExecutionPolicy Bypass -File C:\PalServer\scripts\palworld-idle.ps1"
+$idleTrigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(5) `
+  -RepetitionInterval (New-TimeSpan -Minutes 2)
+Register-ScheduledTask -TaskName "PalworldIdle" -Action $idleAction -Principal $principal `
+  -Trigger $idleTrigger -Force | Out-Null
+
+Start-ScheduledTask -TaskName "PalworldLaunch"
+Stop-Transcript
+</powershell>
