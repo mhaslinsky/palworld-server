@@ -80,8 +80,13 @@ await scenario("everything healthy", {}, {status: "OK", alerts: false});
 await scenario("instance stopped", {state: "stopped"}, {status: "SLEEPING", alerts: false});
 // A cold boot runs SteamCMD before the REST API answers, so the watcher publishes
 // nothing for several minutes. Alerting here would fire on every normal start.
+//
+// The roster MUST be past ROSTER_STALE_MINUTES for this to test anything: a roster
+// younger than the threshold would stay quiet with or without the grace, so the
+// case would pass against a build that has no grace at all. It is realistic too -
+// a stop/start leaves the parameter carrying its pre-stop timestamp.
 await scenario("roster stale but still inside boot grace",
-  {upMinutes: 5, rosterAgeMinutes: 5}, {status: "OK", alerts: false});
+  {upMinutes: 5, rosterAgeMinutes: 15}, {status: "OK", alerts: false});
 
 console.log("\n--- RED: every fault must produce an alert ---");
 // The 2026-07-19 failure: palworld-idle.timer was started but never enabled, a
