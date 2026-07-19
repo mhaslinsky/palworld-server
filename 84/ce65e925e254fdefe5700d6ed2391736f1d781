@@ -1,0 +1,24 @@
+discord-bot/backup-monitor/index.mjs
+  s_bde73c666a7db3::t_df9c5643c7121f 208-209,213-219,221-228
+discord-bot/tests/backup-monitor.test.mjs
+  s_bde73c666a7db3::t_b2ba4134b67ad9 47-49
+  s_bde73c666a7db3::t_1b92b95b67ab5a 110-111
+  s_bde73c666a7db3::t_8292eef597430f 20,23-24
+  s_bde73c666a7db3::t_b37506cecff51b 109,112-125
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "84ce65e925e254fdefe5700d6ed2391736f1d781",
+  "prompts": {},
+  "sessions": {
+    "s_bde73c666a7db3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d1460eae-3c2d-4c2f-a31d-505196b4f586",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    }
+  }
+}
