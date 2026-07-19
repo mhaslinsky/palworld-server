@@ -66,7 +66,7 @@ variable "rest_api_port" {
 variable "idle_shutdown_minutes" {
   description = "Minutes of zero connected players before the server self-shuts-down (OS shutdown -> AWS stops the instance, halting compute billing)."
   type        = number
-  default     = 25
+  default     = 30
 }
 
 variable "discord_webhook_url" {
