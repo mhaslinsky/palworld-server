@@ -27,33 +27,42 @@ const INSTANCE_ID = process.env.INSTANCE_ID;
 const BUCKET = process.env.BACKUP_BUCKET;
 const PREFIX = process.env.BACKUP_PREFIX || "world/linux/";
 const STALE_MINUTES = Number(process.env.STALE_MINUTES || 45);
-const MIN_BYTES = Number(process.env.MIN_BYTES || 10_000_000);
+const MIN_BYTES = Number(process.env.MIN_BYTES || 1_000_000);
 const WEBHOOK_PARAM = process.env.WEBHOOK_PARAM;
 
 const ec2 = new EC2Client({region: REGION});
 const s3 = new S3Client({region: REGION});
 const ssm = new SSMClient({region: REGION});
 
+/**
+ * Deliver an alert. THROWS if it cannot, so the Lambda invocation fails and
+ * EventBridge/CloudWatch records an error.
+ *
+ * The earlier version logged and returned on every failure path, so a monitor
+ * that had correctly detected missing backups could tell nobody and still report
+ * a successful invocation - a watchdog that fails silently is worse than none,
+ * because it is trusted. Note fetch() does NOT reject on 401/404/429/500, so the
+ * response status must be checked explicitly.
+ */
 async function notify(content) {
   if (!WEBHOOK_PARAM) return;
-  let url;
-  try {
-    const result = await ssm.send(new GetParameterCommand({Name: WEBHOOK_PARAM, WithDecryption: true}));
-    url = result.Parameter?.Value;
-  } catch (error) {
-    console.error("could not read webhook param:", error.message);
+
+  const result = await ssm.send(new GetParameterCommand({Name: WEBHOOK_PARAM, WithDecryption: true}));
+  const url = result.Parameter?.Value;
+  // An unset SSM parameter comes back as the literal string "None". That is a
+  // deliberate "no webhook configured", not a failure.
+  if (!url || url === "None") {
+    console.log("no webhook configured — alert not delivered");
     return;
   }
-  // An unset SSM parameter comes back as the literal string "None".
-  if (!url || url === "None") return;
-  try {
-    await fetch(url, {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({content}),
-    });
-  } catch (error) {
-    console.error("webhook post failed:", error.message);
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({content}),
+  });
+  if (!response.ok) {
+    throw new Error(`webhook returned ${response.status} ${response.statusText} — alert NOT delivered`);
   }
 }
 

@@ -77,11 +77,52 @@ resource "aws_s3_bucket_lifecycle_configuration" "backups" {
 
 # The instance may WRITE backups and list them; it may not delete them. A box that
 # can erase its own backup history is one bad script away from having none.
+# --- Linux bootstrap scripts, shipped via S3 ------------------------------------
+# Embedding them in user_data hit EC2's hard 16 KB limit once the backup script
+# joined the idle watcher. Hosting them here also means a script fix no longer
+# changes the user_data hash, so shipping one does not force an instance rebuild -
+# which matters because user_data_replace_on_change is false and a rebuild is a
+# player-facing event.
+resource "aws_s3_object" "linux_idle_script" {
+  bucket       = aws_s3_bucket.backups.id
+  key          = "scripts/linux/idle-shutdown.sh"
+  source       = "${path.module}/../scripts/idle-shutdown.sh"
+  etag         = filemd5("${path.module}/../scripts/idle-shutdown.sh")
+  content_type = "text/plain"
+}
+
+resource "aws_s3_object" "linux_backup_script" {
+  bucket       = aws_s3_bucket.backups.id
+  key          = "scripts/linux/backup-to-s3.sh"
+  source       = "${path.module}/../scripts/backup-to-s3.sh"
+  etag         = filemd5("${path.module}/../scripts/backup-to-s3.sh")
+  content_type = "text/plain"
+}
+
 data "aws_iam_policy_document" "instance_backups" {
+  # The box may read its own bootstrap scripts. Scoped to the scripts prefix: it
+  # still cannot read or delete the world backups themselves.
   statement {
-    sid       = "WriteWorldBackups"
-    actions   = ["s3:PutObject"]
-    resources = ["${aws_s3_bucket.backups.arn}/world/*"]
+    sid       = "ReadBootstrapScripts"
+    actions   = ["s3:GetObject"]
+    resources = ["${aws_s3_bucket.backups.arn}/scripts/linux/*"]
+  }
+
+  # Scoped to the LINUX prefixes, not all of world/*. Both instances share this
+  # role, so a broad grant would let the Windows box write into the Linux backup
+  # path - where a buggy script could publish junk that passes every freshness and
+  # size check the monitor makes. Windows gets world/windows/* in windows.tf.
+  #
+  # linux-degraded/ is where a capture whose save could not be PROVEN goes: kept,
+  # because on-disk state beats nothing, but deliberately outside the prefix the
+  # monitor treats as healthy.
+  statement {
+    sid     = "WriteLinuxWorldBackups"
+    actions = ["s3:PutObject"]
+    resources = [
+      "${aws_s3_bucket.backups.arn}/world/linux/*",
+      "${aws_s3_bucket.backups.arn}/world/linux-degraded/*",
+    ]
   }
 
   statement {

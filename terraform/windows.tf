@@ -60,15 +60,39 @@ resource "aws_s3_object" "windows_idle_script" {
   content_type = "text/plain"
 }
 
-# The instance may read its own bootstrap scripts. Deliberately scoped to the
-# scripts prefix: it still cannot read or delete the world backups.
+resource "aws_s3_object" "windows_backup_script" {
+  count        = local.windows_enabled
+  bucket       = aws_s3_bucket.backups.id
+  key          = "scripts/windows/backup-to-s3.ps1"
+  source       = "${path.module}/../scripts/backup-to-s3.ps1"
+  etag         = filemd5("${path.module}/../scripts/backup-to-s3.ps1")
+  content_type = "text/plain"
+}
+
+# The instance may read its own bootstrap scripts, and write backups under its OWN
+# prefix. Deliberately narrow: it cannot read or delete the world backups, and it
+# cannot write into world/linux/* (the shared instance role would otherwise let a
+# Windows-side bug publish objects the monitor counts as healthy Linux backups).
 data "aws_iam_policy_document" "instance_scripts" {
   count = local.windows_enabled
 
   statement {
-    sid       = "ReadBootstrapScripts"
-    actions   = ["s3:GetObject"]
-    resources = ["${aws_s3_bucket.backups.arn}/scripts/windows/*"]
+    sid     = "ReadBootstrapScripts"
+    actions = ["s3:GetObject"]
+    resources = [
+      "${aws_s3_bucket.backups.arn}/scripts/windows/*",
+    ]
+  }
+
+  # HeadObject is GetObject on the same resource - used to compare the download
+  # against S3's ETag so a truncated bootstrap script is caught.
+  statement {
+    sid     = "WriteWindowsWorldBackups"
+    actions = ["s3:PutObject"]
+    resources = [
+      "${aws_s3_bucket.backups.arn}/world/windows/*",
+      "${aws_s3_bucket.backups.arn}/world/windows-degraded/*",
+    ]
   }
 }
 

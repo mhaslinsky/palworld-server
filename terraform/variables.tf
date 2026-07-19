@@ -119,6 +119,12 @@ variable "idle_warn_before_minutes" {
   }
 }
 
+variable "alert_email" {
+  description = "Address to notify when the backup monitor itself fails. Deliberately a channel independent of Discord, because a broken Discord webhook is one of the failures this must surface. Empty = topic created but nothing subscribed. AWS sends a confirmation mail that must be clicked before delivery starts."
+  type        = string
+  default     = ""
+}
+
 variable "world_volume_gb" {
   description = "Dedicated EBS volume for the Linux world save. Separate from the root volume so an instance replacement cannot delete the world (see AIDB postmortem 2026-07-18). The world is ~80 MB; the size is for headroom and local backups, not need."
   type        = number

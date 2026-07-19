@@ -82,6 +82,10 @@ resource "aws_instance" "server_windows" {
     ])
 
     # Scripts are fetched from S3 at boot rather than embedded - see the template.
+    # Deliberately NOT passing the script hashes here: that would put them in
+    # user_data, so every script edit would change the user_data hash and force an
+    # instance rebuild - exactly what moving the scripts to S3 was meant to avoid.
+    # The box verifies the download against S3's own ETag instead.
     backup_bucket = aws_s3_bucket.backups.id
   })
 

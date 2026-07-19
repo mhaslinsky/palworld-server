@@ -35,7 +35,26 @@ $restBase = "http://127.0.0.1:$($conf.RestPort)/v1/api"
 # this file CLAIMED the idle task did this and did not - a comment describing
 # behaviour that does not exist is worse than no comment.)
 if (-not (Get-Process -Name "PalServer-Win64-Shipping" -ErrorAction SilentlyContinue)) {
-  & powershell.exe -NoProfile -ExecutionPolicy Bypass -File "C:\PalServer\scripts\palworld-launch.ps1"
+  $launcher = "C:\PalServer\scripts\palworld-launch.ps1"
+  # The launcher is fetched from S3 at boot and that fetch is allowed to fail
+  # (loudly, but non-fatally). If it is missing, invoking it would do nothing and
+  # this task would keep returning 0 forever while the server stayed down.
+  if (-not (Test-Path $launcher)) {
+    Write-EventLog -LogName Application -Source "Palworld" -EventId 104 -EntryType Error `
+      -Message "watchdog: launcher missing at $launcher - server cannot be restarted" -ErrorAction SilentlyContinue
+    Write-Output "ERROR: launcher missing at $launcher"
+    exit 1
+  }
+  & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $launcher
+  if ($LASTEXITCODE -ne 0) {
+    # Returning 0 here would report a healthy watchdog run while the server is
+    # still down - the failure would only ever be visible to someone who thought
+    # to look at the box.
+    Write-EventLog -LogName Application -Source "Palworld" -EventId 105 -EntryType Error `
+      -Message "watchdog: launcher exited $LASTEXITCODE - server did not start" -ErrorAction SilentlyContinue
+    Write-Output "ERROR: launcher exited $LASTEXITCODE"
+    exit 1
+  }
   # Nothing to poll this cycle; the next run in 2 min sees the started server.
   exit 0
 }
@@ -148,27 +167,35 @@ if ($elapsedMin -ge $conf.ThresholdMin) {
   # reached disk is Level.sav's mtime advancing. If it did not, this REFUSES to shut
   # down and says so - an idle box costing a few cents an hour is strictly cheaper
   # than an unsaved world, and a failure that keeps running gets noticed.
+  # Locate Level.sav FIRST and treat its absence as a hard stop.
+  #
+  # A missing Level.sav here means the save volume is not mounted or is mapped
+  # wrong - precisely the degraded-storage case where powering off is most
+  # dangerous. An earlier version checked `$saveOk -and $levelSav` with an
+  # `elseif (-not $saveOk)`, so the combination "save returned 200 but no
+  # Level.sav found" matched NEITHER branch and fell straight through to
+  # Stop-Computer. The guard skipped itself in the one case it existed for.
   $levelSav = Get-ChildItem "$($conf.SaveRoot)\*\*\Level.sav" -ErrorAction SilentlyContinue |
     Sort-Object LastWriteTime | Select-Object -Last 1
-  $mtimeBefore = if ($levelSav) { $levelSav.LastWriteTimeUtc } else { $null }
+  if (-not $levelSav) {
+    Send-Notify "⚠️ **$($conf.ServerLabel)**: no Level.sav under ``$($conf.SaveRoot)`` - the save volume may be unmounted. REFUSING to shut down; an idle box is cheaper than a lost world."
+    exit 1
+  }
+  $mtimeBefore = $levelSav.LastWriteTimeUtc
 
-  $saveOk = $false
   try {
     Invoke-RestMethod -Uri "$restBase/save" -Method Post -Credential $cred `
       -Headers @{ "Content-Length" = "0" } -TimeoutSec 30 -ErrorAction Stop | Out-Null
-    $saveOk = $true
   } catch {
     Send-Notify "⚠️ **$($conf.ServerLabel)**: force-save FAILED before idle shutdown ($($_.Exception.Message)). Staying up rather than risking an unsaved world."
+    exit 1
   }
 
-  if ($saveOk -and $levelSav) {
-    Start-Sleep -Seconds 5
-    $after = (Get-Item $levelSav.FullName -ErrorAction SilentlyContinue).LastWriteTimeUtc
-    if ($null -eq $after -or ($mtimeBefore -and $after -le $mtimeBefore)) {
-      Send-Notify "⚠️ **$($conf.ServerLabel)**: save reported success but Level.sav did not change on disk. Staying up - shutting down now could lose the world."
-      exit 1
-    }
-  } elseif (-not $saveOk) {
+  # An HTTP 200 is not proof the world reached disk - the mtime advancing is.
+  Start-Sleep -Seconds 5
+  $after = (Get-Item $levelSav.FullName -ErrorAction SilentlyContinue).LastWriteTimeUtc
+  if ($null -eq $after -or $after -le $mtimeBefore) {
+    Send-Notify "⚠️ **$($conf.ServerLabel)**: save reported success but Level.sav did not change on disk. Staying up - shutting down now could lose the world."
     exit 1
   }
 

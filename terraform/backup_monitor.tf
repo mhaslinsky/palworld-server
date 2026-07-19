@@ -105,7 +105,7 @@ resource "aws_lambda_function" "backup_monitor" {
       BACKUP_BUCKET = aws_s3_bucket.backups.id
       BACKUP_PREFIX = "world/linux/"
       STALE_MINUTES = "45" # the job runs every 30 min; 45 tolerates one missed run
-      MIN_BYTES     = "10000000"
+      MIN_BYTES     = "1000000"
       WEBHOOK_PARAM = aws_ssm_parameter.discord_webhook_url.name
     }
   }
@@ -133,6 +133,50 @@ resource "aws_lambda_permission" "backup_monitor_events" {
   function_name = aws_lambda_function.backup_monitor.function_name
   principal     = "events.amazonaws.com"
   source_arn    = aws_cloudwatch_event_rule.backup_monitor.arn
+}
+
+# --- Independent failure channel -----------------------------------------------
+# The monitor's only alert path is the Discord webhook, so a broken webhook (bad
+# token, 429, Discord outage) means it can detect missing backups and tell nobody.
+# notify() now throws on a failed delivery, which fails the invocation - this is
+# what turns that failure into something a human learns about, over a channel that
+# does NOT depend on Discord being healthy.
+resource "aws_sns_topic" "alerts" {
+  name = "${var.project_name}-alerts"
+}
+
+# Opt-in: with no address set, the topic exists but nothing is subscribed, and the
+# alarm is visible only in the console. Set alert_email in tfvars to get mail.
+resource "aws_sns_topic_subscription" "alerts_email" {
+  count     = var.alert_email == "" ? 0 : 1
+  topic_arn = aws_sns_topic.alerts.arn
+  protocol  = "email"
+  endpoint  = var.alert_email
+}
+
+resource "aws_cloudwatch_metric_alarm" "backup_monitor_errors" {
+  alarm_name          = "${local.monitor_name}-errors"
+  alarm_description   = "The backup freshness monitor failed to run or could not deliver an alert."
+  namespace           = "AWS/Lambda"
+  metric_name         = "Errors"
+  dimensions          = { FunctionName = aws_lambda_function.backup_monitor.function_name }
+  statistic           = "Sum"
+  period              = 900
+  evaluation_periods  = 1
+  threshold           = 0
+  comparison_operator = "GreaterThanThreshold"
+
+  # Missing data is NOT success here: if the function stops being invoked at all,
+  # that is itself the failure this alarm exists to catch.
+  treat_missing_data = "breaching"
+
+  alarm_actions = [aws_sns_topic.alerts.arn]
+  ok_actions    = [aws_sns_topic.alerts.arn]
+}
+
+output "alerts_topic" {
+  description = "SNS topic for monitor failures. Subscribe an address via var.alert_email (needs email confirmation)."
+  value       = aws_sns_topic.alerts.arn
 }
 
 output "backup_monitor_logs" {

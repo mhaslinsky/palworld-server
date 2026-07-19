@@ -182,6 +182,9 @@ function connect(token) {
           break;
         }
 
+        // NOT dead code: opcode 1 is Send/Receive. The gateway sends it to demand
+        // an immediate heartbeat, and failing to answer gets the connection
+        // dropped. (Flagged as unreachable in review 2026-07-18 — it isn't.)
         case Op.HEARTBEAT:
           send({ op: Op.HEARTBEAT, d: lastSequence });
           break;
