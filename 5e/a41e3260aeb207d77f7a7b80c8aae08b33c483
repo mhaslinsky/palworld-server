@@ -1,0 +1,75 @@
+terraform/variables.tf
+  s_1fc195a5a47aa4::t_bd49f651af0738 122-127
+terraform/user_data.sh.tftpl
+  s_1fc195a5a47aa4::t_b2e9970c2f61af 176-201
+  s_1fc195a5a47aa4::t_ed57bf35005675 27-91
+  s_1fc195a5a47aa4::t_23e5d9a5a60597 125
+  s_1fc195a5a47aa4::t_470f1ef14150f8 225-268
+  s_1fc195a5a47aa4::t_db154f62551b5b 172
+  s_1fc195a5a47aa4::t_584db340a30162 273
+scripts/backup-to-s3.sh
+  s_1fc195a5a47aa4::t_bd1da8e4b13acc 34-37
+  s_1fc195a5a47aa4::t_b6e32b4d556d32 54-63,81-83,91-92,94-98
+  s_1fc195a5a47aa4::t_150da1e49c7cad 133-143
+  s_1fc195a5a47aa4::t_923cea8a0da056 102-116
+  s_1fc195a5a47aa4::t_cd9e43b2b871bf 64-80,84-90,93
+terraform/windows_instance.tf
+  s_1fc195a5a47aa4::t_f9d2aeef9fd08a 85-88
+scripts/restore-drill.ps1
+  s_1fc195a5a47aa4::t_1b6c7e6741b79d 1
+  s_1fc195a5a47aa4::t_e9f0efeedfa445 12,17-27,34-41
+  s_1fc195a5a47aa4::t_bd1da8e4b13acc 43
+  s_1fc195a5a47aa4::t_7ebd488df74578 54,89
+discord-bot/presence/index.mjs
+  s_1fc195a5a47aa4::t_8333c288d25e74 185-187
+scripts/idle-shutdown.sh
+  s_1fc195a5a47aa4::t_cd234bfbbf9cdd 11
+scripts/backup-to-s3.ps1
+  s_1fc195a5a47aa4::t_bec46d8a8d94fc 1-31,34-103
+  s_1fc195a5a47aa4::t_bd1da8e4b13acc 32-33
+terraform/compute.tf
+  s_1fc195a5a47aa4::t_17072e5f62403c 68-71
+  s_1fc195a5a47aa4::t_136e6d2a24614f 91,98-101,107-110
+  s_1fc195a5a47aa4::t_da2d6f6bc3f442 31
+  s_1fc195a5a47aa4::t_0c7d21b2173ef3 72-88
+  s_1fc195a5a47aa4::t_cd234bfbbf9cdd 40-43
+terraform/windows.tf
+  s_1fc195a5a47aa4::t_4cc1454c40d65c 72-75,80-95
+  s_1fc195a5a47aa4::t_f23188c4f17a4d 63-71
+terraform/backup_monitor.tf
+  s_1fc195a5a47aa4::t_e29e3526253c8e 138-181
+  s_1fc195a5a47aa4::t_bd1da8e4b13acc 108
+terraform/backups_s3.tf
+  s_1fc195a5a47aa4::t_4725fab5c41295 80-101,103-110
+  s_1fc195a5a47aa4::t_c6e39dc2bd09cd 111-118,120-125
+scripts/palworld-idle.ps1
+  s_1fc195a5a47aa4::t_8d12f6ab128760 170-177,180-184,191,194-198
+  s_1fc195a5a47aa4::t_c8231cd4d3b490 38-57
+terraform/windows_user_data.ps1.tftpl
+  s_1fc195a5a47aa4::t_5789a1c1a64b4c 158-164,172-174,176-181
+  s_1fc195a5a47aa4::t_57dcae21d6a4c3 168-171,175,182-188,190-191
+  s_1fc195a5a47aa4::t_f755c2d254d1a9 80-87
+  s_1fc195a5a47aa4::t_0690de32d98672 144
+  s_1fc195a5a47aa4::t_9c82e2fa846ea0 165,218-223
+  s_1fc195a5a47aa4::t_d74f1a450ce7c2 28-39
+  s_1fc195a5a47aa4::t_a92cfe9ea5143e 224
+discord-bot/backup-monitor/index.mjs
+  s_1fc195a5a47aa4::t_bd1da8e4b13acc 30
+  s_1fc195a5a47aa4::t_0eb9b5807d96dc 37-46,49-55,58-65
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "5ea41e3260aeb207d77f7a7b80c8aae08b33c483",
+  "prompts": {},
+  "sessions": {
+    "s_1fc195a5a47aa4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "93249842-eeb7-4aff-b632-d0468e7a0fc9",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    }
+  }
+}
