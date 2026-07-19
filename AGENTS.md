@@ -53,14 +53,27 @@ one as a deliberate, backup-first operation, never a side effect:
 ### 5. Do not re-arm the guards in `compute.tf`
 
 `prevent_destroy`, `delete_on_termination = false`, and
-`user_data_replace_on_change = false` exist because of the incident above. The world is
-still on the root volume, so all three are load-bearing. `delete_on_termination` is the
-real backstop; the other two are refusals a future edit can remove.
+`user_data_replace_on_change = false` exist because of the incident above. The world now
+lives on its own EBS volume (`aws_ebs_volume.world`, also `prevent_destroy`), so a
+replacement is survivable rather than fatal - but all four are still load-bearing, and a
+replacement still drops every player and re-runs SteamCMD into whatever build is current.
 
 Consequence to remember: with `user_data_replace_on_change = false`, **boot-script edits
 no longer reach a running instance through Terraform.** Apply them over SSM, or do a
 deliberate backup-first replacement. Silently assuming a template edit deployed is its
 own failure.
+
+**But `false` does NOT mean the apply is inert on the box.** Per the AWS provider:
+"Updates to this field will trigger a stop/start of the EC2 instance by default."
+So editing anything `templatefile()` renders into `user_data` - a threshold, a game
+setting, a comment in the template - will **stop and start the live server on apply**,
+disconnecting every player, while the script itself does NOT re-run. Both halves bite:
+players get dropped AND the change does not take effect.
+
+Read the plan for `aws_instance.server` at all, not just for `must be replaced`. An
+in-place `user_data` update is a player-facing restart: announce it, force-save, and
+confirm `Level.sav`'s mtime advanced first. Prefer keeping runtime-tunable values OUT
+of `user_data` entirely (SSM, like the Discord webhook and roster already are).
 
 ### 6. Backups: check, don't assume
 

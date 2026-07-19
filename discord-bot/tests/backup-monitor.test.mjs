@@ -21,7 +21,8 @@ let delivered = [];   // alerts ATTEMPTED, whether or not the POST succeeded
 
 function install({state = "running", upMinutes = 600, backupAgeMinutes = 5,
                   backupSize = 3_000_000, rosterAgeMinutes = 2, objects = true,
-                  failDeliveryNumber = null}) {
+                  failDeliveryNumber = null, webhook = "https://discord.test/webhook",
+                  ssmThrows = false, missingModifiedDate = false}) {
   delivered = [];
 
   EC2Client.prototype.send = async () => ({
@@ -37,9 +38,12 @@ function install({state = "running", upMinutes = 600, backupAgeMinutes = 5,
 
   SSMClient.prototype.send = async command => {
     if (command.input.Name === "/palworld-server/roster") {
-      return {Parameter: {Value: "{}", LastModifiedDate: ago(rosterAgeMinutes)}};
+      if (ssmThrows) throw new Error("ParameterNotFound");
+      return {Parameter: missingModifiedDate
+        ? {Value: "{}"}
+        : {Value: "{}", LastModifiedDate: ago(rosterAgeMinutes)}};
     }
-    return {Parameter: {Value: "https://discord.test/webhook"}};
+    return {Parameter: {Value: webhook}};
   };
 
   global.fetch = async (_url, options) => {
@@ -85,8 +89,11 @@ await scenario("instance stopped", {state: "stopped"}, {status: "SLEEPING", aler
 // younger than the threshold would stay quiet with or without the grace, so the
 // case would pass against a build that has no grace at all. It is realistic too -
 // a stop/start leaves the parameter carrying its pre-stop timestamp.
+// Expects BOOTING, not OK: a check still inside its grace has not cleared anything,
+// so it must not borrow the other check's pass. Quiet (no alert) is the requirement
+// here; "OK" would be the monitor claiming a verdict it has not reached.
 await scenario("roster stale but still inside boot grace",
-  {upMinutes: 5, rosterAgeMinutes: 15}, {status: "OK", alerts: false});
+  {upMinutes: 5, rosterAgeMinutes: 15}, {status: "BOOTING", alerts: false});
 
 console.log("\n--- RED: every fault must produce an alert ---");
 // The 2026-07-19 failure: palworld-idle.timer was started but never enabled, a
@@ -109,6 +116,70 @@ if (delivered.length !== 2) {
   failures++;
 } else {
   console.log("PASS  both faults alerted independently");
+}
+
+console.log("\n--- RED: grace must EXPIRE, not just exist ---");
+// The in-grace case proves a grace exists; this proves it ends. Without it, a wrong
+// compound condition that suppressed forever would still pass every other case.
+await scenario("just past boot grace, roster stale",
+  {upMinutes: 21, rosterAgeMinutes: 15}, {status: "WATCHER_DEAD", alerts: true});
+
+console.log("\n--- RED: a check that never ran must not read as OK ---");
+// ROSTER_PARAM unset is deployment drift, and the liveness check silently switching
+// itself off is exactly the state worth shouting about.
+// ROSTER_PARAM is read at module load, so the env var must be gone BEFORE the module
+// is evaluated. A query-string specifier gets a fresh module instance rather than the
+// cached one; mutating process.env after the first import would not reach it.
+delete process.env.ROSTER_PARAM;
+const {handler: handlerNoRoster} = await import("../backup-monitor/index.mjs?no-roster");
+process.env.ROSTER_PARAM = "/palworld-server/roster";
+install({});
+const noRoster = await handlerNoRoster();
+if (noRoster.status === "UNKNOWN" && delivered.length > 0) {
+  console.log("PASS  ROSTER_PARAM unset reports UNKNOWN and alerts");
+} else {
+  console.log(`FAIL  ROSTER_PARAM unset: status=${noRoster.status} (want UNKNOWN), alerts=${delivered.length} (want >0)`);
+  failures++;
+}
+
+await scenario("SSM read throws", {ssmThrows: true}, {status: "UNKNOWN", alerts: true});
+await scenario("roster has no LastModifiedDate",
+  {missingModifiedDate: true}, {status: "UNKNOWN", alerts: true});
+
+console.log("\n--- RED: a malformed threshold must not all-clear forever ---");
+// Number("twenty") is NaN and every comparison against NaN is false, so an unguarded
+// threshold would make `age > threshold` permanently false - an alarm that can never
+// fire, configured by a typo. The guard falls back to the default instead.
+process.env.ROSTER_STALE_MINUTES = "twenty";
+const {handler: handlerBadEnv} = await import("../backup-monitor/index.mjs?bad-env");
+process.env.ROSTER_STALE_MINUTES = "10";
+install({rosterAgeMinutes: 940});
+const badEnv = await handlerBadEnv();
+if (badEnv.status === "WATCHER_DEAD" && delivered.length > 0) {
+  console.log("PASS  malformed threshold falls back to the default and the alarm still fires");
+} else {
+  console.log(`FAIL  malformed threshold: status=${badEnv.status} (want WATCHER_DEAD), alerts=${delivered.length}`);
+  failures++;
+}
+
+console.log("\n--- GREEN: cold boot must not cry wolf about BACKUPS either ---");
+// After a long stop the newest object is legitimately hours old until the first
+// post-boot backup lands. This fired on every single start before the grace applied.
+await scenario("backups old but instance just started",
+  {upMinutes: 5, backupAgeMinutes: 2880}, {status: "BOOTING", alerts: false});
+
+console.log("\n--- RED: an undeliverable alert is a FAILURE, not a pass ---");
+// notify() used to return quietly when no webhook was configured, so the invocation
+// succeeded, the Errors metric stayed flat, and the SNS channel that exists so
+// alerting does not depend on Discord never fired.
+install({rosterAgeMinutes: 940, webhook: "None"});
+let threwNoWebhook = false;
+try { await handler(); } catch { threwNoWebhook = true; }
+if (threwNoWebhook) {
+  console.log("PASS  unconfigured webhook fails the invocation instead of reporting success");
+} else {
+  console.log("FAIL  a detected fault was silently undeliverable and the run still succeeded");
+  failures++;
 }
 
 console.log("\n--- RED: a failed delivery must not swallow the OTHER alert ---");

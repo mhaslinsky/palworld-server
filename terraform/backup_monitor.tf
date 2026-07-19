@@ -131,7 +131,7 @@ resource "aws_lambda_function" "backup_monitor" {
 # session, cheap enough to be irrelevant (~2,900 invocations/mo, free tier).
 resource "aws_cloudwatch_event_rule" "backup_monitor" {
   name                = local.monitor_name
-  description         = "Check that world backups are still being written"
+  description         = "Check that world backups are still being written and the idle watcher is still publishing"
   schedule_expression = "rate(15 minutes)"
 }
 
@@ -170,7 +170,7 @@ resource "aws_sns_topic_subscription" "alerts_email" {
 
 resource "aws_cloudwatch_metric_alarm" "backup_monitor_errors" {
   alarm_name          = "${local.monitor_name}-errors"
-  alarm_description   = "The backup freshness monitor failed to run or could not deliver an alert."
+  alarm_description   = "The backup/idle-watcher monitor failed to run or could not deliver an alert."
   namespace           = "AWS/Lambda"
   metric_name         = "Errors"
   dimensions          = { FunctionName = aws_lambda_function.backup_monitor.function_name }

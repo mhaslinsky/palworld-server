@@ -19,10 +19,12 @@
 // Distinguishes these states, never collapsing them into "fine":
 //   OK        - instance running, fresh backup present, watcher publishing
 //   SLEEPING  - instance stopped, neither timer expected to run
+//   BOOTING   - instance running but inside its boot grace; a check has not reached
+//               a verdict yet, so this is deliberately NOT reported as OK
 //   STALE     - instance running, newest object older than the threshold  -> alert
 //   WATCHER_DEAD - instance running past its grace period, roster not updating -> alert
-//   UNKNOWN   - the check itself failed (API error) -> alert, because a check that
-//               cannot run has NOT cleared anything
+//   UNKNOWN   - the check itself failed, or was never configured -> alert, because a
+//               check that cannot run has NOT cleared anything
 
 import {EC2Client, DescribeInstancesCommand} from "@aws-sdk/client-ec2";
 import {S3Client, ListObjectsV2Command} from "@aws-sdk/client-s3";
@@ -32,15 +34,27 @@ const REGION = process.env.AWS_REGION || "us-east-1";
 const INSTANCE_ID = process.env.INSTANCE_ID;
 const BUCKET = process.env.BACKUP_BUCKET;
 const PREFIX = process.env.BACKUP_PREFIX || "world/linux/";
-const STALE_MINUTES = Number(process.env.STALE_MINUTES || 45);
-const MIN_BYTES = Number(process.env.MIN_BYTES || 1_000_000);
+// Every threshold goes through this: `Number("")` is 0 and `Number("twenty")` is
+// NaN, and EVERY comparison against NaN is false - so one fat-fingered env var
+// would make `age > threshold` permanently false and all-clear forever. A
+// threshold that cannot fire is the house bug wearing a config costume.
+function minutesSetting(raw, fallback) {
+  const parsed = Number(raw);
+  if (raw === undefined || raw === null || raw === "" || !Number.isFinite(parsed)) return fallback;
+  return parsed;
+}
+
+const STALE_MINUTES = minutesSetting(process.env.STALE_MINUTES, 45);
+const MIN_BYTES = minutesSetting(process.env.MIN_BYTES, 1_000_000);
 const WEBHOOK_PARAM = process.env.WEBHOOK_PARAM;
 const ROSTER_PARAM = process.env.ROSTER_PARAM;
-const ROSTER_STALE_MINUTES = Number(process.env.ROSTER_STALE_MINUTES || 10);
+const ROSTER_STALE_MINUTES = minutesSetting(process.env.ROSTER_STALE_MINUTES, 10);
 // The watcher publishes nothing until the game's REST API answers, and a cold boot
 // runs SteamCMD before that. Without this grace the monitor would cry wolf after
 // every single start - and an alarm that fires on normal operation gets muted.
-const BOOT_GRACE_MINUTES = Number(process.env.BOOT_GRACE_MINUTES || 20);
+// The same grace covers backups: after a long stop the newest object is legitimately
+// hours old until the first post-boot backup lands.
+const BOOT_GRACE_MINUTES = minutesSetting(process.env.BOOT_GRACE_MINUTES, 20);
 
 const ec2 = new EC2Client({region: REGION});
 const s3 = new S3Client({region: REGION});
@@ -57,15 +71,21 @@ const ssm = new SSMClient({region: REGION});
  * response status must be checked explicitly.
  */
 async function notify(content) {
-  if (!WEBHOOK_PARAM) return;
+  // No webhook is NOT a pass. This used to return quietly, on the reasoning that an
+  // unconfigured webhook is a deliberate choice - but notify() is only ever called
+  // when something is already WRONG, and returning cleanly meant the invocation
+  // succeeded, the Errors metric stayed flat, and the SNS channel that exists
+  // precisely so alerting does not depend on Discord never fired. The monitor
+  // detected the fault and told nobody, successfully.
+  if (!WEBHOOK_PARAM) {
+    throw new Error(`WEBHOOK_PARAM not set — alert NOT delivered: ${content}`);
+  }
 
   const result = await ssm.send(new GetParameterCommand({Name: WEBHOOK_PARAM, WithDecryption: true}));
   const url = result.Parameter?.Value;
-  // An unset SSM parameter comes back as the literal string "None". That is a
-  // deliberate "no webhook configured", not a failure.
+  // An unset SSM parameter comes back as the literal string "None".
   if (!url || url === "None") {
-    console.log("no webhook configured — alert not delivered");
-    return;
+    throw new Error(`no webhook configured at ${WEBHOOK_PARAM} — alert NOT delivered: ${content}`);
   }
 
   const response = await fetch(url, {
@@ -128,7 +148,7 @@ async function newestBackup() {
 }
 
 /** Backups: is there a recent, plausibly-sized object? */
-async function checkBackups() {
+async function checkBackups(upMinutes) {
   let newest;
   try {
     newest = await newestBackup();
@@ -152,6 +172,13 @@ async function checkBackups() {
   }
 
   if (ageMinutes > STALE_MINUTES) {
+    // The box stops itself when empty, so after a long sleep the newest object is
+    // legitimately hours old until the first post-boot backup lands. Alerting on
+    // that would fire on every single start - and an alarm that goes off during
+    // normal operation is one everybody learns to ignore.
+    if (upMinutes !== null && upMinutes < BOOT_GRACE_MINUTES) {
+      return {status: "BOOTING", ageMinutes, key: newest.Key, upMinutes};
+    }
     return {status: "STALE", ageMinutes, key: newest.Key,
       alert: `🚨 **World backups have stopped** — newest is \`${newest.Key}\`, ${ageMinutes} min old (threshold ${STALE_MINUTES} min) while the server is running. Check \`palworld-backup.timer\` on the box.`};
   }
@@ -161,10 +188,13 @@ async function checkBackups() {
 
 /** Idle watcher: is it still publishing the roster? */
 async function checkWatcher(launchTime) {
+  // Terraform always wires this, so an unset ROSTER_PARAM means drift or a partial
+  // deploy - and "the liveness check silently switched itself off" is exactly the
+  // state worth shouting about. Returning a quiet SKIPPED here previously let the
+  // aggregation report a top-level OK that no check had earned.
   if (!ROSTER_PARAM) {
-    // Not configured. Report that honestly rather than as a pass - a check that
-    // did not run has cleared nothing.
-    return {status: "SKIPPED", reason: "ROSTER_PARAM not set"};
+    return {status: "UNKNOWN", reason: "ROSTER_PARAM not set",
+      alert: "⚠️ **Idle-watcher check is not configured** — `ROSTER_PARAM` is unset on the monitor, so nothing is watching whether the box still shuts down when empty. This is deployment drift; Terraform sets it."};
   }
 
   let ageMinutes;
@@ -183,8 +213,13 @@ async function checkWatcher(launchTime) {
   }
 
   if (ageMinutes > ROSTER_STALE_MINUTES) {
+    // Name BOTH causes. The watcher publishes the roster only after a successful
+    // REST poll, so a stale parameter means either the timer is dead OR the game
+    // is hung and never answers - and the fail-open design means the box will not
+    // stop when empty in either case. Naming only the timer would send whoever
+    // responds at the wrong component during a live incident.
     return {status: "WATCHER_DEAD", rosterAgeMinutes: ageMinutes, upMinutes,
-      alert: `🚨 **Idle-shutdown watcher is not running** — \`${ROSTER_PARAM}\` has not updated in ${ageMinutes} min (threshold ${ROSTER_STALE_MINUTES} min) while the server is up. The box will NOT stop when empty and is billing continuously. Check \`systemctl status palworld-idle.timer\` — and \`systemctl is-enabled\` it, not just \`is-active\`.`};
+      alert: `🚨 **Idle-shutdown is not publishing** — \`${ROSTER_PARAM}\` has not updated in ${ageMinutes} min (threshold ${ROSTER_STALE_MINUTES} min) while the server is up. The box will NOT stop when empty and is billing continuously. Either \`palworld-idle.timer\` is dead (check \`systemctl is-enabled\`, not just \`is-active\`) or the game's REST API is hung (check \`palworld.service\`).`};
   }
 
   return {status: "OK", rosterAgeMinutes: ageMinutes};
@@ -207,7 +242,10 @@ export const handler = async () => {
 
   // Both checks run before ANY alert is delivered, so a delivery failure cannot
   // skip a check that has not happened yet.
-  const backups = await checkBackups();
+  const upMinutes = instance.launchTime
+    ? Math.round((Date.now() - new Date(instance.launchTime).getTime()) / 60000)
+    : null;
+  const backups = await checkBackups(upMinutes);
   const watcher = await checkWatcher(instance.launchTime);
 
   // Every alert gets its own delivery ATTEMPT. notify() throws by design, so a bare
@@ -229,8 +267,17 @@ export const handler = async () => {
   }
 
   // Worst-case wins, so a single "OK" can never paper over the other check.
+  //
+  // "OK" is reserved for a run where every check actually reached a verdict. A
+  // check that was still inside its boot grace has not cleared anything yet, so it
+  // reports BOOTING rather than borrowing the other check's pass - absence of a
+  // signal is not a negative signal, and this top-level string is what a human
+  // skims in the logs.
   const failed = [backups, watcher].some(check => check.alert);
-  const status = failed ? (watcher.alert ? watcher.status : backups.status) : "OK";
+  const inconclusive = [backups, watcher].some(check => check.status === "BOOTING");
+  const status = failed
+    ? (watcher.alert ? watcher.status : backups.status)
+    : (inconclusive ? "BOOTING" : "OK");
 
   console.log(`${status} — backups:${backups.status} watcher:${watcher.status}`);
   return {status, backups, watcher};

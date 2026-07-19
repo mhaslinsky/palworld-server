@@ -6,9 +6,10 @@
 # Inverting the direction keeps the admin password off the wire, which is the whole
 # point of the local-watcher design.
 #
-# It also decouples the Discord webhook from user_data: because
-# user_data_replace_on_change = true, a webhook baked into user_data would make
-# rotating it destroy and rebuild the instance. Here it's a one-line CLI call.
+# It also decouples the Discord webhook from user_data. Baking it in would mean
+# rotating the webhook edits user_data - which stop/starts the live instance on the
+# next apply (and, with user_data_replace_on_change = true as this box once had,
+# rebuilt it outright). Here it's a one-line CLI call that touches nothing.
 
 locals {
   webhook_param_name = "/${var.project_name}/discord_webhook_url"
