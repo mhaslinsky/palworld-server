@@ -1,0 +1,23 @@
+README.md
+  s_bde73c666a7db3::t_c13721932aaea9 194-209
+  s_bde73c666a7db3::t_3b6a49c4c1e2f5 29,43-44,47,50-51
+  s_bde73c666a7db3::t_52a4a275ba85be 9-11,15-28,30-42,45-46,48-49,52-56,58-111
+  s_bde73c666a7db3::t_8a9dd0b7e2af58 156-157,161-162,166,172-174,177-179,183-185,188-190
+  s_bde73c666a7db3::t_09732a9b7e9e9b 191
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "f44c35c82c9ba903ea644142be3443492e42910f",
+  "prompts": {},
+  "sessions": {
+    "s_bde73c666a7db3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d1460eae-3c2d-4c2f-a31d-505196b4f586",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    }
+  }
+}
