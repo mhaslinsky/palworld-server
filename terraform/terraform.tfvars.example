@@ -19,7 +19,7 @@ discord_webhook_url = ""
 # server_name           = "Palworld"
 # instance_type         = "t3.xlarge"
 # root_volume_gb        = 50
-# idle_shutdown_minutes = 25
+# idle_shutdown_minutes = 30
 
 # --- Discord start-bot ---
 # Both values come from the Discord developer portal (General Information).

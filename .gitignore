@@ -28,3 +28,6 @@ secrets/
 # Local secrets (Discord bot token) — never commit
 .env.local
 .env
+
+# Dev-only deps for discord-bot/tests — never shipped (each Lambda zips its own subdir)
+node_modules/

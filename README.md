@@ -15,7 +15,7 @@ Two halves, built in two phases:
 
 | Half | Mechanism | Status |
 |---|---|---|
-| **Auto-stop** (empty → off) | Local systemd timer on the box polls the Palworld REST API on `localhost` and runs `shutdown -h now` after 25 min of zero players. AWS then stops the instance. | ✅ in this Terraform |
+| **Auto-stop** (empty → off) | Local systemd timer on the box polls the Palworld REST API on `localhost` and runs `shutdown -h now` after 30 min of zero players. AWS then stops the instance. | ✅ in this Terraform |
 | **Start** (Discord → on) | Whitelisted Discord slash command → Lambda (Ed25519-verified) → `ec2:StartInstances`. | ✅ deployed — see `discord-bot/` |
 | **Presence** (bot status) | Always-on t4g.nano holding the Discord Gateway socket, so presence reads "sleeping" while the game box is stopped. | ✅ behind `enable_presence_bot` |
 
