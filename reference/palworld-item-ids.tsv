@@ -1,0 +1,2373 @@
+display_name	item_id	type_a	type_b	max_stack	rank
+	Blueprint_Otomo_PalConfidence_Increase_1	Blueprint	Blueprint	1	99
+	Blueprint_Salvage_FishingBait_1_A	Blueprint	Blueprint	9999	1
+	Blueprint_Salvage_FishingBait_1_B	Blueprint	Blueprint	9999	1
+	Blueprint_Salvage_FishingBait_2_A	Blueprint	Blueprint	9999	1
+	Blueprint_Salvage_FishingBait_2_B	Blueprint	Blueprint	9999	1
+	Blueprint_Salvage_FishingBait_3_B	Blueprint	Blueprint	9999	1
+	Blueprint_Salvage_TreasureBoxKey01	Blueprint	Blueprint	9999	1
+	MonsterEquipWeapon_Dummy	MonsterEquipWeapon	MonsterEquipWeapon	1	1
+	Otomo_MoveSpeed_up_1	Accessory	Accessory	1	8
+	PV_Glider_Manta	Glider	Glider	1	4
+	TEST_BossDefeatReward	Essential	NONE	9999	1
+	TEST_CaptureItemModifier	None	NONE	1	1
+	YakushimaParts001	Material	MaterialMonster	9999	1
+	YakushimaParts002	Material	MaterialMonster	9999	1
+	YakushimaParts003	Material	MaterialIngot	9999	1
+5 Blueprints of Long-eared Headband	Blueprint_Head003_5	Blueprint	Blueprint	9999	1
+5 Blueprints of Naemochi Hat	Blueprint_Head015_5	Blueprint	Blueprint	9999	1
+5 Diagrams of Agricultural Hat	Blueprint_Head011_5	Blueprint	Blueprint	9999	1
+5 Schematic Diagrams of the Silk Hat	Blueprint_Head007_5	Blueprint	Blueprint	9999	1
+Ability Glasses	Accessory_TalentChecker	Accessory	Accessory	1	2
+Advanced Arrow	SFArrow	Ammo	ConsumeBullet	9999	1
+Advanced Bow	SFBow	Weapon	WeaponBow	1	4
+Advanced Bow	SFBow_2	Weapon	WeaponBow	1	4
+Advanced Bow	SFBow_3	Weapon	WeaponBow	1	4
+Advanced Bow	SFBow_4	Weapon	WeaponBow	1	4
+Advanced Bow	SFBow_5	Weapon	WeaponBow	1	4
+Advanced Bow Schematic 1	Blueprint_SFBow_2	Blueprint	Blueprint	9999	1
+Advanced Bow Schematic 2	Blueprint_SFBow_3	Blueprint	Blueprint	9999	1
+Advanced Bow Schematic 3	Blueprint_SFBow_4	Blueprint	Blueprint	9999	1
+Advanced Bow Schematic 4	Blueprint_SFBow_5	Blueprint	Blueprint	9999	1
+Advanced Fishing Rod (Depresso)	FishingRod_03_2	Weapon	NONE	1	4
+Advanced Fishing Rod (Depresso) Schematic	Blueprint_FishingRod_03_2	Blueprint	Blueprint	9999	1
+Advanced Fishing Rod (Pengullet)	FishingRod_03_1	Weapon	NONE	1	4
+Advanced Recovery Meds	Potion_Extreme	Consume	Drug	9999	5
+Advanced Shield	Shield_SF	Armor	Shield	1	4
+Advanced Technical Manual	TechnologyBook_G1	Consume	ConsumeTechnologyBook	9999	5
+Aegidron Bounty Token	BossDefeatReward_DomeArmorDragon	Essential	NONE	9999	1
+Aegidron Saddle	SkillUnlock_DomeArmorDragon	Essential	Essential_PalGear	9999	0
+AI Core	AIcore	Material	MaterialProccessing	9999	5
+Air Dash Boots	Accessory_AirDash1	Accessory	Accessory	1	2
+Air Walker EX	Accessory_SuperJumpAir_2	Accessory	Accessory	1	3
+Air Walker EX Schematic	Blueprint_Accessory_SuperJumpAir_2	Blueprint	Blueprint	9999	8
+Air Walker Mk I	Accessory_JumpAir_1	Accessory	Accessory	1	3
+Air Walker Mk I Schematic	Blueprint_Accessory_JumpAir_1	Blueprint	Blueprint	9999	8
+Air Walker Mk II	Accessory_JumpAir_2	Accessory	Accessory	1	3
+Air Walker Mk II Schematic	Blueprint_Accessory_JumpAir_2	Blueprint	Blueprint	9999	8
+Air Walker Mk III	Accessory_SuperJumpAir_1	Accessory	Accessory	1	3
+Air Walker Mk III Schematic	Blueprint_Accessory_SuperJumpAir_1	Blueprint	Blueprint	9999	8
+Alluring Bait	FishingBait_3_A	Consume	NONE	9999	1
+Ancient Armor	AncientArmor	Armor	ArmorBody	1	10
+Ancient Armor	AncientArmor_2	Armor	ArmorBody	1	10
+Ancient Armor	AncientArmor_3	Armor	ArmorBody	1	10
+Ancient Armor	AncientArmor_4	Armor	ArmorBody	1	10
+Ancient Armor	AncientArmor_5	Armor	ArmorBody	1	10
+Ancient Armor Schematic 1	Blueprint_AncientArmor_2	Blueprint	Blueprint	9999	1
+Ancient Armor Schematic 2	Blueprint_AncientArmor_3	Blueprint	Blueprint	9999	1
+Ancient Armor Schematic 3	Blueprint_AncientArmor_4	Blueprint	Blueprint	9999	1
+Ancient Armor Schematic 4	Blueprint_AncientArmor_5	Blueprint	Blueprint	9999	1
+Ancient Bark	Wood_Ancient	Material	MaterialWood	9999	1
+Ancient Bone	BeastBone_Ancient	Material	MaterialOre	9999	1
+Ancient Civilization Core	AncientParts2	Material	MaterialMonster	9999	8
+Ancient Civilization Parts	PalCrystal_Ex	Material	MaterialMonster	9999	1
+Ancient Helm	AncientHelmet	Armor	ArmorHead	1	10
+Ancient Helm	AncientHelmet_2	Armor	ArmorHead	1	10
+Ancient Helm	AncientHelmet_3	Armor	ArmorHead	1	10
+Ancient Helm	AncientHelmet_4	Armor	ArmorHead	1	10
+Ancient Helm	AncientHelmet_5	Armor	ArmorHead	1	10
+Ancient Helm Schematic 1	Blueprint_AncientHelmet_2	Blueprint	Blueprint	9999	1
+Ancient Helm Schematic 2	Blueprint_AncientHelmet_3	Blueprint	Blueprint	9999	1
+Ancient Helm Schematic 3	Blueprint_AncientHelmet_4	Blueprint	Blueprint	9999	1
+Ancient Helm Schematic 4	Blueprint_AncientHelmet_5	Blueprint	Blueprint	9999	1
+Ancient Lava	Lava_Ancient	Material	MaterialOre	9999	1
+Ancient Pal Manuscript	AncientParts3	Material	MaterialMonster	9999	8
+Ancient Shield	Shield_07	Armor	Shield	1	10
+Ancient Sphere	PalSphere_Ancient_2	SpecialWeapon	SPWeaponCaptureBall	9999	10
+Ancient Technical Manual	AncientTechnologyBook_G1	Consume	ConsumeAncientTechnologyBook	9999	5
+Animal Skin	AnimalSkin	Material	MaterialMonster	9999	1
+Animal Skin	AnimalSkin2	Material	MaterialMonster	9999	1
+Anti-Gravity Belt	Accessory_JumpPower_Increase	Accessory	Accessory	1	2
+Antibiotic Good	Antibiotic_Good	Consume	ConsumeBandage	9999	6
+Antibiotic Normal	Antibiotic_Normal	Consume	ConsumeBandage	9999	5
+Antibiotic Super	Antibiotic_Super	Consume	ConsumeBandage	9999	7
+Anubis Bounty Token	BossDefeatReward_Anubis	Essential	NONE	9999	1
+Anubis's Talisman	Otomo_DFEarth_ElementBoost_1	Accessory	Accessory	1	3
+Anubis's Talisman Schematic	Blueprint_Otomo_DFEarth_ElementBoost_1	Blueprint	Blueprint	9999	8
+Applied Cooling Handbook I	WorkSuitability_AddTicket_Cool	Consume	NONE	9999	1
+Applied Gathering Handbook I	WorkSuitability_AddTicket_Collection	Consume	NONE	9999	1
+Applied Generating Electricity Handbook I	WorkSuitability_AddTicket_GenerateElectricity	Consume	NONE	9999	1
+Applied Handiwork Handbook I	WorkSuitability_AddTicket_Handcraft	Consume	NONE	9999	1
+Applied Kindling Handbook I	WorkSuitability_AddTicket_EmitFlame	Consume	NONE	9999	1
+Applied Lumbering Handbook I	WorkSuitability_AddTicket_Deforest	Consume	NONE	9999	1
+Applied Medicine Production Handbook I	WorkSuitability_AddTicket_ProductMedicine	Consume	NONE	9999	1
+Applied Mining Handbook I	WorkSuitability_AddTicket_Mining	Consume	NONE	9999	1
+Applied Planting Handbook I	WorkSuitability_AddTicket_Seeding	Consume	NONE	9999	1
+Applied Ranching Handbook I	WorkSuitability_AddTicket_MonsterFarm	Consume	NONE	9999	1
+Applied Transporting Handbook I	WorkSuitability_AddTicket_Transport	Consume	NONE	9999	1
+Applied Watering Handbook I	WorkSuitability_AddTicket_Watering	Consume	NONE	9999	1
+Aquatic Construction Kit	WaterBuildKit	Essential	Essential_UnlockPlayerFuture	9999	4
+Aquatic Pal Fluids	PalFluid	Material	MaterialMonster	9999	1
+Arrow	Arrow	Ammo	ConsumeBullet	9999	1
+Arsox Bounty Token	BossDefeatReward_FlameBuffalo	Essential	NONE	9999	1
+Arsox Saddle	SkillUnlock_FlameBuffalo	Essential	Essential_PalGear	999999	0
+Assault Rifle	AssaultRifle_Default1	Weapon	WeaponAssaultRifle	1	3
+Assault Rifle	AssaultRifle_Default2	Weapon	WeaponAssaultRifle	1	3
+Assault Rifle	AssaultRifle_Default3	Weapon	WeaponAssaultRifle	1	3
+Assault Rifle	AssaultRifle_Default4	Weapon	WeaponAssaultRifle	1	3
+Assault Rifle	AssaultRifle_Default5	Weapon	WeaponAssaultRifle	1	3
+Assault Rifle Ammo	AssaultRifleBullet	Ammo	ConsumeBullet	9999	3
+Assault Rifle Schematic 1	Blueprint_AssaultRifle_Default2	Blueprint	Blueprint	9999	1
+Assault Rifle Schematic 2	Blueprint_AssaultRifle_Default3	Blueprint	Blueprint	9999	1
+Assault Rifle Schematic 3	Blueprint_AssaultRifle_Default4	Blueprint	Blueprint	9999	1
+Assault Rifle Schematic 4	Blueprint_AssaultRifle_Default5	Blueprint	Blueprint	9999	1
+Astegon Bounty Token	BossDefeatReward_BlackMetalDragon	Essential	NONE	9999	1
+Astegon Saddle	SkillUnlock_BlackMetalDragon	Essential	Essential_PalGear	999999	0
+Attack Pendant	Accessory_AT_1	Accessory	Accessory	1	2
+Attack Pendant	Accessory_AT_2	Accessory	Accessory	1	2
+Attack Pendant	Accessory_AT_3	Accessory	Accessory	1	2
+Attack Pendant Schematic	Blueprint_Accessory_AT_1_2	Blueprint	Blueprint	9999	8
+Attack Support Whistle	Otomo_Attack_up1	Accessory	Accessory	1	2
+Attack Support Whistle	Otomo_Attack_up2	Accessory	Accessory	1	2
+Attack Support Whistle	Otomo_Attack_up3	Accessory	Accessory	1	2
+Attack Support Whistle Schematic	Blueprint_Otomo_Attack_up1_2	Blueprint	Blueprint	9999	8
+Auri Hat	HeadEquip048	Armor	ArmorHead	1	99
+Average Feed Bag	AutoMealPouch_Tier2	Essential	Essential_UnlockPlayerFuture	9999	2
+Axe4	Axe_Tier_03	Weapon	WeaponMelee	1	3
+Axel Hat	GYM_Head_Electric	Armor	ArmorHead	1	99
+Azurmane Bounty Token	BossDefeatReward_BlueThunderHorse	Essential	NONE	9999	1
+Azurmane Saddle	SkillUnlock_BlueThunderHorse	Essential	Essential_PalGear	9999	0
+Azurobe Bounty Token	BossDefeatReward_BlueDragon	Essential	NONE	9999	1
+Azurobe Cryst Saddle	SkillUnlock_BlueDragon_Ice	Essential	Essential_PalGear	9999	0
+Azurobe Saddle	SkillUnlock_BlueDragon	Essential	Essential_PalGear	999999	0
+Baked Berries	Baked_Berries	Food	FoodDishVegetable	9999	1
+Baked Mushroom	BakedMushroom	Food	FoodDishVegetable	9999	1
+Ballistic Shield	HandgunShield	Weapon	WeaponHandgun	1	2
+Bastigor's Hammer	SkillUnlock_SnowTigerBeastman	Essential	Essential_PalGear	9999	0
+Bat	Bat2	Weapon	WeaponMelee	1	1
+Battle Ticket	BattleTicket	Material	MaterialJewelry	9999	4
+Beakon Bounty Token	BossDefeatReward_ThunderBird	Essential	NONE	9999	1
+Beakon Cryst Saddle	SkillUnlock_ThunderBird_Ice	Essential	Essential_PalGear	9999	0
+Beakon Saddle	SkillUnlock_ThunderBird	Essential	Essential_PalGear	999999	0
+Beam Launcher	BeamLauncher	Weapon	WeaponRocketLauncher	1	10
+Beam Launcher	BeamLauncher_2	Weapon	WeaponRocketLauncher	1	10
+Beam Launcher	BeamLauncher_3	Weapon	WeaponRocketLauncher	1	10
+Beam Launcher	BeamLauncher_4	Weapon	WeaponRocketLauncher	1	10
+Beam Launcher	BeamLauncher_5	Weapon	WeaponRocketLauncher	1	10
+Beam Launcher Ammo	BeamLauncherBullet	Ammo	ConsumeBullet	9999	10
+Beam Launcher Schematic 1	Blueprint_BeamLauncher_2	Blueprint	Blueprint	9999	1
+Beam Launcher Schematic 2	Blueprint_BeamLauncher_3	Blueprint	Blueprint	9999	1
+Beam Launcher Schematic 3	Blueprint_BeamLauncher_4	Blueprint	Blueprint	9999	1
+Beam Launcher Schematic 4	Blueprint_BeamLauncher_5	Blueprint	Blueprint	9999	1
+Beam Scatter	WidePenetrateShotgun	Weapon	WeaponShotgun	1	10
+Beam Scatter	WidePenetrateShotgun_2	Weapon	WeaponShotgun	1	10
+Beam Scatter	WidePenetrateShotgun_3	Weapon	WeaponShotgun	1	10
+Beam Scatter	WidePenetrateShotgun_4	Weapon	WeaponShotgun	1	10
+Beam Scatter	WidePenetrateShotgun_5	Weapon	WeaponShotgun	1	10
+Beam Scatter Ammo	WidePenetrateShotgunBullet	Ammo	ConsumeBullet	9999	10
+Beam Scatter Schematic 1	Blueprint_WidePenetrateShotgun_2	Blueprint	Blueprint	9999	1
+Beam Scatter Schematic 2	Blueprint_WidePenetrateShotgun_3	Blueprint	Blueprint	9999	1
+Beam Scatter Schematic 3	Blueprint_WidePenetrateShotgun_4	Blueprint	Blueprint	9999	1
+Beam Scatter Schematic 4	Blueprint_WidePenetrateShotgun_5	Blueprint	Blueprint	9999	1
+Beam Sword	BeamSword	Weapon	WeaponMelee	1	4
+Beam Sword	BeamSword_2	Weapon	WeaponMelee	1	4
+Beam Sword	BeamSword_3	Weapon	WeaponMelee	1	4
+Beam Sword	BeamSword_4	Weapon	WeaponMelee	1	4
+Beam Sword	BeamSword_5	Weapon	WeaponMelee	1	4
+Beam Sword Schematic 1	Blueprint_BeamSword_2	Blueprint	Blueprint	9999	1
+Beam Sword Schematic 2	Blueprint_BeamSword_3	Blueprint	Blueprint	9999	1
+Beam Sword Schematic 3	Blueprint_BeamSword_4	Blueprint	Blueprint	9999	1
+Beam Sword Schematic 4	Blueprint_BeamSword_5	Blueprint	Blueprint	9999	1
+Beautiful Flower	Poppy	Material	Drug	9999	1
+Beegarde's Spear	Spear_SoldierBee	Weapon	WeaponMelee	1	99
+Beer	Beer	Food	FoodProcessed	9999	1
+Beginner Bait	FishingBait_1_A	Consume	NONE	9999	1
+Beginner Fishing Rod (Chillet)	FishingRod_01_1	Weapon	NONE	1	2
+Beginner Fishing Rod (Gumoss)	FishingRod_01_2	Weapon	NONE	1	2
+Beginner Fishing Rod (Gumoss) Schematic	Blueprint_FishingRod_01_2	Blueprint	Blueprint	9999	1
+Bellanoir Libero (Ultra) Slab	PalSummon_NightLady_Dark_2	Consume	ConsumeOther	9999	1
+Bellanoir Libero (Ultra) Slab Fragment	PalSummon_NightLady_Dark_Parts_2	Blueprint	Blueprint	9999	1
+Bellanoir Libero's Slab	PalSummon_NightLady_Dark	Consume	ConsumeOther	9999	1
+Bellanoir Libero's Slab Fragment	PalSummon_NightLady_Dark_Parts	Blueprint	Blueprint	9999	1
+Bellanoir's Slab	PalSummon_NightLady	Consume	ConsumeOther	9999	1
+Bellanoir's Slab Fragment	PalSummon_NightLady_Parts	Blueprint	Blueprint	9999	1
+Berry Seeds	BerrySeeds	Material	MaterialMonster	9999	1
+Bio Battery	Bio_Battery	Material	MaterialProccessing	9999	4
+Bjorn Hat	GYM_Head_Viking	Armor	ArmorHead	1	99
+Blazamut Bounty Token	BossDefeatReward_KingBahamut	Essential	NONE	9999	1
+Blazamut Ryu (Ultra) Slab	PalSummon_KingBahamut_Dragon_2	Consume	ConsumeOther	9999	1
+Blazamut Ryu (Ultra) Slab Fragment	PalSummon_KingBahamut_Dragon_Parts_2	Blueprint	Blueprint	9999	1
+Blazamut Ryu Saddle	SkillUnlock_KingBahamut_Dragon	Essential	Essential_PalGear	999999	0
+Blazamut Ryu Slab	PalSummon_KingBahamut_Dragon	Consume	ConsumeOther	9999	1
+Blazamut Ryu Slab Fragment	PalSummon_KingBahamut_Dragon_Parts	Blueprint	Blueprint	9999	1
+Blazamut Saddle	SkillUnlock_KingBahamut	Essential	Essential_PalGear	999999	0
+Blazamut's Talisman	Otomo_DFFire_ElementBoost_1	Accessory	Accessory	1	3
+Blazamut's Talisman Schematic	Blueprint_Otomo_DFFire_ElementBoost_1	Blueprint	Blueprint	9999	8
+Blazehowl Bounty Token	BossDefeatReward_Manticore	Essential	NONE	9999	1
+Blazehowl Noct Saddle	SkillUnlock_Manticore_Dark	Essential	Essential_PalGear	999999	0
+Blazehowl Ring	Accessory_Otomo_Fire_1	Accessory	Accessory	1	3
+Blazehowl Ring Schematic	Blueprint_Accessory_Otomo_Fire_1	Blueprint	Blueprint	9999	8
+Blazehowl Saddle	SkillUnlock_Manticore	Essential	Essential_PalGear	999999	0
+BLT	BLT	Food	FoodDishMeat	9999	3
+Blueprint 5 of University Hat	Blueprint_Head010_5	Blueprint	Blueprint	9999	1
+Blueprint for Golden Crown 5	Blueprint_Head002_5	Blueprint	Blueprint	9999	1
+Blueprint of Bowler Hat 5	Blueprint_Head012_5	Blueprint	Blueprint	9999	1
+Blueprint of Capppen Hat 5	Blueprint_Head016_5	Blueprint	Blueprint	9999	1
+Blueprint of Exploration Hat 5	Blueprint_Head009_5	Blueprint	Blueprint	9999	1
+Blueprint of Helmet 5	Blueprint_Head006_5	Blueprint	Blueprint	9999	1
+Blueprint of Soft Hat 5	Blueprint_Head005_5	Blueprint	Blueprint	9999	1
+Blueprint of the King's Crown 5	Blueprint_Head001_5	Blueprint	Blueprint	9999	1
+Blueprint of the Tricorn Hat 5	Blueprint_Head008_5	Blueprint	Blueprint	9999	1
+Bolognese Sauce	MeatSauce	Food	FoodDishMeat	9999	3
+Boltmane Saddle	SkillUnlock_ElecLion	Essential	Essential_PalGear	999999	0
+Bone	Bone	Material	MaterialMonster	9999	1
+Boost Gun	PalDopingShot	Weapon	WeaponHandgun	1	2
+Boost Gun	PalDopingShot_3	Weapon	WeaponHandgun	1	2
+Boost Gun Ammo	PalDopingShotBullet	Ammo	ConsumeBullet	9999	2
+Bowler Hat	Head012	Armor	ArmorHead	1	1
+Bowler Hat	Head012_2	Armor	ArmorHead	1	1
+Bowler Hat	Head012_3	Armor	ArmorHead	1	1
+Bowler Hat	Head012_4	Armor	ArmorHead	1	1
+Bowler Hat	Head012_5	Armor	ArmorHead	1	1
+Bowler Hat Schematic 1	Blueprint_Head012_1	Blueprint	Blueprint	9999	1
+Bowler Hat Schematic 2	Blueprint_Head012_2	Blueprint	Blueprint	9999	1
+Bowler Hat Schematic 3	Blueprint_Head012_3	Blueprint	Blueprint	9999	1
+Bowler Hat Schematic 4	Blueprint_Head012_4	Blueprint	Blueprint	9999	1
+Braloha Saddle	SkillUnlock_Plesiosaur	Essential	Essential_PalGear	9999	0
+Bread	Pan	Food	FoodDishVegetable	9999	1
+Breeder's Precious Pal	QuestItem_Breeder_1	Consume	ConsumeOther	1	1
+Broiled Dumud	BakedMeat_LazyCatfish	Food	FoodDishFish	9999	1
+Broncherry Aqua Bounty Token	BossDefeatReward_SakuraSaurus_Water	Essential	NONE	9999	1
+Broncherry Aqua Saddle	SkillUnlock_SakuraSaurus_Water	Essential	Essential_PalGear	999999	0
+Broncherry Bounty Token	BossDefeatReward_SakuraSaurus	Essential	NONE	9999	1
+Broncherry Fried Noodles	Yakisoba	Food	FoodDishMeat	9999	3
+Broncherry Meat	Meat_SakuraSaurus	Food	FoodMeat	9999	3
+Broncherry Rib Roast	BakedMeat_SakuraSaurus	Food	FoodDishMeat	9999	1
+Broncherry Saddle	SkillUnlock_SakuraSaurus	Essential	Essential_PalGear	999999	0
+Building Repair Kit	RepairKit	Consume	ConsumeOther	9999	1
+Bulldosu Saddle	SkillUnlock_SumoDog	Essential	Essential_PalGear	9999	0
+Burden Elixir	Elixir_weight_02	Consume	ConsumeGainStatusPoints	9999	4
+Burden Remedy	Elixir_weight_01	Consume	ConsumeGainStatusPoints	9999	3
+Bushi Bounty Token	BossDefeatReward_Ronin	Essential	NONE	9999	1
+Cake	Cake	Food	FoodDishVegetable	9999	2
+Caprity Meat	Meat_BerryGoat	Food	FoodMeat	9999	2
+Caprity Noct Bounty Token	BossDefeatReward_BerryGoat_Dark	Essential	NONE	9999	1
+Caramel Cotton Candy	Sweet_Caramel	Food	FoodVegetable	9999	1
+Carbon Fiber	CarbonFiber	Material	MaterialProccessing	9999	3
+Carbonara	Carbonara	Food	FoodDishMeat	9999	3
+Carrot	Carrot	Food	FoodVegetable	9999	1
+Carrot Seeds	CarrotSeeds	Material	MaterialMonster	9999	1
+Carrying Lotus (L)	Lotus_weight_02	Material	MaterialMonster	9999	4
+Carrying Lotus (S)	Lotus_weight_01	Material	MaterialMonster	9999	3
+Cattiva Effigy	Relic_08	Essential	Essential	9999	9
+Cattiva Hat	HeadEquip033	Armor	ArmorHead	1	99
+Cavern Mushroom	CaveMushroom	Food	FoodVegetable	9999	1
+Cawgnito Hat	HeadEquip027	Armor	ArmorHead	1	99
+Celaray Lux's Gloves	SkillUnlock_FlyingManta_Thunder	Essential	Essential_PalGear	999999	999
+Celaray's Gloves	SkillUnlock_FlyingManta	Essential	Essential_PalGear	999999	999
+Celesdir Bounty Token	BossDefeatReward_WhiteDeer	Essential	NONE	9999	1
+Celesdir Noct Bounty Token	BossDefeatReward_WhiteDeer_Dark	Essential	NONE	9999	1
+Celesdir Noct Saddle	SkillUnlock_WhiteDeer_Dark	Essential	Essential_PalGear	9999	0
+Celesdir Saddle	SkillUnlock_WhiteDeer	Essential	Essential_PalGear	9999	0
+Celestial Emperor's Baton	Otomo_ATNormal_ElementBoost_1	Accessory	Accessory	1	3
+Celestial Emperor's Baton Schematic	Blueprint_Otomo_ATNormal_ElementBoost_1	Blueprint	Blueprint	9999	8
+Celestial Sigil	PalSummon_YakushimaBoss002	Consume	ConsumeOther	9999	1
+Celestial Sigil [Master]	PalSummon_YakushimaBoss002_2	Consume	ConsumeOther	9999	1
+Celestial Sigil Schematic	Blueprint_PalSummon_YakushimaBoss002	Blueprint	Blueprint	9999	1
+Cement	Cement	Material	MaterialProccessing	9999	2
+Ceremonial Candlestick Schematic	Blueprint_FireStand	Blueprint	Blueprint	9999	1
+Champion's Emblem	PlayerDropItem	Material	MaterialJewelry	9999	1
+Charcoal	Charcoal	Material	MaterialIngot	9999	1
+Charge Rifle	ChargeLaserRifle	Weapon	WeaponAssaultRifle	1	5
+Charge Rifle	ChargeLaserRifle_2	Weapon	WeaponAssaultRifle	1	5
+Charge Rifle	ChargeLaserRifle_3	Weapon	WeaponAssaultRifle	1	5
+Charge Rifle	ChargeLaserRifle_4	Weapon	WeaponAssaultRifle	1	5
+Charge Rifle	ChargeLaserRifle_5	Weapon	WeaponAssaultRifle	1	5
+Charge Rifle Ammo	ChargeLaserRifleBullet	Ammo	ConsumeBullet	9999	5
+Charge Rifle Schematic 1	Blueprint_ChargeLaserRifle_2	Blueprint	Blueprint	9999	1
+Charge Rifle Schematic 2	Blueprint_ChargeLaserRifle_3	Blueprint	Blueprint	9999	1
+Charge Rifle Schematic 3	Blueprint_ChargeLaserRifle_4	Blueprint	Blueprint	9999	1
+Charge Rifle Schematic 4	Blueprint_ChargeLaserRifle_5	Blueprint	Blueprint	9999	1
+Cheeseburger	CheeseBurger	Food	FoodDishMeat	9999	3
+Chikipi Cap	HeadEquip056	Armor	ArmorHead	1	99
+Chikipi Poultry	Meat_ChickenPal	Food	FoodMeat	9999	1
+Chikipi Sauté	ChickenSaute	Food	FoodDishMeat	9999	2
+Chillet Bounty Token	BossDefeatReward_WeaselDragon	Essential	NONE	9999	1
+Chillet Ignis Saddle	SkillUnlock_WeaselDragon_Fire	Essential	Essential_PalGear	999999	0
+Chillet Saddle	SkillUnlock_WeaselDragon	Essential	Essential_PalGear	999999	0
+Chromite	Chromium	Material	MaterialOre	9999	1
+Circuit Board	MachineParts2	Material	MaterialProccessing	9999	3
+Claw	Claws	Material	MaterialMonster	9999	1
+Claw	Claws2	Material	MaterialMonster	9999	1
+Cloth	Cloth	Material	MaterialProccessing	9999	1
+Cloth Outfit	ClothArmor	Armor	ArmorBody	1	1
+Cloth Outfit	ClothArmor_2	Armor	ArmorBody	1	1
+Cloth Outfit	ClothArmor_3	Armor	ArmorBody	1	1
+Cloth Outfit	ClothArmor_4	Armor	ArmorBody	1	1
+Cloth Outfit	ClothArmor_5	Armor	ArmorBody	1	1
+Cloth Outfit Schematic 1	Blueprint_ClothArmor_2	Blueprint	Blueprint	9999	1
+Cloth Outfit Schematic 2	Blueprint_ClothArmor_3	Blueprint	Blueprint	9999	1
+Cloth Outfit Schematic 3	Blueprint_ClothArmor_4	Blueprint	Blueprint	9999	1
+Cloth Outfit Schematic 4	Blueprint_ClothArmor_5	Blueprint	Blueprint	9999	1
+Coal	Coal	Material	MaterialOre	9999	1
+Coarse Ammo	RoughBullet	Ammo	ConsumeBullet	9999	2
+Cold Resistant Hexolite Armor	SFArmorCold	Armor	ArmorBody	1	4
+Cold Resistant Hexolite Armor	SFArmorCold_2	Armor	ArmorBody	1	4
+Cold Resistant Hexolite Armor	SFArmorCold_3	Armor	ArmorBody	1	4
+Cold Resistant Hexolite Armor	SFArmorCold_4	Armor	ArmorBody	1	4
+Cold Resistant Hexolite Armor	SFArmorCold_5	Armor	ArmorBody	1	4
+Cold Resistant Hexolite Armor Schematic 1	Blueprint_SFArmorCold_2	Blueprint	Blueprint	9999	1
+Cold Resistant Hexolite Armor Schematic 2	Blueprint_SFArmorCold_3	Blueprint	Blueprint	9999	1
+Cold Resistant Hexolite Armor Schematic 3	Blueprint_SFArmorCold_4	Blueprint	Blueprint	9999	1
+Cold Resistant Hexolite Armor Schematic 4	Blueprint_SFArmorCold_5	Blueprint	Blueprint	9999	1
+Cold Resistant Metal Armor	CopperArmorCold	Armor	ArmorBody	1	2
+Cold Resistant Metal Armor	CopperArmorCold_2	Armor	ArmorBody	1	2
+Cold Resistant Metal Armor	CopperArmorCold_3	Armor	ArmorBody	1	2
+Cold Resistant Metal Armor	CopperArmorCold_4	Armor	ArmorBody	1	2
+Cold Resistant Metal Armor	CopperArmorCold_5	Armor	ArmorBody	1	2
+Cold Resistant Metal Armor Schematic 1	Blueprint_CopperArmorCold_2	Blueprint	Blueprint	9999	1
+Cold Resistant Metal Armor Schematic 2	Blueprint_CopperArmorCold_3	Blueprint	Blueprint	9999	1
+Cold Resistant Metal Armor Schematic 3	Blueprint_CopperArmorCold_4	Blueprint	Blueprint	9999	1
+Cold Resistant Metal Armor Schematic 4	Blueprint_CopperArmorCold_5	Blueprint	Blueprint	9999	1
+Cold Resistant Pal Metal Armor	StealArmorCold	Armor	ArmorBody	1	4
+Cold Resistant Pal Metal Armor	StealArmorCold_2	Armor	ArmorBody	1	4
+Cold Resistant Pal Metal Armor	StealArmorCold_3	Armor	ArmorBody	1	4
+Cold Resistant Pal Metal Armor	StealArmorCold_4	Armor	ArmorBody	1	4
+Cold Resistant Pal Metal Armor	StealArmorCold_5	Armor	ArmorBody	1	4
+Cold Resistant Pal Metal Armor Schematic 1	Blueprint_StealArmorCold_2	Blueprint	Blueprint	9999	1
+Cold Resistant Pal Metal Armor Schematic 2	Blueprint_StealArmorCold_3	Blueprint	Blueprint	9999	1
+Cold Resistant Pal Metal Armor Schematic 3	Blueprint_StealArmorCold_4	Blueprint	Blueprint	9999	1
+Cold Resistant Pal Metal Armor Schematic 4	Blueprint_StealArmorCold_5	Blueprint	Blueprint	9999	1
+Cold Resistant Pelt Armor	FurArmorCold	Armor	ArmorBody	1	2
+Cold Resistant Pelt Armor	FurArmorCold_2	Armor	ArmorBody	1	2
+Cold Resistant Pelt Armor	FurArmorCold_3	Armor	ArmorBody	1	2
+Cold Resistant Pelt Armor	FurArmorCold_4	Armor	ArmorBody	1	2
+Cold Resistant Pelt Armor	FurArmorCold_5	Armor	ArmorBody	1	2
+Cold Resistant Pelt Armor Schematic 1	Blueprint_FurArmorCold_2	Blueprint	Blueprint	9999	1
+Cold Resistant Pelt Armor Schematic 2	Blueprint_FurArmorCold_3	Blueprint	Blueprint	9999	1
+Cold Resistant Pelt Armor Schematic 3	Blueprint_FurArmorCold_4	Blueprint	Blueprint	9999	1
+Cold Resistant Pelt Armor Schematic 4	Blueprint_FurArmorCold_5	Blueprint	Blueprint	9999	1
+Cold Resistant Plasteel Armor	PlasticArmorCold	Armor	ArmorBody	1	4
+Cold Resistant Plasteel Armor	PlasticArmorCold_2	Armor	ArmorBody	1	4
+Cold Resistant Plasteel Armor	PlasticArmorCold_3	Armor	ArmorBody	1	4
+Cold Resistant Plasteel Armor	PlasticArmorCold_4	Armor	ArmorBody	1	4
+Cold Resistant Plasteel Armor	PlasticArmorCold_5	Armor	ArmorBody	1	4
+Cold Resistant Plasteel Armor Schematic 1	Blueprint_PlasticArmorCold_2	Blueprint	Blueprint	9999	1
+Cold Resistant Plasteel Armor Schematic 2	Blueprint_PlasticArmorCold_3	Blueprint	Blueprint	9999	1
+Cold Resistant Plasteel Armor Schematic 3	Blueprint_PlasticArmorCold_4	Blueprint	Blueprint	9999	1
+Cold Resistant Plasteel Armor Schematic 4	Blueprint_PlasticArmorCold_5	Blueprint	Blueprint	9999	1
+Cold Resistant Refined Metal Armor	IronArmorCold	Armor	ArmorBody	1	3
+Cold Resistant Refined Metal Armor	IronArmorCold_2	Armor	ArmorBody	1	3
+Cold Resistant Refined Metal Armor	IronArmorCold_3	Armor	ArmorBody	1	3
+Cold Resistant Refined Metal Armor	IronArmorCold_4	Armor	ArmorBody	1	3
+Cold Resistant Refined Metal Armor	IronArmorCold_5	Armor	ArmorBody	1	3
+Cold Resistant Refined Metal Armor Schematic 1	Blueprint_IronArmorCold_2	Blueprint	Blueprint	9999	1
+Cold Resistant Refined Metal Armor Schematic 2	Blueprint_IronArmorCold_3	Blueprint	Blueprint	9999	1
+Cold Resistant Refined Metal Armor Schematic 3	Blueprint_IronArmorCold_4	Blueprint	Blueprint	9999	1
+Cold Resistant Refined Metal Armor Schematic 4	Blueprint_IronArmorCold_5	Blueprint	Blueprint	9999	1
+Cold-Resistant Ancient Armor	AncientArmorCold	Armor	ArmorBody	1	10
+Cold-Resistant Ancient Armor	AncientArmorCold_2	Armor	ArmorBody	1	10
+Cold-Resistant Ancient Armor	AncientArmorCold_3	Armor	ArmorBody	1	10
+Cold-Resistant Ancient Armor	AncientArmorCold_4	Armor	ArmorBody	1	10
+Cold-Resistant Ancient Armor	AncientArmorCold_5	Armor	ArmorBody	1	10
+Cold-Resistant Ancient Armor Schematic 1	Blueprint_AncientArmorCold_2	Blueprint	Blueprint	9999	1
+Cold-Resistant Ancient Armor Schematic 2	Blueprint_AncientArmorCold_3	Blueprint	Blueprint	9999	1
+Cold-Resistant Ancient Armor Schematic 3	Blueprint_AncientArmorCold_4	Blueprint	Blueprint	9999	1
+Cold-Resistant Ancient Armor Schematic 4	Blueprint_AncientArmorCold_5	Blueprint	Blueprint	9999	1
+Combat SMG	SkySubmachineGun	Weapon	WeaponAssaultRifle	1	10
+Combat SMG	SkySubmachineGun_2	Weapon	WeaponAssaultRifle	1	10
+Combat SMG	SkySubmachineGun_3	Weapon	WeaponAssaultRifle	1	10
+Combat SMG	SkySubmachineGun_4	Weapon	WeaponAssaultRifle	1	10
+Combat SMG	SkySubmachineGun_5	Weapon	WeaponAssaultRifle	1	10
+Combat SMG Ammo	SkySubmachineGunBullet	Ammo	ConsumeBullet	9999	10
+Combat SMG Schematic 1	Blueprint_SkySubmachineGun_2	Blueprint	Blueprint	9999	1
+Combat SMG Schematic 2	Blueprint_SkySubmachineGun_3	Blueprint	Blueprint	9999	1
+Combat SMG Schematic 3	Blueprint_SkySubmachineGun_4	Blueprint	Blueprint	9999	1
+Combat SMG Schematic 4	Blueprint_SkySubmachineGun_5	Blueprint	Blueprint	9999	1
+Common Egg	PalEgg_Normal_01	Material	MaterialPalEgg	1	1
+Common Egg	PalEgg_Normal_02	Material	MaterialPalEgg	1	1
+Common Shield	Shield_01	Armor	Shield	1	1
+Compound Bow	CompoundBow	Weapon	WeaponBow	1	3
+Compound Bow	CompoundBow_2	Weapon	WeaponBow	1	3
+Compound Bow	CompoundBow_3	Weapon	WeaponBow	1	3
+Compound Bow	CompoundBow_4	Weapon	WeaponBow	1	3
+Compound Bow	CompoundBow_5	Weapon	WeaponBow	1	3
+Compound Bow Schematic 1	Blueprint_CompoundBow_2	Blueprint	Blueprint	9999	1
+Compound Bow Schematic 2	Blueprint_CompoundBow_3	Blueprint	Blueprint	9999	1
+Compound Bow Schematic 3	Blueprint_CompoundBow_4	Blueprint	Blueprint	9999	1
+Compound Bow Schematic 4	Blueprint_CompoundBow_5	Blueprint	Blueprint	9999	1
+Computer	Computer	Material	MaterialProccessing	9999	4
+Copper Key	TreasureBoxKey01	Consume	ConsumeOther	9999	1
+Coralum Ingot	ManganeseIngot	Material	MaterialIngot	9999	4
+Coralum Ore	ManganeseOre	Material	MaterialOre	9999	1
+Core Eject Shotgun	OctaviaShotgun	Weapon	WeaponShotgun	1	4
+Core Eject Shotgun	OctaviaShotgun_2	Weapon	WeaponShotgun	1	4
+Core Eject Shotgun	OctaviaShotgun_3	Weapon	WeaponShotgun	1	4
+Core Eject Shotgun	OctaviaShotgun_4	Weapon	WeaponShotgun	1	4
+Core Eject Shotgun	OctaviaShotgun_5	Weapon	WeaponShotgun	1	4
+Core Eject Shotgun Schematic 1	Blueprint_OctaviaShotgun_2	Blueprint	Blueprint	9999	1
+Core Eject Shotgun Schematic 2	Blueprint_OctaviaShotgun_3	Blueprint	Blueprint	9999	1
+Core Eject Shotgun Schematic 3	Blueprint_OctaviaShotgun_4	Blueprint	Blueprint	9999	1
+Core Eject Shotgun Schematic 4	Blueprint_OctaviaShotgun_5	Blueprint	Blueprint	9999	1
+Corn Soup	CornSoup	Food	FoodVegetable	9999	1
+Corrosive Mist Mask	GasMask	Accessory	Accessory	1	10
+Corrosive Solvent	Corrosive_Solvent	Material	MaterialProccessing	9999	3
+Cotton Candy	Sweet	Food	FoodVegetable	9999	1
+Croajiro Cap	HeadEquip055	Armor	ArmorHead	1	99
+Crossbow	BowGun	Weapon	WeaponCrossbow	1	2
+Crossbow	BowGun_2	Weapon	WeaponCrossbow	1	2
+Crossbow	BowGun_3	Weapon	WeaponCrossbow	1	2
+Crossbow	BowGun_4	Weapon	WeaponCrossbow	1	2
+Crossbow	BowGun_5	Weapon	WeaponCrossbow	1	2
+Crossbow Schematic 1	Blueprint_BowGun_2	Blueprint	Blueprint	9999	1
+Crossbow Schematic 2	Blueprint_BowGun_3	Blueprint	Blueprint	9999	1
+Crossbow Schematic 3	Blueprint_BowGun_4	Blueprint	Blueprint	9999	1
+Crossbow Schematic 4	Blueprint_BowGun_5	Blueprint	Blueprint	9999	1
+Crown of Salvation	HeadEquip046	Armor	ArmorHead	1	99
+Crude Oil	CrudeOil	Material	MaterialOre	9999	1
+Cryogenic Coolant	Bio_Coolant	Material	MaterialProccessing	9999	3
+Cryolinx Ring	Accessory_Otomo_Ice_1	Accessory	Accessory	1	3
+Cryolinx Ring Schematic	Blueprint_Accessory_Otomo_Ice_1	Blueprint	Blueprint	9999	8
+Cryolinx Terra Bounty Token	BossDefeatReward_WhiteTiger_Ground	Essential	NONE	9999	1
+Curry	Curry_old	Food	FoodDishMeat	9999	3
+Curve Module	SphereModule_Curve	SphereModule	SphereModule	1	1
+Daedream's Necklace	SkillUnlock_DreamDemon	Essential	Essential_PalGear	999999	999
+Damp Egg	PalEgg_Water_01	Material	MaterialPalEgg	1	1
+Damp Egg	PalEgg_Water_02	Material	MaterialPalEgg	1	1
+Dandilord Hat	HeadEquip057	Armor	ArmorHead	1	99
+Dandilord's Petal	BossDefeatReward_FlowerPrince	Essential	NONE	9999	1
+Dark Awakening Crystal	PalAwakening_Dark	Consume	NONE	9999	10
+Dark Egg	PalEgg_Dark_01	Material	MaterialPalEgg	1	1
+Dark Egg	PalEgg_Dark_02	Material	MaterialPalEgg	1	1
+Dark Fragment	PalDarkParts	Material	MaterialMonster	9999	1
+Dark Grenade	FragGrenade_Dark	Weapon	WeaponThrowObject	9999	2
+Dark Radiant Gem	PalAwakening_Material_Dark	Material	MaterialMonster	9999	5
+Dark Skill Fruit: Apocalypse	SkillCard_Apocalypse	Consume	ConsumeWazaMachine	9999	1
+Dark Skill Fruit: Dark Arrow	SkillCard_DarkArrow	Consume	ConsumeWazaMachine	9999	1
+Dark Skill Fruit: Dark Cannon	SkillCard_DarkCanon	Consume	ConsumeWazaMachine	9999	1
+Dark Skill Fruit: Dark Laser	SkillCard_DarkLaser	Consume	ConsumeWazaMachine	9999	1
+Dark Skill Fruit: Dark Shot	SkillCard_GravityShot	Consume	ConsumeWazaMachine	9999	1
+Dark Skill Fruit: Dark Whisp	SkillCard_DarkLegion	Consume	ConsumeWazaMachine	9999	1
+Dark Skill Fruit: Nightmare Ball	SkillCard_ShadowBall	Consume	ConsumeWazaMachine	9999	1
+Dark Skill Fruit: Poison Blast	SkillCard_PoisonShot	Consume	ConsumeWazaMachine	9999	1
+Dark Skill Fruit: Poison Shower	SkillCard_BubbleShower	Consume	ConsumeWazaMachine	9999	1
+Dark Skill Fruit: Psycho Gravity	SkillCard_Psychokinesis	Consume	ConsumeWazaMachine	9999	1
+Dark Skill Fruit: Shadow Burst	SkillCard_DarkWave	Consume	ConsumeWazaMachine	9999	1
+Dark Skill Fruit: Spirit Flame	SkillCard_GhostFlame	Consume	ConsumeWazaMachine	9999	1
+Dark Skill Fruit: Umbral Surge	SkillCard_DarkPulse	Consume	ConsumeWazaMachine	9999	1
+Dark Support Whistle	Otomo_ElementBoost_Dark_1	Accessory	Accessory	1	2
+Dark Support Whistle	Otomo_ElementBoost_Dark_2	Accessory	Accessory	1	2
+Dark Support Whistle	Otomo_ElementBoost_Dark_3	Accessory	Accessory	1	2
+Dark Support Whistle Schematic	Blueprint_Otomo_ElementBoost_Dark_1_2	Blueprint	Blueprint	9999	8
+Dazemu Saddle	SkillUnlock_FeatherOstrich	Essential	Essential_PalGear	999999	0
+Dazzi Cloud	PalItem_RaijinDaughter	Material	MaterialMonster	9999	1
+Dazzi Hat	HeadEquip032	Armor	ArmorHead	1	1
+Dazzi Hat	HeadEquip032_2	Armor	ArmorHead	1	1
+Dazzi Hat	HeadEquip032_3	Armor	ArmorHead	1	1
+Dazzi Hat	HeadEquip032_4	Armor	ArmorHead	1	1
+Dazzi Hat	HeadEquip032_5	Armor	ArmorHead	1	1
+Dazzi Hat Schematic 1	Blueprint_HeadEquip032_1	Blueprint	Blueprint	9999	1
+Dazzi Hat Schematic 1	Blueprint_HeadEquip032_5	Blueprint	Blueprint	9999	1
+Dazzi Hat Schematic 2	Blueprint_HeadEquip032_2	Blueprint	Blueprint	9999	1
+Dazzi Hat Schematic 3	Blueprint_HeadEquip032_3	Blueprint	Blueprint	9999	1
+Dazzi Hat Schematic 4	Blueprint_HeadEquip032_4	Blueprint	Blueprint	9999	1
+Dazzi Noct Bounty Token	BossDefeatReward_RaijinDaughter_Water	Essential	NONE	9999	1
+Dazzi Noct's Necklace	SkillUnlock_RaijinDaughter_Water	Essential	Essential_PalGear	9999	999
+Dazzi's Necklace	SkillUnlock_RaijinDaughter	Essential	Essential_PalGear	999999	999
+Decal Gun 1	DecalGun_1	Weapon	WeaponHandgun	1	2
+Decal Gun 2	DecalGun_2	Weapon	WeaponHandgun	1	2
+Decal Gun 3	DecalGun_3	Weapon	WeaponHandgun	1	2
+Decal Gun 4	DecalGun_4	Weapon	WeaponHandgun	1	2
+Decal Gun 5	DecalGun_5	Weapon	WeaponHandgun	1	2
+Decal Ink	InkBullet	Ammo	ConsumeBullet	9999	2
+Decayed Ancient Relic	WorldTreeRelic_01	Material	MaterialMonster	9999	1
+Defense Pendant	Accessory_defense_1	Accessory	Accessory	1	2
+Defense Pendant	Accessory_defense_2	Accessory	Accessory	1	2
+Defense Pendant	Accessory_defense_3	Accessory	Accessory	1	2
+Defense Pendant Schematic	Blueprint_Accessory_defense_1_2	Blueprint	Blueprint	9999	8
+Defense Support Whistle	Otomo_Defense_up1	Accessory	Accessory	1	2
+Defense Support Whistle	Otomo_Defense_up2	Accessory	Accessory	1	2
+Defense Support Whistle	Otomo_Defense_up3	Accessory	Accessory	1	2
+Defense Support Whistle Schematic	Blueprint_Otomo_Defense_up1_2	Blueprint	Blueprint	9999	8
+Deluxe Bait	FishingBait_3	Consume	NONE	9999	1
+Depresso Armor	Player_Outfit_Kigurumi001	Armor	ArmorBody	1	99
+Depresso Effigy	Relic_07	Essential	Essential	9999	9
+Depresso Helmet	HeadEquip045	Armor	ArmorHead	1	99
+Design of Witch Hat No. 5	Blueprint_Head004_5	Blueprint	Blueprint	9999	1
+Design Plan 5 for the Crutchli Hat	Blueprint_Head013_5	Blueprint	Blueprint	9999	1
+Diamond	Diamond	Material	MaterialJewelry	9999	9
+Digtoise's Headband	SkillUnlock_DrillGame	Essential	Essential_PalGear	999999	999
+Dinossom Lux Bounty Token	BossDefeatReward_FlowerDinosaur_Electric	Essential	NONE	9999	1
+Dinossom Lux Saddle	SkillUnlock_FlowerDinosaur_Electric	Essential	Essential_PalGear	999999	0
+Dinossom Saddle	SkillUnlock_FlowerDinosaur	Essential	Essential_PalGear	999999	0
+Direhowl's Saddled Harness	SkillUnlock_Garm	Essential	Essential_PalGear	9999	0
+Disposable Implant: Babysitter	PalPassiveSkillChange_Consumable_MutationPal_Babysitter	Consume	NONE	9999	4
+Disposable Implant: Demon God	PalPassiveSkillChange_Consumable_PAL_ALLAttack_up3	Consume	NONE	9999	4
+Disposable Implant: Demonic Grasp	PalPassiveSkillChange_Consumable_WorldTree_CraftSpeed	Consume	NONE	9999	4
+Disposable Implant: Diamond Body	PalPassiveSkillChange_Consumable_Deffence_up3	Consume	NONE	9999	4
+Disposable Implant: Dimensional Leap	PalPassiveSkillChange_Consumable_WorldTree_MoveSpeed	Consume	NONE	9999	4
+Disposable Implant: Double-Edged Holy Sword	PalPassiveSkillChange_Consumable_WorldTree_ATK	Consume	NONE	9999	4
+Disposable Implant: Eternal Engine	PalPassiveSkillChange_Consumable_Stamina_Up_3	Consume	NONE	9999	4
+Disposable Implant: Eternal Flame	PalPassiveSkillChange_Consumable_EternalFlame	Consume	NONE	9999	99
+Disposable Implant: God of Destruction	PalPassiveSkillChange_Consumable_WorldTree_ATK_DEF	Consume	NONE	9999	4
+Disposable Implant: Heart of the Immovable King	PalPassiveSkillChange_Consumable_PAL_Sanity_Down_3	Consume	NONE	9999	4
+Disposable Implant: Heavily Armored	PalPassiveSkillChange_Consumable_MutationPal_ExplosionResist	Consume	NONE	9999	4
+Disposable Implant: Hermit	PalPassiveSkillChange_Consumable_WorldTree_Sanity	Consume	NONE	9999	4
+Disposable Implant: Idiosyncratic	PalPassiveSkillChange_Consumable_MutationPal_Mutant	Consume	NONE	9999	4
+Disposable Implant: Immortality	PalPassiveSkillChange_Consumable_MutationPal_Immortal	Consume	NONE	9999	4
+Disposable Implant: Invader	PalPassiveSkillChange_Consumable_Invader	Consume	NONE	9999	99
+Disposable Implant: King of the Waves	PalPassiveSkillChange_Consumable_SwimSpeed_up_3	Consume	NONE	9999	4
+Disposable Implant: Legend	PalPassiveSkillChange_Consumable_Legend	Consume	NONE	9999	99
+Disposable Implant: Lucky	PalPassiveSkillChange_Consumable_Rare	Consume	NONE	9999	99
+Disposable Implant: Lunker	PalPassiveSkillChange_Consumable_Nushi	Consume	NONE	9999	99
+Disposable Implant: Mastery of Fasting	PalPassiveSkillChange_Consumable_PAL_FullStomach_Down_3	Consume	NONE	9999	4
+Disposable Implant: Remarkable Craftsmanship	PalPassiveSkillChange_Consumable_CraftSpeed_up3	Consume	NONE	9999	4
+Disposable Implant: Sacred Flesh	PalPassiveSkillChange_Consumable_WorldTree_DEF	Consume	NONE	9999	4
+Disposable Implant: Savior	PalPassiveSkillChange_Consumable_Salvation	Consume	NONE	9999	99
+Disposable Implant: Siren of the Void	PalPassiveSkillChange_Consumable_Witch	Consume	NONE	9999	99
+Disposable Implant: Skymarcher	PalPassiveSkillChange_Consumable_RideJumpCount_Increase2	Consume	NONE	9999	4
+Disposable Implant: Swift	PalPassiveSkillChange_Consumable_MoveSpeed_up_3	Consume	NONE	9999	4
+Disposable Implant: Vampiric	PalPassiveSkillChange_Consumable_Vampire	Consume	NONE	9999	4
+Disposable Implant: World Tree's Bounty	PalPassiveSkillChange_Consumable_WorldTree_FullStomach	Consume	NONE	9999	4
+Divine Dragon's Baton	Otomo_ATDragon_ElementBoost_1	Accessory	Accessory	1	3
+Divine Dragon's Baton Schematic	Blueprint_Otomo_ATDragon_ElementBoost_1	Blueprint	Blueprint	9999	8
+Dog Coin	DogCoin	Material	MaterialJewelry	9999	4
+Dogen Emblem	Accessory_PPAT_1	Accessory	Accessory	1	3
+Dogen Emblem Schematic	Blueprint_Accessory_PPAT_1	Blueprint	Blueprint	9999	8
+Dormant Ancient Relic	WorldTreeRelic_02	Material	MaterialMonster	9999	1
+Double Air Dash Boots	Accessory_AirDash2	Accessory	Accessory	1	3
+Double Jump Boots	Accessory_JumpCount_Increase1	Accessory	Accessory	1	2
+Double-Barreled Shotgun	DoubleBarrelShotgun	Weapon	WeaponShotgun	1	3
+Double-Barreled Shotgun	DoubleBarrelShotgun_2	Weapon	WeaponShotgun	1	3
+Double-Barreled Shotgun	DoubleBarrelShotgun_3	Weapon	WeaponShotgun	1	3
+Double-Barreled Shotgun	DoubleBarrelShotgun_4	Weapon	WeaponShotgun	1	3
+Double-Barreled Shotgun	DoubleBarrelShotgun_5	Weapon	WeaponShotgun	1	3
+Double-Barreled Shotgun Schematic 1	Blueprint_DoubleBarrelShotgun_2	Blueprint	Blueprint	9999	1
+Double-Barreled Shotgun Schematic 2	Blueprint_DoubleBarrelShotgun_3	Blueprint	Blueprint	9999	1
+Double-Barreled Shotgun Schematic 3	Blueprint_DoubleBarrelShotgun_4	Blueprint	Blueprint	9999	1
+Double-Barreled Shotgun Schematic 4	Blueprint_DoubleBarrelShotgun_5	Blueprint	Blueprint	9999	1
+Dragon Awakening Crystal	PalAwakening_Dragon	Consume	NONE	9999	10
+Dragon Egg	PalEgg_Dragon_01	Material	MaterialPalEgg	1	1
+Dragon Egg	PalEgg_Dragon_02	Material	MaterialPalEgg	1	1
+Dragon Grenade	FragGrenade_Dragon	Weapon	WeaponThrowObject	9999	2
+Dragon Radiant Gem	PalAwakening_Material_Dragon	Material	MaterialMonster	9999	5
+Dragon Skill Fruit: Beam Slicer	SkillCard_BeamSlicer	Consume	ConsumeWazaMachine	9999	1
+Dragon Skill Fruit: Blast Cannon	SkillCard_BlastCanon	Consume	ConsumeWazaMachine	9999	1
+Dragon Skill Fruit: Charge Cannon	SkillCard_ChargeCanon	Consume	ConsumeWazaMachine	9999	1
+Dragon Skill Fruit: Comet	SkillCard_Commet	Consume	ConsumeWazaMachine	9999	1
+Dragon Skill Fruit: Dragon Breath	SkillCard_DragonBreath	Consume	ConsumeWazaMachine	9999	1
+Dragon Skill Fruit: Dragon Burst	SkillCard_DragonWave	Consume	ConsumeWazaMachine	9999	1
+Dragon Skill Fruit: Dragon Cannon	SkillCard_DragonCanon	Consume	ConsumeWazaMachine	9999	1
+Dragon Skill Fruit: Dragon Meteor	SkillCard_DragonMeteor	Consume	ConsumeWazaMachine	9999	1
+Dragon Support Whistle	Otomo_ElementBoost_Dragon_1	Accessory	Accessory	1	2
+Dragon Support Whistle	Otomo_ElementBoost_Dragon_2	Accessory	Accessory	1	2
+Dragon Support Whistle	Otomo_ElementBoost_Dragon_3	Accessory	Accessory	1	2
+Dragon Support Whistle Schematic	Blueprint_Otomo_ElementBoost_Dragon_1_2	Blueprint	Blueprint	9999	8
+Dragostrophe's Shotgun	SkillUnlock_BlackFurDragon	Essential	Essential_PalGear	999999	0
+Drone Launcher	DroneLauncher	Weapon	WeaponMelee	1	10
+Drone Launcher	DroneLauncher_2	Weapon	WeaponMelee	1	10
+Drone Launcher	DroneLauncher_3	Weapon	WeaponMelee	1	10
+Drone Launcher	DroneLauncher_4	Weapon	WeaponMelee	1	10
+Drone Launcher	DroneLauncher_5	Weapon	WeaponMelee	1	10
+Drone Launcher Schematic 1	Blueprint_DroneLauncher_2	Blueprint	Blueprint	9999	1
+Drone Launcher Schematic 2	Blueprint_DroneLauncher_3	Blueprint	Blueprint	9999	1
+Drone Launcher Schematic 3	Blueprint_DroneLauncher_4	Blueprint	Blueprint	9999	1
+Drone Launcher Schematic 4	Blueprint_DroneLauncher_5	Blueprint	Blueprint	9999	1
+Dualith Bounty Token	BossDefeatReward_GrassGolem	Essential	NONE	9999	1
+Dualith Noct Bounty Token	BossDefeatReward_GrassGolem_Dark	Essential	NONE	9999	1
+Dualith Noct Saddle	SkillUnlock_GrassGolem_Dark	Essential	Essential_PalGear	9999	0
+Dualith Saddle	SkillUnlock_GrassGolem	Essential	Essential_PalGear	9999	0
+Dumud Bounty Token	BossDefeatReward_LazyCatfish	Essential	NONE	9999	1
+Dumud Chowder	Chowder	Food	FoodDishFish	9999	3
+Dumud Helm	HeadEquip030	Armor	ArmorHead	1	99
+Dung	Unko_S	Material	MaterialJewelry	9999	1
+Dynamoff Bounty Token	BossDefeatReward_ThunderFluffyBird	Essential	NONE	9999	1
+Dynamoff Saddle	SkillUnlock_ThunderFluffyBird	Essential	Essential_PalGear	9999	0
+Earth Emperor's Baton	Otomo_ATEarth_ElementBoost_1	Accessory	Accessory	1	3
+Earth Emperor's Baton Schematic	Blueprint_Otomo_ATEarth_ElementBoost_1	Blueprint	Blueprint	9999	8
+Echoing Flute	WhaleWhistle	Essential	Essential_UnlockPlayerFuture	9999	1
+Egg	Egg	Food	FoodMeat	9999	1
+Eidrolon Bounty Token	BossDefeatReward_GhostDragon	Essential	NONE	9999	1
+Eidrolon Ignis Saddle	SkillUnlock_GhostDragon_Fire	Essential	Essential_PalGear	9999	0
+Eidrolon Saddle	SkillUnlock_GhostDragon	Essential	Essential_PalGear	9999	0
+Eikthyrdeer Loco Moco	DeerLocoMoco	Food	FoodDishMeat	9999	3
+Eikthyrdeer Saddle	SkillUnlock_Deer	Essential	Essential_PalGear	999999	0
+Eikthyrdeer Stew	DeerStew	Food	FoodDishMeat	9999	3
+Eikthyrdeer Terra Saddle	SkillUnlock_Deer_Ground	Essential	Essential_PalGear	999999	0
+Eikthyrdeer Venison	Meat_Deer	Food	FoodMeat	9999	2
+Electric Awakening Crystal	PalAwakening_Electric	Consume	NONE	9999	10
+Electric Egg	PalEgg_Electricity_01	Material	MaterialPalEgg	1	1
+Electric Egg	PalEgg_Electricity_02	Material	MaterialPalEgg	1	1
+Electric Organ	ElectricOrgan	Material	MaterialMonster	9999	1
+Electric Radiant Gem	PalAwakening_Material_Electric	Material	MaterialMonster	9999	5
+Electric Skill Fruit: Electric Ball	SkillCard_ThunderBall	Consume	ConsumeWazaMachine	9999	1
+Electric Skill Fruit: Lightning Bolt	SkillCard_Thunderbolt	Consume	ConsumeWazaMachine	9999	1
+Electric Skill Fruit: Lightning Streak	SkillCard_LineThunder	Consume	ConsumeWazaMachine	9999	1
+Electric Skill Fruit: Lightning Strike	SkillCard_LightningStrike	Consume	ConsumeWazaMachine	9999	1
+Electric Skill Fruit: Lock-on Laser	SkillCard_LockonLaser	Consume	ConsumeWazaMachine	9999	1
+Electric Skill Fruit: Plasma Funnel	SkillCard_ThunderFunnel	Consume	ConsumeWazaMachine	9999	1
+Electric Skill Fruit: Shockwave	SkillCard_ElecWave	Consume	ConsumeWazaMachine	9999	1
+Electric Skill Fruit: Spark Blast	SkillCard_SpreadPulse	Consume	ConsumeWazaMachine	9999	1
+Electric Skill Fruit: Thunder Rain	SkillCard_ThunderRain	Consume	ConsumeWazaMachine	9999	1
+Electric Skill Fruit: Thunder Spear	SkillCard_ThunderSpear	Consume	ConsumeWazaMachine	9999	1
+Electric Skill Fruit: Thunderstorm	SkillCard_ThunderStorm	Consume	ConsumeWazaMachine	9999	1
+Electric Skill Fruit: Tri-Lightning	SkillCard_ThreeThunder	Consume	ConsumeWazaMachine	9999	1
+Electric Skill Fruit: TriSpark	SkillCard_TriSpark	Consume	ConsumeWazaMachine	9999	1
+Electric Support Whistle	Otomo_ElementBoost_Electricity_1	Accessory	Accessory	1	2
+Electric Support Whistle	Otomo_ElementBoost_Electricity_2	Accessory	Accessory	1	2
+Electric Support Whistle	Otomo_ElementBoost_Electricity_3	Accessory	Accessory	1	2
+Electric Support Whistle Schematic	Blueprint_Otomo_ElementBoost_Electricity_1_2	Blueprint	Blueprint	9999	8
+Elizabee Bounty Token	BossDefeatReward_QueenBee	Essential	NONE	9999	1
+Elizabee's Staff	Spear_QueenBee	Weapon	WeaponMelee	1	99
+Elphidran Aqua Saddle	SkillUnlock_FairyDragon_Water	Essential	Essential_PalGear	999999	0
+Elphidran Bounty Token	BossDefeatReward_FairyDragon	Essential	NONE	9999	1
+Elphidran Ring	Accessory_Otomo_Dargon_1	Accessory	Accessory	1	3
+Elphidran Ring Schematic	Blueprint_Accessory_Otomo_Dargon_1	Blueprint	Blueprint	9999	8
+Elphidran Saddle	SkillUnlock_FairyDragon	Essential	Essential_PalGear	999999	0
+Emerald	Eemerald	Material	MaterialJewelry	9999	7
+en text's Power Converter	SkillUnlock_DarkMutant	Essential	Essential_PalGear	999999	0
+Energy Cartridge	LaserBullet	Ammo	ConsumeBullet	9999	4
+Energy Shotgun	EnergyShotgun	Weapon	WeaponShotgun	1	5
+Energy Shotgun	EnergyShotgun_2	Weapon	WeaponShotgun	1	5
+Energy Shotgun	EnergyShotgun_3	Weapon	WeaponShotgun	1	5
+Energy Shotgun	EnergyShotgun_4	Weapon	WeaponShotgun	1	5
+Energy Shotgun	EnergyShotgun_5	Weapon	WeaponShotgun	1	5
+Energy Shotgun Ammo	EnergyShotgunBullet	Ammo	ConsumeBullet	9999	5
+Energy Shotgun Schematic 1	Blueprint_EnergyShotgun_2	Blueprint	Blueprint	9999	1
+Energy Shotgun Schematic 2	Blueprint_EnergyShotgun_3	Blueprint	Blueprint	9999	1
+Energy Shotgun Schematic 3	Blueprint_EnergyShotgun_4	Blueprint	Blueprint	9999	1
+Energy Shotgun Schematic 4	Blueprint_EnergyShotgun_5	Blueprint	Blueprint	9999	1
+Enhanced Hip Lantern	Lantern_High	Essential	NONE	9999	3
+Enhanced Lily's Spear	Spear_ForestBoss2	Weapon	WeaponMelee	1	5
+Enhanced Lily's Spear	Spear_ForestBoss2_5	Weapon	WeaponMelee	1	5
+Enhanced Lily's Spear Schematic 4	Blueprint_Spear_ForestBoss2_5	Blueprint	Blueprint	9999	1
+Excalibur	YakushimaBlade004	Weapon	WeaponMelee	1	3
+Excalibur	YakushimaBlade004_2	Weapon	WeaponMelee	1	3
+Excalibur	YakushimaBlade004_3	Weapon	WeaponMelee	1	3
+Excalibur	YakushimaBlade004_4	Weapon	WeaponMelee	1	3
+Excalibur	YakushimaBlade004_5	Weapon	WeaponMelee	1	3
+Excalibur Schematic	Blueprint_YakushimaBlade004	Blueprint	Blueprint	9999	1
+Excalibur Schematic 1	Blueprint_YakushimaBlade004_2	Blueprint	Blueprint	9999	1
+Excalibur Schematic 2	Blueprint_YakushimaBlade004_3	Blueprint	Blueprint	9999	1
+Excalibur Schematic 3	Blueprint_YakushimaBlade004_4	Blueprint	Blueprint	9999	1
+Excalibur Schematic 4	Blueprint_YakushimaBlade004_5	Blueprint	Blueprint	9999	1
+Exotic Sphere	PalSphere_Exotic	SpecialWeapon	SPWeaponCaptureBall	9999	7
+Exploration Cap Schematic 1	Blueprint_Head009_1	Blueprint	Blueprint	9999	1
+Exploration Cap Schematic 2	Blueprint_Head009_2	Blueprint	Blueprint	9999	1
+Exploration Cap Schematic 3	Blueprint_Head009_3	Blueprint	Blueprint	9999	1
+Exploration Cap Schematic 4	Blueprint_Head009_4	Blueprint	Blueprint	9999	1
+Explorer Cap	Head009	Armor	ArmorHead	1	1
+Explorer Cap	Head009_2	Armor	ArmorHead	1	1
+Explorer Cap	Head009_3	Armor	ArmorHead	1	1
+Explorer Cap	Head009_4	Armor	ArmorHead	1	1
+Explorer Cap	Head009_5	Armor	ArmorHead	1	1
+Explosion-Resistant Fiber	UniqueMaterial_Mothman	Material	MaterialMonster	9999	3
+Explosion-Resistant Undershirt	Accessory_ExplosionResist	Accessory	Accessory	1	10
+Extra Weapon Holster	UnlockEquipmentSlot_Weapon_01	Essential	Essential_UnlockPlayerFuture	9999	1
+Extra Weapon Holster 2	UnlockEquipmentSlot_Weapon_02	Essential	Essential_UnlockPlayerFuture	9999	1
+Extravagant Vegetable Cake	Cake04	Food	FoodDishVegetable	9999	4
+Eye of Cthulhu Mask	YakushimaHeadEquip006	Armor	ArmorHead	1	99
+Faded Schematic	Blueprint_WhaleWhistle	Essential	Blueprint	9999	1
+Faleris Aqua Bounty Token	BossDefeatReward_Horus_Water	Essential	NONE	9999	1
+Faleris Aqua Ring	Accessory_Otomo_Water_1	Accessory	Accessory	1	3
+Faleris Aqua Ring Schematic	Blueprint_Accessory_Otomo_Water_1	Blueprint	Blueprint	9999	8
+Faleris Aqua Saddle	SkillUnlock_Horus_Water	Essential	Essential_PalGear	9999	0
+Faleris Ring	Accessory_Otomo_Fire_2	Accessory	Accessory	1	3
+Faleris Ring Schematic	Blueprint_Accessory_Otomo_Fire_2	Blueprint	Blueprint	9999	8
+Faleris Saddle	SkillUnlock_Horus	Essential	Essential_PalGear	999999	0
+Fang	Fang	Material	MaterialMonster	9999	1
+Fang	Fang2	Material	MaterialMonster	9999	1
+Farmer's Special Dish	QuestItem_Farmer_1	Consume	ConsumeOther	1	1
+Farming Hat	Head011	Armor	ArmorHead	1	1
+Farming Hat	Head011_2	Armor	ArmorHead	1	1
+Farming Hat	Head011_3	Armor	ArmorHead	1	1
+Farming Hat	Head011_4	Armor	ArmorHead	1	1
+Farming Hat	Head011_5	Armor	ArmorHead	1	1
+Farming Hat Schematic 1	Blueprint_Head011_1	Blueprint	Blueprint	9999	1
+Farming Hat Schematic 2	Blueprint_Head011_2	Blueprint	Blueprint	9999	1
+Farming Hat Schematic 3	Blueprint_Head011_3	Blueprint	Blueprint	9999	1
+Farming Hat Schematic 4	Blueprint_Head011_4	Blueprint	Blueprint	9999	1
+Feathered Hair Band	FurHelmet	Armor	ArmorHead	1	1
+Feathered Hair Band	FurHelmet_2	Armor	ArmorHead	1	1
+Feathered Hair Band	FurHelmet_3	Armor	ArmorHead	1	1
+Feathered Hair Band	FurHelmet_4	Armor	ArmorHead	1	1
+Feathered Hair Band	FurHelmet_5	Armor	ArmorHead	1	1
+Feathered Hair Band Schematic 1	Blueprint_FurHelmet_2	Blueprint	Blueprint	9999	1
+Feathered Hair Band Schematic 2	Blueprint_FurHelmet_3	Blueprint	Blueprint	9999	1
+Feathered Hair Band Schematic 3	Blueprint_FurHelmet_4	Blueprint	Blueprint	9999	1
+Feathered Hair Band Schematic 4	Blueprint_FurHelmet_5	Blueprint	Blueprint	9999	1
+Felbat Bounty Token	BossDefeatReward_CatVampire	Essential	NONE	9999	1
+Fenglope Bounty Token	BossDefeatReward_FengyunDeeper	Essential	NONE	9999	1
+Fenglope Lux Bounty Token	BossDefeatReward_FengyunDeeper_Electric	Essential	NONE	9999	1
+Fenglope Lux Ring	Accessory_Otomo_Electricity_1	Accessory	Accessory	1	3
+Fenglope Lux Ring Schematic	Blueprint_Accessory_Otomo_Electricity_1	Blueprint	Blueprint	9999	8
+Fenglope Lux Saddle	SkillUnlock_FengyunDeeper_Electric	Essential	Essential_PalGear	9999	0
+Fenglope Saddle	SkillUnlock_FengyunDeeper	Essential	Essential_PalGear	999999	0
+Fiber	Fiber	Material	MaterialWood	9999	1
+Fire Arrow	Arrow_Fire	Ammo	ConsumeBullet	9999	1
+Fire Arrow Crossbow	BowGun_Fire	Weapon	WeaponCrossbow	1	999
+Fire Arrow Crossbow	BowGun_Fire_2	Weapon	WeaponCrossbow	1	999
+Fire Arrow Crossbow	BowGun_Fire_3	Weapon	WeaponCrossbow	1	999
+Fire Arrow Crossbow	BowGun_Fire_4	Weapon	WeaponCrossbow	1	999
+Fire Arrow Crossbow	BowGun_Fire_5	Weapon	WeaponCrossbow	1	999
+Fire Arrow Crossbow Schematic 1	Blueprint_BowGun_Fire_2	Blueprint	Blueprint	9999	999
+Fire Arrow Crossbow Schematic 2	Blueprint_BowGun_Fire_3	Blueprint	Blueprint	9999	999
+Fire Arrow Crossbow Schematic 3	Blueprint_BowGun_Fire_4	Blueprint	Blueprint	9999	999
+Fire Arrow Crossbow Schematic 4	Blueprint_BowGun_Fire_5	Blueprint	Blueprint	9999	999
+Fire Awakening Crystal	PalAwakening_Fire	Consume	NONE	9999	10
+Fire Bow	Bow_Fire	Weapon	WeaponBow	1	999
+Fire Radiant Gem	PalAwakening_Material_Fire	Material	MaterialMonster	9999	5
+Fire Skill Fruit: Fire Ball	SkillCard_FireBall	Consume	ConsumeWazaMachine	9999	1
+Fire Skill Fruit: Flame Funnel	SkillCard_FlameFunnel	Consume	ConsumeWazaMachine	9999	1
+Fire Skill Fruit: Flame Wall	SkillCard_FlameWall	Consume	ConsumeWazaMachine	9999	1
+Fire Skill Fruit: Flare Arrow	SkillCard_FlareArrow	Consume	ConsumeWazaMachine	9999	1
+Fire Skill Fruit: Flare Storm	SkillCard_FlareTornado	Consume	ConsumeWazaMachine	9999	1
+Fire Skill Fruit: Ignis Blast	SkillCard_FireBlast	Consume	ConsumeWazaMachine	9999	1
+Fire Skill Fruit: Ignis Breath	SkillCard_Flamethrower	Consume	ConsumeWazaMachine	9999	1
+Fire Skill Fruit: Ignis Rage	SkillCard_Inferno	Consume	ConsumeWazaMachine	9999	1
+Fire Skill Fruit: Spirit Fire	SkillCard_FireSeed	Consume	ConsumeWazaMachine	9999	1
+Fire Skill Fruit: Volcanic Rain	SkillCard_Eruption	Consume	ConsumeWazaMachine	9999	1
+Fire Support Whistle	Otomo_ElementBoost_Fire_1	Accessory	Accessory	1	2
+Fire Support Whistle	Otomo_ElementBoost_Fire_2	Accessory	Accessory	1	2
+Fire Support Whistle	Otomo_ElementBoost_Fire_3	Accessory	Accessory	1	2
+Fire Support Whistle Schematic	Blueprint_Otomo_ElementBoost_Fire_1_2	Blueprint	Blueprint	9999	8
+Fishing Magnet	Salvage_TreasureBoxKey01	Consume	ConsumeOther	9999	1
+Fishing Rod Good	FishingRod_Good	Weapon	WeaponMelee	1	1
+Fishing Rod Legendary	FishingRod_Legendary	Weapon	WeaponMelee	1	1
+Fishing Rod Old	FishingRod_Old	Weapon	WeaponMelee	1	1
+Fishing Rod Super	FishingRod_Super	Weapon	WeaponMelee	1	1
+Five Shot Bow	Bow_Fifth	Weapon	WeaponBow	1	1
+Flame Emperor's Baton	Otomo_ATFire_ElementBoost_1	Accessory	Accessory	1	3
+Flame Emperor's Baton Schematic	Blueprint_Otomo_ATFire_ElementBoost_1	Blueprint	Blueprint	9999	8
+Flame Organ	FireOrgan	Material	MaterialMonster	9999	1
+FlameThrower	FlameThrower	Weapon	WeaponFlameThrower	1	4
+FlameThrower	FlameThrower_2	Weapon	WeaponFlameThrower	1	4
+FlameThrower	FlameThrower_3	Weapon	WeaponFlameThrower	1	4
+FlameThrower	FlameThrower_4	Weapon	WeaponFlameThrower	1	4
+FlameThrower	FlameThrower_5	Weapon	WeaponFlameThrower	1	4
+Flamethrower Fuel	FlamethrowerBullet	Ammo	ConsumeBullet	9999	4
+Flamethrower Schematic 1	Blueprint_FlameThrower_2	Blueprint	Blueprint	9999	1
+Flamethrower Schematic 2	Blueprint_FlameThrower_3	Blueprint	Blueprint	9999	1
+Flamethrower Schematic 3	Blueprint_FlameThrower_4	Blueprint	Blueprint	9999	1
+Flamethrower Schematic 4	Blueprint_FlameThrower_5	Blueprint	Blueprint	9999	1
+Flaracle Bounty Token	BossDefeatReward_FoxExorcist	Essential	NONE	9999	1
+Flopie's Necklace	SkillUnlock_FlowerRabbit	Essential	Essential_PalGear	999999	999
+Flour	Flour	Food	FoodVegetable	9999	1
+Foxicle Bounty Token	BossDefeatReward_IceFox	Essential	NONE	9999	1
+Foxparks Cryst Bounty Token	BossDefeatReward_Kitsunebi_Ice	Essential	NONE	9999	1
+Foxparks Cryst's Harness	SkillUnlock_Kitsunebi_Ice	Essential	Essential_PalGear	9999	0
+Foxparks' Harness	SkillUnlock_Kitsunebi	Essential	Essential_PalGear	999999	0
+Frag Grenade	FragGrenade	Weapon	WeaponThrowObject	9999	2
+Frag Grenade Mk2	FragGrenade_Super	Weapon	WeaponThrowObject	9999	2
+Free Pal Alliance Banner Schematic	Blueprint_ConservationGroupBannerB	Blueprint	Blueprint	9999	1
+Free Pal Alliance Flag Schematic	Blueprint_ConservationGroupBannerA	Blueprint	Blueprint	9999	1
+French Fries	PotatoChips	Food	FoodDishVegetable	9999	2
+Fried Chikipi	FriedChicken	Food	FoodDishMeat	9999	3
+Fried Egg	FriedEggs	Food	FoodDishMeat	9999	1
+Fried Gloopie Balls	OctopusGirl_Takoyaki	Food	FoodDishFish	9999	2
+Fried Kelpsea	FriedKelpie	Food	FoodDishFish	9999	3
+Frostallion Bounty Token	BossDefeatReward_IceHorse	Essential	NONE	9999	1
+Frostallion Noct Bounty Token	BossDefeatReward_IceHorse_Dark	Essential	NONE	9999	1
+Frostallion Noct Saddle	SkillUnlock_IceHorse_Dark	Essential	Essential_PalGear	999999	0
+Frostallion Saddle	SkillUnlock_IceHorse	Essential	Essential_PalGear	999999	0
+Frostallion's Talisman	Otomo_DFIce_ElementBoost_1	Accessory	Accessory	1	3
+Frostallion's Talisman Schematic	Blueprint_Otomo_DFIce_ElementBoost_1	Blueprint	Blueprint	9999	8
+Frozen Egg	PalEgg_Ice_01	Material	MaterialPalEgg	1	1
+Frozen Egg	PalEgg_Ice_02	Material	MaterialPalEgg	1	1
+Futuristic Technical Manual	TechnologyBook_G3	Consume	ConsumeTechnologyBook	9999	5
+Galeclaw Nikujaga	MeatAndPotatoes	Food	FoodDishMeat	9999	4
+Galeclaw Poultry	Meat_Eagle	Food	FoodMeat	9999	1
+Galeclaw's Gloves	SkillUnlock_Eagle	Essential	Essential_PalGear	999999	999
+Gatling Gun	GatlingGun	Weapon	WeaponGatlingGun	1	1
+Gatling Gun	GatlingGun_2	Weapon	WeaponGatlingGun	1	1
+Gatling Gun	GatlingGun_3	Weapon	WeaponGatlingGun	1	1
+Gatling Gun	GatlingGun_4	Weapon	WeaponGatlingGun	1	1
+Gatling Gun	GatlingGun_5	Weapon	WeaponGatlingGun	1	1
+Gatling Gun Ammo	GatlingBullet	Ammo	ConsumeBullet	9999	4
+Gatling Gun Schematic 1	Blueprint_GatlingGun_2	Blueprint	Blueprint	9999	1
+Gatling Gun Schematic 2	Blueprint_GatlingGun_3	Blueprint	Blueprint	9999	1
+Gatling Gun Schematic 3	Blueprint_GatlingGun_4	Blueprint	Blueprint	9999	1
+Gatling Gun Schematic 4	Blueprint_GatlingGun_5	Blueprint	Blueprint	9999	1
+Ghangler Accessory	HeadEquip059	Armor	ArmorHead	1	99
+Ghangler Ignis Saddle	SkillUnlock_GhostAnglerfish_Fire	Essential	Essential_PalGear	9999	0
+Ghangler Saddle	SkillUnlock_GhostAnglerfish	Essential	Essential_PalGear	9999	0
+Giant Feed Bag	AutoMealPouch_Tier5	Essential	Essential_UnlockPlayerFuture	9999	3
+Giant Pal Soul	PalUpgradeStone4	Material	MaterialMonster	9999	2
+Giant Pouch	AdditionalInventory_004	Essential	NONE	9999	4
+Giga Glider	Glider_Super	Glider	Glider	1	3
+Giga Grappling Gun	GrapplingGun3	Weapon	WeaponGrapplingGun	1	3
+Giga Shield	Shield_03	Armor	Shield	1	3
+Giga Sphere	PalSphere_Giga	SpecialWeapon	SPWeaponCaptureBall	9999	3
+Gildane Bounty Token	BossDefeatReward_GoldenHorse	Essential	NONE	9999	1
+Gildane Saddle	SkillUnlock_GoldenHorse	Essential	Essential_PalGear	999999	0
+Glistening Ancient Relic	WorldTreeRelic_05	Material	MaterialMonster	9999	1
+Gloopie Hat	HeadEquip052	Armor	ArmorHead	1	99
+Gloopie Tentacle	Meat_OctopusGirl	Food	FoodMeat	9999	3
+Glowing Ancient Relic	WorldTreeRelic_04	Material	MaterialMonster	9999	1
+Gold Coin	Money	Material	Money	99999999	1
+Gold Key	TreasureBoxKey03	Consume	ConsumeOther	9999	1
+Golden Crown	Head002	Armor	ArmorHead	1	1
+Golden Crown	Head002_2	Armor	ArmorHead	1	1
+Golden Crown	Head002_3	Armor	ArmorHead	1	1
+Golden Crown	Head002_4	Armor	ArmorHead	1	1
+Golden Crown	Head002_5	Armor	ArmorHead	1	1
+Golden Crown Schematic 1	Blueprint_Head002_1	Blueprint	Blueprint	9999	1
+Golden Crown Schematic 2	Blueprint_Head002_2	Blueprint	Blueprint	9999	1
+Golden Crown Schematic 3	Blueprint_Head002_3	Blueprint	Blueprint	9999	1
+Golden Crown Schematic 4	Blueprint_Head002_4	Blueprint	Blueprint	9999	1
+Gorgeous Ancient Relic	WorldTreeRelic_03	Material	MaterialMonster	9999	1
+Graduation Cap	Head010	Armor	ArmorHead	1	1
+Graduation Cap	Head010_2	Armor	ArmorHead	1	1
+Graduation Cap	Head010_3	Armor	ArmorHead	1	1
+Graduation Cap	Head010_4	Armor	ArmorHead	1	1
+Graduation Cap	Head010_5	Armor	ArmorHead	1	1
+Graduation Cap Schematic 1	Blueprint_Head010_1	Blueprint	Blueprint	9999	1
+Graduation Cap Schematic 2	Blueprint_Head010_2	Blueprint	Blueprint	9999	1
+Graduation Cap Schematic 3	Blueprint_Head010_3	Blueprint	Blueprint	9999	1
+Graduation Cap Schematic 4	Blueprint_Head010_4	Blueprint	Blueprint	9999	1
+Grape	Grape	Food	FoodVegetable	9999	1
+Grappling Gun	GrapplingGun	Weapon	WeaponGrapplingGun	1	1
+Grass Awakening Crystal	PalAwakening_Grass	Consume	NONE	9999	10
+Grass Grenade	FragGrenade_Leaf	Weapon	WeaponThrowObject	9999	2
+Grass Radiant Gem	PalAwakening_Material_Grass	Material	MaterialMonster	9999	5
+Grass Skill Fruit: Circle Vine	SkillCard_RootLance	Consume	ConsumeWazaMachine	9999	1
+Grass Skill Fruit: Crosswind	SkillCard_CrossWind	Consume	ConsumeWazaMachine	9999	1
+Grass Skill Fruit: Grass Tornado	SkillCard_GrassTornado	Consume	ConsumeWazaMachine	9999	1
+Grass Skill Fruit: Multicutter	SkillCard_SpecialCutter	Consume	ConsumeWazaMachine	9999	1
+Grass Skill Fruit: Reflect Leaf	SkillCard_ReflectiveShuriken	Consume	ConsumeWazaMachine	9999	1
+Grass Skill Fruit: Seed Machine Gun	SkillCard_SeedMachinegun	Consume	ConsumeWazaMachine	9999	1
+Grass Skill Fruit: Seed Mine	SkillCard_SeedMine	Consume	ConsumeWazaMachine	9999	1
+Grass Skill Fruit: Solar Blast	SkillCard_SolarBeam	Consume	ConsumeWazaMachine	9999	1
+Grass Skill Fruit: Spine Vine	SkillCard_RootAttack	Consume	ConsumeWazaMachine	9999	1
+Grass Skill Fruit: Wind Blast	SkillCard_WindBurst	Consume	ConsumeWazaMachine	9999	1
+Grass Skill Fruit: Wind Cutter	SkillCard_WindCutter	Consume	ConsumeWazaMachine	9999	1
+Grass Support Whistle	Otomo_ElementBoost_Leaf_1	Accessory	Accessory	1	2
+Grass Support Whistle	Otomo_ElementBoost_Leaf_2	Accessory	Accessory	1	2
+Grass Support Whistle	Otomo_ElementBoost_Leaf_3	Accessory	Accessory	1	2
+Grass Support Whistle Schematic	Blueprint_Otomo_ElementBoost_Leaf_1_2	Blueprint	Blueprint	9999	8
+Gratin	Gratin	Food	FoodDishVegetable	9999	3
+Grenade Ammo	GrenadeBullet	Ammo	ConsumeBullet	9999	4
+Grenade Launcher	GrenadeLauncher	Weapon	WeaponRocketLauncher	1	4
+Grenade Launcher	GrenadeLauncher_2	Weapon	WeaponRocketLauncher	1	4
+Grenade Launcher	GrenadeLauncher_3	Weapon	WeaponRocketLauncher	1	4
+Grenade Launcher	GrenadeLauncher_4	Weapon	WeaponRocketLauncher	1	4
+Grenade Launcher	GrenadeLauncher_5	Weapon	WeaponRocketLauncher	1	4
+Grenade Launcher Schematic 1	Blueprint_GrenadeLauncher_2	Blueprint	Blueprint	9999	1
+Grenade Launcher Schematic 2	Blueprint_GrenadeLauncher_3	Blueprint	Blueprint	9999	1
+Grenade Launcher Schematic 3	Blueprint_GrenadeLauncher_4	Blueprint	Blueprint	9999	1
+Grenade Launcher Schematic 4	Blueprint_GrenadeLauncher_5	Blueprint	Blueprint	9999	1
+Grilled Chikipi	BakedMeat_ChickenPal	Food	FoodDishMeat	9999	1
+Grilled Fish	GrilledFish	Food	FoodDishFish	9999	1
+Grilled Galeclaw	BakedMeat_Eagle	Food	FoodDishMeat	9999	1
+Grilled Kelpsea	BakedMeat_Kelpie	Food	FoodDishFish	9999	1
+Grilled Lamball	GenghisKhan	Food	FoodDishMeat	9999	2
+Grilled Meat	GrilledMeat	Food	FoodDishMeat	9999	1
+Grinning Curly Hat Blueprint 5	Blueprint_Head014_5	Blueprint	Blueprint	9999	1
+Grinning Tocotoco Cap	Head014	Armor	ArmorHead	1	1
+Grinning Tocotoco Cap	Head014_2	Armor	ArmorHead	1	1
+Grinning Tocotoco Cap	Head014_3	Armor	ArmorHead	1	1
+Grinning Tocotoco Cap	Head014_4	Armor	ArmorHead	1	1
+Grinning Tocotoco Cap	Head014_5	Armor	ArmorHead	1	1
+Grinning Tocotoco Cap Schematic 1	Blueprint_Head014_1	Blueprint	Blueprint	9999	1
+Grinning Tocotoco Cap Schematic 2	Blueprint_Head014_2	Blueprint	Blueprint	9999	1
+Grinning Tocotoco Cap Schematic 3	Blueprint_Head014_3	Blueprint	Blueprint	9999	1
+Grinning Tocotoco Cap Schematic 4	Blueprint_Head014_4	Blueprint	Blueprint	9999	1
+Grintale Bounty Token	BossDefeatReward_NaughtyCat	Essential	NONE	9999	1
+Grintale Saddle	SkillUnlock_NaughtyCat	Essential	Essential_PalGear	999999	0
+Grizzbolt Bounty Token	BossDefeatReward_ElecPanda	Essential	NONE	9999	1
+Grizzbolt's Minigun	SkillUnlock_ElecPanda	Essential	Essential_PalGear	999999	0
+Ground Awakening Crystal	PalAwakening_Ground	Consume	NONE	9999	10
+Ground Grenade	FragGrenade_Ground	Weapon	WeaponThrowObject	9999	2
+Ground Radiant Gem	PalAwakening_Material_Ground	Material	MaterialMonster	9999	5
+Ground Skill Fruit: Bog Blast	SkillCard_MudShot	Consume	ConsumeWazaMachine	9999	1
+Ground Skill Fruit: Rock Lance	SkillCard_RockLance	Consume	ConsumeWazaMachine	9999	1
+Ground Skill Fruit: Rockburst	SkillCard_Tremor	Consume	ConsumeWazaMachine	9999	1
+Ground Skill Fruit: Rocky Impact	SkillCard_RockBeat	Consume	ConsumeWazaMachine	9999	1
+Ground Skill Fruit: Sand Tornado	SkillCard_SandTornado	Consume	ConsumeWazaMachine	9999	1
+Ground Skill Fruit: Sand Twister	SkillCard_SandTwister	Consume	ConsumeWazaMachine	9999	1
+Ground Skill Fruit: Stone Blast	SkillCard_StoneShotgun	Consume	ConsumeWazaMachine	9999	1
+Ground Skill Fruit: Stone Cannon	SkillCard_ThrowRock	Consume	ConsumeWazaMachine	9999	1
+Ground Support Whistle	Otomo_ElementBoost_Earth_1	Accessory	Accessory	1	2
+Ground Support Whistle	Otomo_ElementBoost_Earth_2	Accessory	Accessory	1	2
+Ground Support Whistle	Otomo_ElementBoost_Earth_3	Accessory	Accessory	1	2
+Ground Support Whistle Schematic	Blueprint_Otomo_ElementBoost_Earth_1_2	Blueprint	Blueprint	9999	8
+Growth Acceleration Bell	Otomo_PalExp_Increase_1	Accessory	Accessory	1	2
+Growth Acceleration Bell	Otomo_PalExp_Increase_2	Accessory	Accessory	1	2
+Growth Acceleration Bell	Otomo_PalExp_Increase_3	Accessory	Accessory	1	2
+Growth Acceleration Bell Schematic	Blueprint_Otomo_PalExp_Increase_1_2	Blueprint	Blueprint	9999	8
+Guided Missile Launcher	GuidedMissileLauncher	Weapon	WeaponRocketLauncher	1	4
+Guided Missile Launcher	GuidedMissileLauncher_2	Weapon	WeaponRocketLauncher	1	4
+Guided Missile Launcher	GuidedMissileLauncher_3	Weapon	WeaponRocketLauncher	1	4
+Guided Missile Launcher	GuidedMissileLauncher_4	Weapon	WeaponRocketLauncher	1	4
+Guided Missile Launcher	GuidedMissileLauncher_5	Weapon	WeaponRocketLauncher	1	4
+Guided Missile Launcher Schematic 1	Blueprint_GuidedMissileLauncher_2	Blueprint	Blueprint	9999	1
+Guided Missile Launcher Schematic 2	Blueprint_GuidedMissileLauncher_3	Blueprint	Blueprint	9999	1
+Guided Missile Launcher Schematic 3	Blueprint_GuidedMissileLauncher_4	Blueprint	Blueprint	9999	1
+Guided Missile Launcher Schematic 4	Blueprint_GuidedMissileLauncher_5	Blueprint	Blueprint	9999	1
+Gumoss Bounty Token	BossDefeatReward_PlantSlime	Essential	NONE	9999	1
+Gumoss Cap	Head015	Armor	ArmorHead	1	1
+Gumoss Cap	Head015_2	Armor	ArmorHead	1	1
+Gumoss Cap	Head015_3	Armor	ArmorHead	1	1
+Gumoss Cap	Head015_4	Armor	ArmorHead	1	1
+Gumoss Cap	Head015_5	Armor	ArmorHead	1	1
+Gumoss Cap Schematic 1	Blueprint_Head015_1	Blueprint	Blueprint	9999	1
+Gumoss Cap Schematic 2	Blueprint_Head015_2	Blueprint	Blueprint	9999	1
+Gumoss Cap Schematic 3	Blueprint_Head015_3	Blueprint	Blueprint	9999	1
+Gumoss Cap Schematic 4	Blueprint_Head015_4	Blueprint	Blueprint	9999	1
+Gumoss Leaf	PalItem_PlantSlime	Material	MaterialMonster	9999	1
+Gunpowder	Gunpowder	Material	MaterialProccessing	9999	1
+Gunpowder	Gunpowder2	Material	MaterialProccessing	9999	2
+Hallowed Bar	YakushimaIngot001	Material	MaterialIngot	9999	1
+Hallowed Headgear	YakushimaHeadEquip002	Armor	ArmorHead	1	3
+Hallowed Headgear	YakushimaHeadEquip002_2	Armor	ArmorHead	1	3
+Hallowed Headgear	YakushimaHeadEquip002_3	Armor	ArmorHead	1	3
+Hallowed Headgear	YakushimaHeadEquip002_4	Armor	ArmorHead	1	3
+Hallowed Headgear	YakushimaHeadEquip002_5	Armor	ArmorHead	1	3
+Hallowed Headgear Schematic	Blueprint_YakushimaHeadEquip002	Blueprint	Blueprint	9999	1
+Hallowed Headgear Schematic 1	Blueprint_YakushimaHeadEquip002_2	Blueprint	Blueprint	9999	1
+Hallowed Headgear Schematic 2	Blueprint_YakushimaHeadEquip002_3	Blueprint	Blueprint	9999	1
+Hallowed Headgear Schematic 3	Blueprint_YakushimaHeadEquip002_4	Blueprint	Blueprint	9999	1
+Hallowed Headgear Schematic 4	Blueprint_YakushimaHeadEquip002_5	Blueprint	Blueprint	9999	1
+Hallowed Helmet	YakushimaHeadEquip003	Armor	ArmorHead	1	3
+Hallowed Helmet	YakushimaHeadEquip003_2	Armor	ArmorHead	1	3
+Hallowed Helmet	YakushimaHeadEquip003_3	Armor	ArmorHead	1	3
+Hallowed Helmet	YakushimaHeadEquip003_4	Armor	ArmorHead	1	3
+Hallowed Helmet	YakushimaHeadEquip003_5	Armor	ArmorHead	1	3
+Hallowed Helmet Schematic	Blueprint_YakushimaHeadEquip003	Blueprint	Blueprint	9999	1
+Hallowed Helmet Schematic 1	Blueprint_YakushimaHeadEquip003_2	Blueprint	Blueprint	9999	1
+Hallowed Helmet Schematic 2	Blueprint_YakushimaHeadEquip003_3	Blueprint	Blueprint	9999	1
+Hallowed Helmet Schematic 3	Blueprint_YakushimaHeadEquip003_4	Blueprint	Blueprint	9999	1
+Hallowed Helmet Schematic 4	Blueprint_YakushimaHeadEquip003_5	Blueprint	Blueprint	9999	1
+Hallowed Hood	YakushimaHeadEquip004	Armor	ArmorHead	1	3
+Hallowed Hood	YakushimaHeadEquip004_2	Armor	ArmorHead	1	3
+Hallowed Hood	YakushimaHeadEquip004_3	Armor	ArmorHead	1	3
+Hallowed Hood	YakushimaHeadEquip004_4	Armor	ArmorHead	1	3
+Hallowed Hood	YakushimaHeadEquip004_5	Armor	ArmorHead	1	3
+Hallowed Hood Schematic	Blueprint_YakushimaHeadEquip004	Blueprint	Blueprint	9999	1
+Hallowed Hood Schematic 1	Blueprint_YakushimaHeadEquip004_2	Blueprint	Blueprint	9999	1
+Hallowed Hood Schematic 2	Blueprint_YakushimaHeadEquip004_3	Blueprint	Blueprint	9999	1
+Hallowed Hood Schematic 3	Blueprint_YakushimaHeadEquip004_4	Blueprint	Blueprint	9999	1
+Hallowed Hood Schematic 4	Blueprint_YakushimaHeadEquip004_5	Blueprint	Blueprint	9999	1
+Hallowed Mask	YakushimaHeadEquip001	Armor	ArmorHead	1	3
+Hallowed Mask	YakushimaHeadEquip001_2	Armor	ArmorHead	1	3
+Hallowed Mask	YakushimaHeadEquip001_3	Armor	ArmorHead	1	3
+Hallowed Mask	YakushimaHeadEquip001_4	Armor	ArmorHead	1	3
+Hallowed Mask	YakushimaHeadEquip001_5	Armor	ArmorHead	1	3
+Hallowed Mask Schematic	Blueprint_YakushimaHeadEquip001	Blueprint	Blueprint	9999	1
+Hallowed Mask Schematic 1	Blueprint_YakushimaHeadEquip001_2	Blueprint	Blueprint	9999	1
+Hallowed Mask Schematic 2	Blueprint_YakushimaHeadEquip001_3	Blueprint	Blueprint	9999	1
+Hallowed Mask Schematic 3	Blueprint_YakushimaHeadEquip001_4	Blueprint	Blueprint	9999	1
+Hallowed Mask Schematic 4	Blueprint_YakushimaHeadEquip001_5	Blueprint	Blueprint	9999	1
+Hallowed Plate Mail	YakushimaArmor001	Armor	ArmorBody	1	3
+Hallowed Plate Mail	YakushimaArmor001_2	Armor	ArmorBody	1	3
+Hallowed Plate Mail	YakushimaArmor001_3	Armor	ArmorBody	1	3
+Hallowed Plate Mail	YakushimaArmor001_4	Armor	ArmorBody	1	3
+Hallowed Plate Mail	YakushimaArmor001_5	Armor	ArmorBody	1	3
+Hallowed Plate Mail Schematic	Blueprint_YakushimaArmor001	Blueprint	Blueprint	9999	1
+Hallowed Plate Mail Schematic 1	Blueprint_YakushimaArmor001_2	Blueprint	Blueprint	9999	1
+Hallowed Plate Mail Schematic 2	Blueprint_YakushimaArmor001_3	Blueprint	Blueprint	9999	1
+Hallowed Plate Mail Schematic 3	Blueprint_YakushimaArmor001_4	Blueprint	Blueprint	9999	1
+Hallowed Plate Mail Schematic 4	Blueprint_YakushimaArmor001_5	Blueprint	Blueprint	9999	1
+Hamburger	Hamburger	Food	FoodDishMeat	9999	3
+Hand-Held Torch	Torch	Weapon	WeaponMelee	1	1
+Handgun	HandGun_Default	Weapon	WeaponHandgun	1	2
+Handgun	HandGun_Default_2	Weapon	WeaponHandgun	1	2
+Handgun	HandGun_Default_3	Weapon	WeaponHandgun	1	2
+Handgun	HandGun_Default_4	Weapon	WeaponHandgun	1	2
+Handgun	HandGun_Default_5	Weapon	WeaponHandgun	1	2
+Handgun Ammo	HandgunBullet	Ammo	ConsumeBullet	9999	2
+Handgun Schematic 1	Blueprint_HandGun_Default_2	Blueprint	Blueprint	9999	1
+Handgun Schematic 2	Blueprint_HandGun_Default_3	Blueprint	Blueprint	9999	1
+Handgun Schematic 3	Blueprint_HandGun_Default_4	Blueprint	Blueprint	9999	1
+Handgun Schematic 4	Blueprint_HandGun_Default_5	Blueprint	Blueprint	9999	1
+Hangyu Cryst's Glove	SkillUnlock_WindChimes_Ice	Essential	Essential_PalGear	999999	999
+Hangyu's Gloves	SkillUnlock_WindChimes	Essential	Essential_PalGear	999999	999
+Hardwood	Wood_Fine	Material	MaterialWood	9999	1
+Hartalis (Ultra) Slab	PalSummon_LegendDeer_2	Consume	ConsumeOther	9999	1
+Hartalis (Ultra) Slab Fragment	PalSummon_LegendDeer_Parts_2	Blueprint	Blueprint	9999	1
+Hartalis Saddle	SkillUnlock_LegendDeer	Essential	Essential_PalGear	9999	0
+Hartalis Slab	PalSummon_LegendDeer	Consume	ConsumeOther	9999	1
+Hartalis Slab Fragment	PalSummon_LegendDeer_Parts	Blueprint	Blueprint	9999	1
+Hartalis's Talisman	Otomo_DFNormal_ElementBoost_1	Accessory	Accessory	1	3
+Hartalis's Talisman Schematic	Blueprint_Otomo_DFNormal_ElementBoost_1	Blueprint	Blueprint	9999	8
+Heat Resistant Hexolite Armor	SFArmorHeat	Armor	ArmorBody	1	4
+Heat Resistant Hexolite Armor	SFArmorHeat_2	Armor	ArmorBody	1	4
+Heat Resistant Hexolite Armor	SFArmorHeat_3	Armor	ArmorBody	1	4
+Heat Resistant Hexolite Armor	SFArmorHeat_4	Armor	ArmorBody	1	4
+Heat Resistant Hexolite Armor	SFArmorHeat_5	Armor	ArmorBody	1	4
+Heat Resistant Hexolite Armor Schematic 1	Blueprint_SFArmorHeat_2	Blueprint	Blueprint	9999	1
+Heat Resistant Hexolite Armor Schematic 2	Blueprint_SFArmorHeat_3	Blueprint	Blueprint	9999	1
+Heat Resistant Hexolite Armor Schematic 3	Blueprint_SFArmorHeat_4	Blueprint	Blueprint	9999	1
+Heat Resistant Hexolite Armor Schematic 4	Blueprint_SFArmorHeat_5	Blueprint	Blueprint	9999	1
+Heat Resistant Metal Armor	CopperArmorHeat	Armor	ArmorBody	1	2
+Heat Resistant Metal Armor	CopperArmorHeat_2	Armor	ArmorBody	1	2
+Heat Resistant Metal Armor	CopperArmorHeat_3	Armor	ArmorBody	1	2
+Heat Resistant Metal Armor	CopperArmorHeat_4	Armor	ArmorBody	1	2
+Heat Resistant Metal Armor	CopperArmorHeat_5	Armor	ArmorBody	1	2
+Heat Resistant Metal Armor Schematic 1	Blueprint_CopperArmorHeat_2	Blueprint	Blueprint	9999	1
+Heat Resistant Metal Armor Schematic 2	Blueprint_CopperArmorHeat_3	Blueprint	Blueprint	9999	1
+Heat Resistant Metal Armor Schematic 3	Blueprint_CopperArmorHeat_4	Blueprint	Blueprint	9999	1
+Heat Resistant Metal Armor Schematic 4	Blueprint_CopperArmorHeat_5	Blueprint	Blueprint	9999	1
+Heat Resistant Pal Metal Armor	StealArmorHeat	Armor	ArmorBody	1	4
+Heat Resistant Pal Metal Armor	StealArmorHeat_2	Armor	ArmorBody	1	4
+Heat Resistant Pal Metal Armor	StealArmorHeat_3	Armor	ArmorBody	1	4
+Heat Resistant Pal Metal Armor	StealArmorHeat_4	Armor	ArmorBody	1	4
+Heat Resistant Pal Metal Armor	StealArmorHeat_5	Armor	ArmorBody	1	4
+Heat Resistant Pal Metal Armor Schematic 1	Blueprint_StealArmorHeat_2	Blueprint	Blueprint	9999	1
+Heat Resistant Pal Metal Armor Schematic 2	Blueprint_StealArmorHeat_3	Blueprint	Blueprint	9999	1
+Heat Resistant Pal Metal Armor Schematic 3	Blueprint_StealArmorHeat_4	Blueprint	Blueprint	9999	1
+Heat Resistant Pal Metal Armor Schematic 4	Blueprint_StealArmorHeat_5	Blueprint	Blueprint	9999	1
+Heat Resistant Pelt Armor	FurArmorHeat	Armor	ArmorBody	1	2
+Heat Resistant Pelt Armor	FurArmorHeat_2	Armor	ArmorBody	1	2
+Heat Resistant Pelt Armor	FurArmorHeat_3	Armor	ArmorBody	1	2
+Heat Resistant Pelt Armor	FurArmorHeat_4	Armor	ArmorBody	1	2
+Heat Resistant Pelt Armor	FurArmorHeat_5	Armor	ArmorBody	1	2
+Heat Resistant Pelt Armor Schematic 1	Blueprint_FurArmorHeat_2	Blueprint	Blueprint	9999	1
+Heat Resistant Pelt Armor Schematic 2	Blueprint_FurArmorHeat_3	Blueprint	Blueprint	9999	1
+Heat Resistant Pelt Armor Schematic 3	Blueprint_FurArmorHeat_4	Blueprint	Blueprint	9999	1
+Heat Resistant Pelt Armor Schematic 4	Blueprint_FurArmorHeat_5	Blueprint	Blueprint	9999	1
+Heat Resistant Plasteel Armor	PlasticArmorHeat	Armor	ArmorBody	1	4
+Heat Resistant Plasteel Armor	PlasticArmorHeat_2	Armor	ArmorBody	1	4
+Heat Resistant Plasteel Armor	PlasticArmorHeat_3	Armor	ArmorBody	1	4
+Heat Resistant Plasteel Armor	PlasticArmorHeat_4	Armor	ArmorBody	1	4
+Heat Resistant Plasteel Armor	PlasticArmorHeat_5	Armor	ArmorBody	1	4
+Heat Resistant Plasteel Armor Schematic 1	Blueprint_PlasticArmorHeat_2	Blueprint	Blueprint	9999	1
+Heat Resistant Plasteel Armor Schematic 2	Blueprint_PlasticArmorHeat_3	Blueprint	Blueprint	9999	1
+Heat Resistant Plasteel Armor Schematic 3	Blueprint_PlasticArmorHeat_4	Blueprint	Blueprint	9999	1
+Heat Resistant Plasteel Armor Schematic 4	Blueprint_PlasticArmorHeat_5	Blueprint	Blueprint	9999	1
+Heat Resistant Refined Metal Armor	IronArmorHeat	Armor	ArmorBody	1	3
+Heat Resistant Refined Metal Armor	IronArmorHeat_2	Armor	ArmorBody	1	3
+Heat Resistant Refined Metal Armor	IronArmorHeat_3	Armor	ArmorBody	1	3
+Heat Resistant Refined Metal Armor	IronArmorHeat_4	Armor	ArmorBody	1	3
+Heat Resistant Refined Metal Armor	IronArmorHeat_5	Armor	ArmorBody	1	3
+Heat Resistant Refined Metal Armor Schematic 1	Blueprint_IronArmorHeat_2	Blueprint	Blueprint	9999	1
+Heat Resistant Refined Metal Armor Schematic 2	Blueprint_IronArmorHeat_3	Blueprint	Blueprint	9999	1
+Heat Resistant Refined Metal Armor Schematic 3	Blueprint_IronArmorHeat_4	Blueprint	Blueprint	9999	1
+Heat Resistant Refined Metal Armor Schematic 4	Blueprint_IronArmorHeat_5	Blueprint	Blueprint	9999	1
+Heat Resistant Undershirt	Accessory_HeatResist_1	Accessory	Accessory	1	2
+Heat Resistant Undershirt	Accessory_HeatResist_2	Accessory	Accessory	1	2
+Heat Resistant Undershirt	Accessory_HeatResist_3	Accessory	Accessory	1	2
+Heat-Resistant Ancient Armor	AncientArmorHeat	Armor	ArmorBody	1	10
+Heat-Resistant Ancient Armor	AncientArmorHeat_2	Armor	ArmorBody	1	10
+Heat-Resistant Ancient Armor	AncientArmorHeat_3	Armor	ArmorBody	1	10
+Heat-Resistant Ancient Armor	AncientArmorHeat_4	Armor	ArmorBody	1	10
+Heat-Resistant Ancient Armor	AncientArmorHeat_5	Armor	ArmorBody	1	10
+Heat-Resistant Ancient Armor Schematic 1	Blueprint_AncientArmorHeat_2	Blueprint	Blueprint	9999	1
+Heat-Resistant Ancient Armor Schematic 2	Blueprint_AncientArmorHeat_3	Blueprint	Blueprint	9999	1
+Heat-Resistant Ancient Armor Schematic 3	Blueprint_AncientArmorHeat_4	Blueprint	Blueprint	9999	1
+Heat-Resistant Ancient Armor Schematic 4	Blueprint_AncientArmorHeat_5	Blueprint	Blueprint	9999	1
+Heat-Resistant Undershirt Schematic	Blueprint_Accessory_HeatResist_1_2	Blueprint	Blueprint	9999	8
+Heavy Assault Rifle	SkyAssaultRifle	Weapon	WeaponAssaultRifle	1	10
+Heavy Assault Rifle	SkyAssaultRifle_2	Weapon	WeaponAssaultRifle	1	10
+Heavy Assault Rifle	SkyAssaultRifle_3	Weapon	WeaponAssaultRifle	1	10
+Heavy Assault Rifle	SkyAssaultRifle_4	Weapon	WeaponAssaultRifle	1	10
+Heavy Assault Rifle	SkyAssaultRifle_5	Weapon	WeaponAssaultRifle	1	10
+Heavy Assault Rifle Ammo	SkyAssaultRifleBullet	Ammo	ConsumeBullet	9999	10
+Heavy Assault Rifle Schematic 1	Blueprint_SkyAssaultRifle_2	Blueprint	Blueprint	9999	1
+Heavy Assault Rifle Schematic 2	Blueprint_SkyAssaultRifle_3	Blueprint	Blueprint	9999	1
+Heavy Assault Rifle Schematic 3	Blueprint_SkyAssaultRifle_4	Blueprint	Blueprint	9999	1
+Heavy Assault Rifle Schematic 4	Blueprint_SkyAssaultRifle_5	Blueprint	Blueprint	9999	1
+Heavy Weight Module	SphereModule_Heavy	SphereModule	SphereModule	1	1
+Helmet	Head006	Armor	ArmorHead	1	1
+Helmet	Head006_2	Armor	ArmorHead	1	1
+Helmet	Head006_3	Armor	ArmorHead	1	1
+Helmet	Head006_4	Armor	ArmorHead	1	1
+Helmet	Head006_5	Armor	ArmorHead	1	1
+Helmet Schematic 1	Blueprint_Head006_1	Blueprint	Blueprint	9999	1
+Helmet Schematic 2	Blueprint_Head006_2	Blueprint	Blueprint	9999	1
+Helmet Schematic 3	Blueprint_Head006_3	Blueprint	Blueprint	9999	1
+Helmet Schematic 4	Blueprint_Head006_4	Blueprint	Blueprint	9999	1
+Helzephyr Lux Saddle	SkillUnlock_HadesBird_Electric	Essential	Essential_PalGear	999999	0
+Helzephyr Saddle	SkillUnlock_HadesBird	Essential	Essential_PalGear	999999	0
+Herb Roasted Caprity	BakedMeat_BerryGoat	Food	FoodDishMeat	9999	1
+Herb Roasted Lamball	GrilledSheepHerbs	Food	FoodDishMeat	9999	2
+Herbil Effigy	Relic_05	Essential	Essential	9999	9
+Herbil Headband	HeadEquip050	Armor	ArmorHead	1	99
+Herbil's Harness	SkillUnlock_LeafMomonga	Essential	Essential_PalGear	9999	999
+Hexolite	StainlessSteel	Material	MaterialIngot	9999	4
+Hexolite Armor	SFArmor	Armor	ArmorBody	1	4
+Hexolite Armor	SFArmor_2	Armor	ArmorBody	1	4
+Hexolite Armor	SFArmor_3	Armor	ArmorBody	1	4
+Hexolite Armor	SFArmor_4	Armor	ArmorBody	1	4
+Hexolite Armor	SFArmor_5	Armor	ArmorBody	1	4
+Hexolite Armor Schematic 1	Blueprint_SFArmor_2	Blueprint	Blueprint	9999	1
+Hexolite Armor Schematic 2	Blueprint_SFArmor_3	Blueprint	Blueprint	9999	1
+Hexolite Armor Schematic 3	Blueprint_SFArmor_4	Blueprint	Blueprint	9999	1
+Hexolite Armor Schematic 4	Blueprint_SFArmor_5	Blueprint	Blueprint	9999	1
+Hexolite Helmet	SFHelmet	Armor	ArmorHead	1	4
+Hexolite Helmet	SFHelmet_2	Armor	ArmorHead	1	4
+Hexolite Helmet	SFHelmet_3	Armor	ArmorHead	1	4
+Hexolite Helmet	SFHelmet_4	Armor	ArmorHead	1	4
+Hexolite Helmet	SFHelmet_5	Armor	ArmorHead	1	4
+Hexolite Helmet Schematic 1	Blueprint_SFHelmet_2	Blueprint	Blueprint	9999	1
+Hexolite Helmet Schematic 2	Blueprint_SFHelmet_3	Blueprint	Blueprint	9999	1
+Hexolite Helmet Schematic 3	Blueprint_SFHelmet_4	Blueprint	Blueprint	9999	1
+Hexolite Helmet Schematic 4	Blueprint_SFHelmet_5	Blueprint	Blueprint	9999	1
+Hexolite Quartz	RainbowCrystal	Material	MaterialOre	9999	1
+High Grade Medical Supplies	LuxuryMedicines	Consume	Medicine	9999	3
+High Quality Bait	FishingBait_2	Consume	NONE	9999	1
+High Quality Cloth	Cloth2	Material	MaterialProccessing	9999	2
+High Quality Pal Oil	PalOil	Material	MaterialMonster	9999	1
+High Quality Recovery Meds	Potion_High	Consume	Drug	9999	4
+High Quality Wooden Board	HighGrade_Processed_Wood	Material	MaterialProccessing	9999	4
+Hip Lantern	Lantern	Essential	NONE	9999	1
+Homeward Thundercloud	Homeward	Consume	ReturnToBaseCamp	9999	2
+Homing Module	SphereModule_Homing	SphereModule	SphereModule	1	10
+Homing Sphere Launcher	HomingSphereLauncher	Weapon	WeaponRocketLauncher	1	4
+Honey	Honey	Food	FoodVegetable	9999	1
+Hop	Hop	Food	FoodVegetable	9999	1
+Horn	Horn	Material	MaterialMonster	9999	1
+Horns of Supremacy	HeadEquip041	Armor	ArmorHead	1	99
+Hot Dog	HotDog	Food	FoodDishMeat	9999	2
+Hot Milk	HotMilk	Food	FoodDishMeat	9999	1
+Huge Common Egg	PalEgg_Normal_05	Material	MaterialPalEgg	1	1
+Huge Damp Egg	PalEgg_Water_05	Material	MaterialPalEgg	1	1
+Huge Dark Egg	PalEgg_Dark_05	Material	MaterialPalEgg	1	1
+Huge Dragon Egg	PalEgg_Dragon_05	Material	MaterialPalEgg	1	1
+Huge Dung	Unko_L	Material	MaterialJewelry	9999	1
+Huge Electric Egg	PalEgg_Electricity_05	Material	MaterialPalEgg	1	1
+Huge Feed Bag	AutoMealPouch_Tier4	Essential	Essential_UnlockPlayerFuture	9999	3
+Huge Frozen Egg	PalEgg_Ice_05	Material	MaterialPalEgg	1	1
+Huge Mutated Egg	PalEgg_MutationPal	Material	MaterialPalEgg	1	1
+Huge Mutated Egg	PalEgg_MutationPal_05	Material	MaterialPalEgg	1	1
+Huge Ominous Egg	PalEgg_WorldTree_05	Material	MaterialPalEgg	1	1
+Huge Rocky Egg	PalEgg_Earth_05	Material	MaterialPalEgg	1	1
+Huge Scorching Egg	PalEgg_Fire_05	Material	MaterialPalEgg	1	1
+Huge Verdant Egg	PalEgg_Leaf_05	Material	MaterialPalEgg	1	1
+Hyper Glider	Glider_Legendary	Glider	Glider	1	4
+Hyper Glider	Glider_Tera	Glider	Glider	1	4
+Hyper Grappling Gun	GrapplingGun4	Weapon	WeaponGrapplingGun	1	4
+Hyper Shield	Shield_04	Armor	Shield	1	4
+Hyper Sphere	PalSphere_Tera	SpecialWeapon	SPWeaponCaptureBall	9999	4
+Ice Awakening Crystal	PalAwakening_Ice	Consume	NONE	9999	10
+Ice Emperor's Baton	Otomo_ATIce_ElementBoost_1	Accessory	Accessory	1	3
+Ice Emperor's Baton Schematic	Blueprint_Otomo_ATIce_ElementBoost_1	Blueprint	Blueprint	9999	8
+Ice Grenade	FragGrenade_Ice	Weapon	WeaponThrowObject	9999	2
+Ice Kingpaca Bounty Token	BossDefeatReward_KingAlpaca_Ice	Essential	NONE	9999	1
+Ice Organ	IceOrgan	Material	MaterialMonster	9999	1
+Ice Radiant Gem	PalAwakening_Material_Ice	Material	MaterialMonster	9999	5
+Ice Skill Fruit: Absolute Frost	SkillCard_IceAge	Consume	ConsumeWazaMachine	9999	1
+Ice Skill Fruit: Blizzard Spike	SkillCard_IcicleThrow	Consume	ConsumeWazaMachine	9999	1
+Ice Skill Fruit: Crystal Breath	SkillCard_FrostBreath	Consume	ConsumeWazaMachine	9999	1
+Ice Skill Fruit: Diamond Rain	SkillCard_DiamondFall	Consume	ConsumeWazaMachine	9999	1
+Ice Skill Fruit: Freeze Wall	SkillCard_IceWall	Consume	ConsumeWazaMachine	9999	1
+Ice Skill Fruit: Ice Missile	SkillCard_IceMissile	Consume	ConsumeWazaMachine	9999	1
+Ice Skill Fruit: Iceberg	SkillCard_BlizzardLance	Consume	ConsumeWazaMachine	9999	1
+Ice Skill Fruit: Icicle Bullet	SkillCard_IciclePierce	Consume	ConsumeWazaMachine	9999	1
+Ice Skill Fruit: Icicle Cutter	SkillCard_IceBlade	Consume	ConsumeWazaMachine	9999	1
+Ice Skill Fruit: Icicle Line	SkillCard_IcicleLine	Consume	ConsumeWazaMachine	9999	1
+Ice Support Whistle	Otomo_ElementBoost_Ice_1	Accessory	Accessory	1	2
+Ice Support Whistle	Otomo_ElementBoost_Ice_2	Accessory	Accessory	1	2
+Ice Support Whistle	Otomo_ElementBoost_Ice_3	Accessory	Accessory	1	2
+Ice Support Whistle Schematic	Blueprint_Otomo_ElementBoost_Ice_1_2	Blueprint	Blueprint	9999	8
+Icelyn Hat	HeadEquip060	Armor	ArmorHead	1	99
+Implant: Ace Swimmer	PalPassiveSkillChange_SwimSpeed_up_2	Essential	NONE	9999	4
+Implant: Artisan	PalPassiveSkillChange_CraftSpeed_up2	Essential	NONE	9999	4
+Implant: Brave	PalPassiveSkillChange_PAL_ALLAttack_up1	Essential	NONE	9999	4
+Implant: Burly Body	PalPassiveSkillChange_Deffence_up2	Essential	NONE	9999	4
+Implant: Dainty Eater	PalPassiveSkillChange_PAL_FullStomach_Down_1	Essential	NONE	9999	4
+Implant: Demon God	PalPassiveSkillChange_PAL_ALLAttack_up3	Essential	NONE	9999	4
+Implant: Diamond Body	PalPassiveSkillChange_Deffence_up3	Essential	NONE	9999	4
+Implant: Diet Lover	PalPassiveSkillChange_PAL_FullStomach_Down_2	Essential	NONE	9999	4
+Implant: Eternal Engine	PalPassiveSkillChange_Stamina_Up_3	Essential	NONE	9999	4
+Implant: Ferocious	PalPassiveSkillChange_PAL_ALLAttack_up2	Essential	NONE	9999	4
+Implant: Fine Furs	PalPassiveSkillChange_SalePrice_Up_2	Essential	NONE	9999	4
+Implant: Fit as a Fiddle	PalPassiveSkillChange_Stamina_Up_2	Essential	NONE	9999	4
+Implant: Hard Skin	PalPassiveSkillChange_Deffence_up1	Essential	NONE	9999	4
+Implant: Healing Coach	PalPassiveSkillChange_AutoHPRegeneRate_Passive	Essential	NONE	9999	4
+Implant: Heart of the Immovable King	PalPassiveSkillChange_PAL_Sanity_Down_3	Essential	NONE	9999	4
+Implant: Impatient	PalPassiveSkillChange_CoolTimeReduction_Up_2	Essential	NONE	9999	4
+Implant: Infinite Stamina	PalPassiveSkillChange_Stamina_Up_1	Essential	NONE	9999	4
+Implant: Insomnia	PalPassiveSkillChange_Nocturnal	Essential	NONE	9999	4
+Implant: Logging Foreman	PalPassiveSkillChange_TrainerLogging_up1	Essential	NONE	9999	4
+Implant: Mastery of Fasting	PalPassiveSkillChange_PAL_FullStomach_Down_3	Essential	NONE	9999	4
+Implant: Mercy Hit	PalPassiveSkillChange_NonKilling	Essential	NONE	9999	4
+Implant: Mine Foreman	PalPassiveSkillChange_TrainerMining_up1	Essential	NONE	9999	4
+Implant: Motivational Leader	PalPassiveSkillChange_TrainerWorkSpeed_UP_1	Essential	NONE	9999	4
+Implant: Musclehead	PalPassiveSkillChange_Noukin	Essential	NONE	9999	4
+Implant: Nimble	PalPassiveSkillChange_MoveSpeed_up_1	Essential	NONE	9999	4
+Implant: Noble	PalPassiveSkillChange_SalePrice_Up_1	Essential	NONE	9999	4
+Implant: Philanthropist	PalPassiveSkillChange_HatchingSpeed_Up	Essential	NONE	9999	4
+Implant: Positive Thinker	PalPassiveSkillChange_PAL_Sanity_Down_1	Essential	NONE	9999	4
+Implant: Reload Master	PalPassiveSkillChange_ReloadSpeedUp_Passive	Essential	NONE	9999	4
+Implant: Remarkable Craftsmanship	PalPassiveSkillChange_CraftSpeed_up3	Essential	NONE	9999	4
+Implant: Runner	PalPassiveSkillChange_MoveSpeed_up_2	Essential	NONE	9999	4
+Implant: Serenity	PalPassiveSkillChange_CoolTimeReduction_Up_1	Essential	NONE	9999	4
+Implant: Serious	PalPassiveSkillChange_CraftSpeed_up1	Essential	NONE	9999	4
+Implant: Sleek Stroke	PalPassiveSkillChange_SwimSpeed_up_1	Essential	NONE	9999	4
+Implant: Stronghold Strategist	PalPassiveSkillChange_TrainerDEF_UP_1	Essential	NONE	9999	4
+Implant: Swift	PalPassiveSkillChange_MoveSpeed_up_3	Essential	NONE	9999	4
+Implant: Vanguard	PalPassiveSkillChange_TrainerATK_UP_1	Essential	NONE	9999	4
+Implant: Wellness Watcher	PalPassiveSkillChange_PlayerSP_DecreaseRate_Passive	Essential	NONE	9999	4
+Implant: Work Slave	PalPassiveSkillChange_PAL_CorporateSlave	Essential	NONE	9999	4
+Implant: Workaholic	PalPassiveSkillChange_PAL_Sanity_Down_2	Essential	NONE	9999	4
+Incendiary Grenade	FragGrenade_Fire	Weapon	WeaponThrowObject	9999	2
+Ingot	CopperIngot	Material	MaterialIngot	9999	1
+Innovative Technical Manual	TechnologyBook_G2	Consume	ConsumeTechnologyBook	9999	5
+Intermediate Fishing Rod (Cattiva)	FishingRod_02_1	Weapon	NONE	1	3
+Intermediate Fishing Rod (Croajiro)	FishingRod_02_2	Weapon	NONE	1	3
+Intermediate Fishing Rod (Croajiro) Schematic	Blueprint_FishingRod_02_2	Blueprint	Blueprint	9999	1
+Islander's Tool Belt	Accessory_WKMC_1	Accessory	Accessory	1	3
+Islander's Tool Belt Schematic	Blueprint_Accessory_WKMC_1	Blueprint	Blueprint	9999	8
+Jam-Filled Bun	JamBun	Food	FoodDishVegetable	9999	2
+Jelliette Bell Flesh	Meat_JellyfishFairy	Food	FoodMeat	9999	3
+Jelliette Hat	HeadEquip053	Armor	ArmorHead	1	99
+Jelliette's Jiggly Jelly	JellyfishFairy_jelly	Food	FoodDishFish	9999	2
+Jellroy Bell Flesh	Meat_JellyfishGhost	Food	FoodMeat	9999	3
+Jellroy's Jolly Jelly	JellyfishGhost_jelly	Food	FoodDishFish	9999	2
+Jetragon Bounty Token	BossDefeatReward_JetDragon	Essential	NONE	9999	1
+Jetragon's Missile Launcher	SkillUnlock_JetDragon	Essential	Essential_PalGear	999999	0
+Jetragon's Talisman	Otomo_DFDragon_ElementBoost_1	Accessory	Accessory	1	3
+Jetragon's Talisman Schematic	Blueprint_Otomo_DFDragon_ElementBoost_1	Blueprint	Blueprint	9999	8
+Jolthog Cryst's Gloves	SkillUnlock_Hedgehog_Ice	Essential	Essential_PalGear	999999	999
+Jolthog's Gloves	SkillUnlock_Hedgehog	Essential	Essential_PalGear	999999	999
+Jormuntide Bounty Token	BossDefeatReward_Umihebi	Essential	NONE	9999	1
+Jormuntide Ignis Saddle	SkillUnlock_Umihebi_Fire	Essential	Essential_PalGear	999999	0
+Jormuntide Saddle	SkillUnlock_Umihebi	Essential	Essential_PalGear	999999	0
+Katana	Katana	Weapon	WeaponMelee	1	4
+Katana	Katana_2	Weapon	WeaponMelee	1	4
+Katana	Katana_3	Weapon	WeaponMelee	1	4
+Katana	Katana_4	Weapon	WeaponMelee	1	4
+Katana	Katana_5	Weapon	WeaponMelee	1	4
+Katana Schematic 1	Blueprint_Katana_2	Blueprint	Blueprint	9999	1
+Katana Schematic 2	Blueprint_Katana_3	Blueprint	Blueprint	9999	1
+Katana Schematic 3	Blueprint_Katana_4	Blueprint	Blueprint	9999	1
+Katana Schematic 4	Blueprint_Katana_5	Blueprint	Blueprint	9999	1
+Katress Bounty Token	BossDefeatReward_CatMage	Essential	NONE	9999	1
+Katress Cap	Head017	Armor	ArmorHead	1	1
+Katress Cap	Head017_2	Armor	ArmorHead	1	1
+Katress Cap	Head017_3	Armor	ArmorHead	1	1
+Katress Cap	Head017_4	Armor	ArmorHead	1	1
+Katress Cap	Head017_5	Armor	ArmorHead	1	1
+Katress Cap Schematic 1	Blueprint_Head017_1	Blueprint	Blueprint	9999	1
+Katress Cap Schematic 1	Blueprint_Head017_5	Blueprint	Blueprint	9999	1
+Katress Cap Schematic 2	Blueprint_Head017_2	Blueprint	Blueprint	9999	1
+Katress Cap Schematic 3	Blueprint_Head017_3	Blueprint	Blueprint	9999	1
+Katress Cap Schematic 4	Blueprint_Head017_4	Blueprint	Blueprint	9999	1
+Katress Hair	PalItem_CatMage	Material	MaterialMonster	9999	1
+Katress Ring	Accessory_Otomo_Dark_1	Accessory	Accessory	1	3
+Katress Ring Schematic	Blueprint_Accessory_Otomo_Dark_1	Blueprint	Blueprint	9999	8
+Key Sphere of Envy	KeySphere_01	Essential	Essential	99999999	0
+Key Sphere of Gluttony	KeySphere_05	Essential	Essential	99999999	0
+Key Sphere of Greed	KeySphere_03	Essential	Essential	99999999	0
+Key Sphere of Lust	KeySphere_06	Essential	Essential	99999999	0
+Key Sphere of Original Sin	KeySphere_08	Essential	Essential	99999999	0
+Key Sphere of Pride	KeySphere_02	Essential	Essential	99999999	0
+Key Sphere of Sloth	KeySphere_04	Essential	Essential	99999999	0
+Key Sphere of Wrath	KeySphere_07	Essential	Essential	99999999	0
+Killamari Cap	HeadEquip026	Armor	ArmorHead	1	1
+Killamari Cap	HeadEquip026_2	Armor	ArmorHead	1	1
+Killamari Cap	HeadEquip026_3	Armor	ArmorHead	1	1
+Killamari Cap	HeadEquip026_4	Armor	ArmorHead	1	1
+Killamari Cap	HeadEquip026_5	Armor	ArmorHead	1	1
+Killamari Cap Schematic 1	Blueprint_HeadEquip026_1	Blueprint	Blueprint	9999	1
+Killamari Cap Schematic 1	Blueprint_HeadEquip026_5	Blueprint	Blueprint	9999	1
+Killamari Cap Schematic 2	Blueprint_HeadEquip026_2	Blueprint	Blueprint	9999	1
+Killamari Cap Schematic 3	Blueprint_HeadEquip026_3	Blueprint	Blueprint	9999	1
+Killamari Cap Schematic 4	Blueprint_HeadEquip026_4	Blueprint	Blueprint	9999	1
+Killamari Primo's Gloves	SkillUnlock_NegativeOctopus_Neutral	Essential	Essential_PalGear	999999	999
+Killamari Tentacle	PalItem_NegativeOctopus	Material	MaterialMonster	9999	1
+Killamari's Gloves	SkillUnlock_NegativeOctopus	Essential	Essential_PalGear	999999	999
+Kingpaca Bounty Token	BossDefeatReward_KingAlpaca	Essential	NONE	9999	1
+Kingpaca Cryst Saddle	SkillUnlock_KingAlpaca_Ice	Essential	Essential_PalGear	999999	0
+Kingpaca Headband	HeadEquip051	Armor	ArmorHead	1	99
+Kingpaca Saddle	SkillUnlock_KingAlpaca	Essential	Essential_PalGear	999999	0
+Kinship Peach	AffectionFruit_01	Consume	NONE	9999	4
+Kitsun Noct Bounty Token	BossDefeatReward_AmaterasuWolf_Dark	Essential	NONE	9999	1
+Kitsun Noct Saddle	SkillUnlock_AmaterasuWolf_Dark	Essential	Essential_PalGear	9999	0
+Kitsun Saddle	SkillUnlock_AmaterasuWolf	Essential	Essential_PalGear	999999	0
+Knocklem Bounty Token	BossDefeatReward_WingGolem	Essential	NONE	9999	1
+Kuprok Bounty Token	BossDefeatReward_RockBeast	Essential	NONE	9999	1
+Kuprok Cryst Bounty Token	BossDefeatReward_RockBeast_Ice	Essential	NONE	9999	1
+Laboratory Chair Schematic	Blueprint_SF_Chair	Blueprint	Blueprint	9999	1
+Laboratory Desk Schematic	Blueprint_SF_Desk	Blueprint	Blueprint	9999	1
+Lamball Effigy	Relic_01	Essential	Essential	9999	9
+Lamball Helm	HeadEquip029	Armor	ArmorHead	1	99
+Lamball Kebab	BakedMeat_SheepBall	Food	FoodDishMeat	9999	1
+Lamball Mutton	Meat_SheepBall	Food	FoodMeat	9999	1
+Large Common Egg	PalEgg_Normal_03	Material	MaterialPalEgg	1	1
+Large Common Egg	PalEgg_Normal_04	Material	MaterialPalEgg	1	1
+Large Damp Egg	PalEgg_Water_03	Material	MaterialPalEgg	1	1
+Large Damp Egg	PalEgg_Water_04	Material	MaterialPalEgg	1	1
+Large Dark Egg	PalEgg_Dark_03	Material	MaterialPalEgg	1	1
+Large Dark Egg	PalEgg_Dark_04	Material	MaterialPalEgg	1	1
+Large Dragon Egg	PalEgg_Dragon_03	Material	MaterialPalEgg	1	1
+Large Dragon Egg	PalEgg_Dragon_04	Material	MaterialPalEgg	1	1
+Large Electric Egg	PalEgg_Electricity_03	Material	MaterialPalEgg	1	1
+Large Electric Egg	PalEgg_Electricity_04	Material	MaterialPalEgg	1	1
+Large Feed Bag	AutoMealPouch_Tier3	Essential	Essential_UnlockPlayerFuture	9999	2
+Large Frozen Egg	PalEgg_Ice_03	Material	MaterialPalEgg	1	1
+Large Frozen Egg	PalEgg_Ice_04	Material	MaterialPalEgg	1	1
+Large Mutated Egg	PalEgg_MutationPal_03	Material	MaterialPalEgg	1	1
+Large Mutated Egg	PalEgg_MutationPal_04	Material	MaterialPalEgg	1	1
+Large Ominous Egg	PalEgg_WorldTree_03	Material	MaterialPalEgg	1	1
+Large Ominous Egg	PalEgg_WorldTree_04	Material	MaterialPalEgg	1	1
+Large Pal Soul	PalUpgradeStone3	Material	MaterialMonster	9999	2
+Large Pouch	AdditionalInventory_003	Essential	NONE	9999	3
+Large Rocky Egg	PalEgg_Earth_03	Material	MaterialPalEgg	1	1
+Large Rocky Egg	PalEgg_Earth_04	Material	MaterialPalEgg	1	1
+Large Scorching Egg	PalEgg_Fire_03	Material	MaterialPalEgg	1	1
+Large Scorching Egg	PalEgg_Fire_04	Material	MaterialPalEgg	1	1
+Large Verdant Egg	PalEgg_Leaf_03	Material	MaterialPalEgg	1	1
+Large Verdant Egg	PalEgg_Leaf_04	Material	MaterialPalEgg	1	1
+Laser Gatling Cartridge	LaserGatlingBullet	Ammo	ConsumeBullet	9999	4
+Laser Gatling Gun	LaserGatlingGun	Weapon	WeaponGatlingGun	1	1
+Laser Gatling Gun	LaserGatlingGun_2	Weapon	WeaponGatlingGun	1	1
+Laser Gatling Gun	LaserGatlingGun_3	Weapon	WeaponGatlingGun	1	1
+Laser Gatling Gun	LaserGatlingGun_4	Weapon	WeaponGatlingGun	1	1
+Laser Gatling Gun	LaserGatlingGun_5	Weapon	WeaponGatlingGun	1	1
+Laser Gatling Gun Schematic 1	Blueprint_LaserGatlingGun_2	Blueprint	Blueprint	9999	1
+Laser Gatling Gun Schematic 2	Blueprint_LaserGatlingGun_3	Blueprint	Blueprint	9999	1
+Laser Gatling Gun Schematic 3	Blueprint_LaserGatlingGun_4	Blueprint	Blueprint	9999	1
+Laser Gatling Gun Schematic 4	Blueprint_LaserGatlingGun_5	Blueprint	Blueprint	9999	1
+Laser Rifle	LaserRifle	Weapon	WeaponAssaultRifle	1	4
+Laser Rifle	LaserRifle_2	Weapon	WeaponAssaultRifle	1	4
+Laser Rifle	LaserRifle_3	Weapon	WeaponAssaultRifle	1	4
+Laser Rifle	LaserRifle_4	Weapon	WeaponAssaultRifle	1	4
+Laser Rifle	LaserRifle_5	Weapon	WeaponAssaultRifle	1	4
+Laser Rifle Schematic 1	Blueprint_LaserRifle_2	Blueprint	Blueprint	9999	1
+Laser Rifle Schematic 2	Blueprint_LaserRifle_3	Blueprint	Blueprint	9999	1
+Laser Rifle Schematic 3	Blueprint_LaserRifle_4	Blueprint	Blueprint	9999	1
+Laser Rifle Schematic 4	Blueprint_LaserRifle_5	Blueprint	Blueprint	9999	1
+Laser Sword	SkyBeamSword	Weapon	WeaponMelee	1	10
+Laser Sword	SkyBeamSword_2	Weapon	WeaponMelee	1	10
+Laser Sword	SkyBeamSword_3	Weapon	WeaponMelee	1	10
+Laser Sword	SkyBeamSword_4	Weapon	WeaponMelee	1	10
+Laser Sword	SkyBeamSword_5	Weapon	WeaponMelee	1	10
+Laser Sword Schematic 1	Blueprint_SkyBeamSword_2	Blueprint	Blueprint	9999	1
+Laser Sword Schematic 2	Blueprint_SkyBeamSword_3	Blueprint	Blueprint	9999	1
+Laser Sword Schematic 3	Blueprint_SkyBeamSword_4	Blueprint	Blueprint	9999	1
+Laser Sword Schematic 4	Blueprint_SkyBeamSword_5	Blueprint	Blueprint	9999	1
+Leather	Leather	Material	MaterialMonster	9999	1
+Leather	Leather2	Material	MaterialMonster	9999	1
+Leezpunk Crest	PalItem_LizardMan	Material	MaterialMonster	9999	1
+Leezpunk Hood	HeadEquip025	Armor	ArmorHead	1	1
+Leezpunk Hood	HeadEquip025_2	Armor	ArmorHead	1	1
+Leezpunk Hood	HeadEquip025_3	Armor	ArmorHead	1	1
+Leezpunk Hood	HeadEquip025_4	Armor	ArmorHead	1	1
+Leezpunk Hood	HeadEquip025_5	Armor	ArmorHead	1	1
+Leezpunk Hood Schematic 1	Blueprint_HeadEquip025_1	Blueprint	Blueprint	9999	1
+Leezpunk Hood Schematic 1	Blueprint_HeadEquip025_5	Blueprint	Blueprint	9999	1
+Leezpunk Hood Schematic 2	Blueprint_HeadEquip025_2	Blueprint	Blueprint	9999	1
+Leezpunk Hood Schematic 3	Blueprint_HeadEquip025_3	Blueprint	Blueprint	9999	1
+Leezpunk Hood Schematic 4	Blueprint_HeadEquip025_4	Blueprint	Blueprint	9999	1
+Legendary Meowmere	YakushimaBlade005	Weapon	WeaponMelee	1	99
+Legendary Sphere	PalSphere_Legend	SpecialWeapon	SPWeaponCaptureBall	9999	6
+Lettuce	Lettuce	Food	FoodVegetable	9999	1
+Lettuce Seeds	LettuceSeeds	Material	MaterialMonster	9999	1
+Life Crystal	Elixir_hp_Yakushima	Consume	ConsumeGainStatusPoints	9999	1
+Life Fruit	Fruit_hp_01	Consume	ConsumePalTalentUp	9999	4
+Life Lotus (L)	Lotus_hp_02	Material	MaterialMonster	9999	4
+Life Lotus (S)	Lotus_hp_01	Material	MaterialMonster	9999	3
+Life Pendant	Accessory_HP_1	Accessory	Accessory	1	2
+Life Pendant	Accessory_HP_2	Accessory	Accessory	1	2
+Life Pendant	Accessory_HP_3	Accessory	Accessory	1	2
+Life Pendant Schematic	Blueprint_Accessory_HP_1_2	Blueprint	Blueprint	9999	8
+Lifmunk Effigy	Relic	Essential	Essential	9999	9
+Lifmunk's Submachine Gun	SkillUnlock_Carbunclo	Essential	Essential_PalGear	9999	0
+Lightweight Ancient Armor	AncientArmorWeight	Armor	ArmorBody	1	10
+Lightweight Ancient Armor	AncientArmorWeight_2	Armor	ArmorBody	1	10
+Lightweight Ancient Armor	AncientArmorWeight_3	Armor	ArmorBody	1	10
+Lightweight Ancient Armor	AncientArmorWeight_4	Armor	ArmorBody	1	10
+Lightweight Ancient Armor	AncientArmorWeight_5	Armor	ArmorBody	1	10
+Lightweight Ancient Armor Schematic 1	Blueprint_AncientArmorWeight_2	Blueprint	Blueprint	9999	1
+Lightweight Ancient Armor Schematic 2	Blueprint_AncientArmorWeight_3	Blueprint	Blueprint	9999	1
+Lightweight Ancient Armor Schematic 3	Blueprint_AncientArmorWeight_4	Blueprint	Blueprint	9999	1
+Lightweight Ancient Armor Schematic 4	Blueprint_AncientArmorWeight_5	Blueprint	Blueprint	9999	1
+Lightweight Hexolite Armor	SFArmorWeight	Armor	ArmorBody	1	4
+Lightweight Hexolite Armor	SFArmorWeight_2	Armor	ArmorBody	1	4
+Lightweight Hexolite Armor	SFArmorWeight_3	Armor	ArmorBody	1	4
+Lightweight Hexolite Armor	SFArmorWeight_4	Armor	ArmorBody	1	4
+Lightweight Hexolite Armor	SFArmorWeight_5	Armor	ArmorBody	1	4
+Lightweight Hexolite Armor Schematic 1	Blueprint_SFArmorWeight_2	Blueprint	Blueprint	9999	1
+Lightweight Hexolite Armor Schematic 2	Blueprint_SFArmorWeight_3	Blueprint	Blueprint	9999	1
+Lightweight Hexolite Armor Schematic 3	Blueprint_SFArmorWeight_4	Blueprint	Blueprint	9999	1
+Lightweight Hexolite Armor Schematic 4	Blueprint_SFArmorWeight_5	Blueprint	Blueprint	9999	1
+Lightweight Plasteel Armor	PlasticArmorWeight	Armor	ArmorBody	1	4
+Lightweight Plasteel Armor	PlasticArmorWeight_2	Armor	ArmorBody	1	4
+Lightweight Plasteel Armor	PlasticArmorWeight_3	Armor	ArmorBody	1	4
+Lightweight Plasteel Armor	PlasticArmorWeight_4	Armor	ArmorBody	1	4
+Lightweight Plasteel Armor	PlasticArmorWeight_5	Armor	ArmorBody	1	4
+Lightweight Plasteel Armor Schematic 1	Blueprint_PlasticArmorWeight_2	Blueprint	Blueprint	9999	1
+Lightweight Plasteel Armor Schematic 2	Blueprint_PlasticArmorWeight_3	Blueprint	Blueprint	9999	1
+Lightweight Plasteel Armor Schematic 3	Blueprint_PlasticArmorWeight_4	Blueprint	Blueprint	9999	1
+Lightweight Plasteel Armor Schematic 4	Blueprint_PlasticArmorWeight_5	Blueprint	Blueprint	9999	1
+Lightz Helmet	LightzHelmet	Armor	ArmorHead	1	4
+Lily Hat	GYM_Head_Forest	Armor	ArmorHead	1	99
+Lily's Spear	Spear_ForestBoss	Weapon	WeaponMelee	1	3
+Lily's Spear	Spear_ForestBoss_5	Weapon	WeaponMelee	1	3
+Lily's Spear Schematic 4	Blueprint_Spear_ForestBoss_5	Blueprint	Blueprint	9999	1
+Little Kinship Peach	AffectionFruit_02	Consume	NONE	9999	4
+Lockpicking Tool v1	Unlock_Picking_Tier1	Essential	Essential_UnlockPlayerFuture	9999	1
+Lockpicking Tool v2	Unlock_Picking_Tier2	Essential	Essential_UnlockPlayerFuture	9999	1
+Lockpicking Tool v3	Unlock_Picking_Tier3	Essential	Essential_UnlockPlayerFuture	9999	1
+Long-Eared Headband	Head003	Armor	ArmorHead	1	1
+Long-Eared Headband	Head003_2	Armor	ArmorHead	1	1
+Long-Eared Headband	Head003_3	Armor	ArmorHead	1	1
+Long-Eared Headband	Head003_4	Armor	ArmorHead	1	1
+Long-Eared Headband	Head003_5	Armor	ArmorHead	1	1
+Long-Eared Headband Schematic 1	Blueprint_Head003_1	Blueprint	Blueprint	9999	1
+Long-Eared Headband Schematic 2	Blueprint_Head003_2	Blueprint	Blueprint	9999	1
+Long-Eared Headband Schematic 3	Blueprint_Head003_3	Blueprint	Blueprint	9999	1
+Long-Eared Headband Schematic 4	Blueprint_Head003_4	Blueprint	Blueprint	9999	1
+Lord of Lightning's Baton	Otomo_ATElectricity_ElementBoost_1	Accessory	Accessory	1	3
+Lord of Lightning's Baton Schematic	Blueprint_Otomo_ATElectricity_ElementBoost_1	Blueprint	Blueprint	9999	8
+Lord of the Sea's Baton	Otomo_ATWater_ElementBoost_1	Accessory	Accessory	1	3
+Lord of the Sea's Baton Schematic	Blueprint_Otomo_ATWater_ElementBoost_1	Blueprint	Blueprint	9999	8
+Lord of the Underworld's Baton	Otomo_ATDark_ElementBoost_1	Accessory	Accessory	1	3
+Lord of the Underworld's Baton Schematic	Blueprint_Otomo_ATDark_ElementBoost_1	Blueprint	Blueprint	9999	8
+Loupmoon Cryst Bounty Token	BossDefeatReward_Werewolf_Ice	Essential	NONE	9999	1
+Low Grade Medical Supplies	Herbs	Consume	Medicine	9999	1
+Low Quality Recovery Meds	Potion_Low	Consume	Drug	9999	2
+Lucky Bait	FishingBait_2_A	Consume	NONE	9999	1
+Luminite Bar	YakushimaIngot002	Material	MaterialIngot	9999	1
+Lunaris Bounty Token	BossDefeatReward_Mutant	Essential	NONE	9999	1
+Lunaris Effigy	Relic_09	Essential	Essential	9999	9
+LuxuryOmelette	LuxuryOmelette	Food	FoodDishMeat	9999	1
+Lyleen Accessory	HeadEquip023	Armor	ArmorHead	1	99
+Lyleen Bounty Token	BossDefeatReward_LilyQueen	Essential	NONE	9999	1
+Lyleen Noct Bounty Token	BossDefeatReward_LilyQueen_Dark	Essential	NONE	9999	1
+Lyleen Noct's Talisman	Otomo_DFDark_ElementBoost_1	Accessory	Accessory	1	3
+Lyleen Noct's Talisman Schematic	Blueprint_Otomo_DFDark_ElementBoost_1	Blueprint	Blueprint	9999	8
+Lyleen Statue Schematic	Blueprint_LilyQueenStatue	Blueprint	Blueprint	9999	1
+Lyleen's Talisman	Otomo_DFLeaf_ElementBoost_1	Accessory	Accessory	1	3
+Lyleen's Talisman Schematic	Blueprint_Otomo_DFLeaf_ElementBoost_1	Blueprint	Blueprint	9999	8
+Machine Gun Ammo	MachingunBullet	Ammo	ConsumeBullet	9999	2
+Magnum Ammo	MagnumBullet	Ammo	ConsumeBullet	9999	2
+Majestic Candlestick Schematic	Blueprint_CandleStand	Blueprint	Blueprint	9999	1
+Majestic Wall Torch Schematic	Blueprint_WallTorch02	Blueprint	Blueprint	9999	1
+Makeshift Assault Rifle	MakeshiftAssaultRifle	Weapon	WeaponAssaultRifle	1	2
+Makeshift Assault Rifle	MakeshiftAssaultRifle_2	Weapon	WeaponAssaultRifle	1	2
+Makeshift Assault Rifle	MakeshiftAssaultRifle_3	Weapon	WeaponAssaultRifle	1	2
+Makeshift Assault Rifle	MakeshiftAssaultRifle_4	Weapon	WeaponAssaultRifle	1	2
+Makeshift Assault Rifle	MakeshiftAssaultRifle_5	Weapon	WeaponAssaultRifle	1	2
+Makeshift Assault Rifle Schematic 1	Blueprint_MakeshiftAssaultRifle_2	Blueprint	Blueprint	9999	1
+Makeshift Assault Rifle Schematic 2	Blueprint_MakeshiftAssaultRifle_3	Blueprint	Blueprint	9999	1
+Makeshift Assault Rifle Schematic 3	Blueprint_MakeshiftAssaultRifle_4	Blueprint	Blueprint	9999	1
+Makeshift Assault Rifle Schematic 4	Blueprint_MakeshiftAssaultRifle_5	Blueprint	Blueprint	9999	1
+Makeshift Handgun	MakeshiftHandgun	Weapon	WeaponHandgun	1	2
+Makeshift Handgun	MakeshiftHandgun_2	Weapon	WeaponHandgun	1	2
+Makeshift Handgun	MakeshiftHandgun_3	Weapon	WeaponHandgun	1	2
+Makeshift Handgun	MakeshiftHandgun_4	Weapon	WeaponHandgun	1	2
+Makeshift Handgun	MakeshiftHandgun_5	Weapon	WeaponHandgun	1	2
+Makeshift Handgun Schematic 1	Blueprint_MakeshiftHandgun_2	Blueprint	Blueprint	9999	1
+Makeshift Handgun Schematic 2	Blueprint_MakeshiftHandgun_3	Blueprint	Blueprint	9999	1
+Makeshift Handgun Schematic 3	Blueprint_MakeshiftHandgun_4	Blueprint	Blueprint	9999	1
+Makeshift Handgun Schematic 4	Blueprint_MakeshiftHandgun_5	Blueprint	Blueprint	9999	1
+Makeshift Shotgun	MakeshiftShotgun	Weapon	WeaponShotgun	1	2
+Makeshift Shotgun	MakeshiftShotgun_2	Weapon	WeaponShotgun	1	2
+Makeshift Shotgun	MakeshiftShotgun_3	Weapon	WeaponShotgun	1	2
+Makeshift Shotgun	MakeshiftShotgun_4	Weapon	WeaponShotgun	1	2
+Makeshift Shotgun	MakeshiftShotgun_5	Weapon	WeaponShotgun	1	2
+Makeshift Shotgun Schematic 1	Blueprint_MakeshiftShotgun_2	Blueprint	Blueprint	9999	1
+Makeshift Shotgun Schematic 2	Blueprint_MakeshiftShotgun_3	Blueprint	Blueprint	9999	1
+Makeshift Shotgun Schematic 3	Blueprint_MakeshiftShotgun_4	Blueprint	Blueprint	9999	1
+Makeshift Shotgun Schematic 4	Blueprint_MakeshiftShotgun_5	Blueprint	Blueprint	9999	1
+Makeshift SMG	MakeshiftSubmachineGun	Weapon	WeaponAssaultRifle	1	2
+Makeshift SMG	MakeshiftSubmachineGun_2	Weapon	WeaponAssaultRifle	1	2
+Makeshift SMG	MakeshiftSubmachineGun_3	Weapon	WeaponAssaultRifle	1	2
+Makeshift SMG	MakeshiftSubmachineGun_4	Weapon	WeaponAssaultRifle	1	2
+Makeshift SMG	MakeshiftSubmachineGun_5	Weapon	WeaponAssaultRifle	1	2
+Makeshift SMG Schematic 1	Blueprint_MakeshiftSubmachineGun_2	Blueprint	Blueprint	9999	1
+Makeshift SMG Schematic 2	Blueprint_MakeshiftSubmachineGun_3	Blueprint	Blueprint	9999	1
+Makeshift SMG Schematic 3	Blueprint_MakeshiftSubmachineGun_4	Blueprint	Blueprint	9999	1
+Makeshift SMG Schematic 4	Blueprint_MakeshiftSubmachineGun_5	Blueprint	Blueprint	9999	1
+Mammorest Bounty Token	BossDefeatReward_GrassMammoth	Essential	NONE	9999	1
+Mammorest Cryst Saddle	SkillUnlock_GrassMammoth_Ice	Essential	Essential_PalGear	999999	0
+Mammorest Curry	Curry	Food	FoodDishMeat	9999	4
+Mammorest Meat	Meat_GrassMammoth	Food	FoodMeat	9999	3
+Mammorest Saddle	SkillUnlock_GrassMammoth	Essential	Essential_PalGear	999999	0
+Mammorest Steak	BakedMeat_GrassMammoth	Food	FoodDishMeat	9999	1
+Maraith Saddle	SkillUnlock_GhostBeast	Essential	Essential_PalGear	999999	0
+Marcus Hat	GYM_Head_Desert	Armor	ArmorHead	1	99
+Marinated Mushrooms	MarinatedMushrooms	Food	FoodDishVegetable	9999	2
+Marine Echobone	WhaleWhistleFragment_01	Essential	Essential	9999	1
+Marksman Revolver	OctaviaRevolver	Weapon	WeaponHandgun	1	3
+Marksman Revolver	OctaviaRevolver_2	Weapon	WeaponHandgun	1	3
+Marksman Revolver	OctaviaRevolver_3	Weapon	WeaponHandgun	1	3
+Marksman Revolver	OctaviaRevolver_4	Weapon	WeaponHandgun	1	3
+Marksman Revolver	OctaviaRevolver_5	Weapon	WeaponHandgun	1	3
+Marksman Revolver Schematic 1	Blueprint_OctaviaRevolver_2	Blueprint	Blueprint	9999	1
+Marksman Revolver Schematic 2	Blueprint_OctaviaRevolver_3	Blueprint	Blueprint	9999	1
+Marksman Revolver Schematic 3	Blueprint_OctaviaRevolver_4	Blueprint	Blueprint	9999	1
+Marksman Revolver Schematic 4	Blueprint_OctaviaRevolver_5	Blueprint	Blueprint	9999	1
+Meat	Meat	Food	FoodMeat	9999	1
+Meat	Meat2	Food	FoodMeat	9999	1
+Meat Cleaver	MeatCutterKnife	Weapon	WeaponMelee	1	1
+Mechanical Bow	SkyBow	Weapon	WeaponBow	1	10
+Mechanical Bow	SkyBow_2	Weapon	WeaponBow	1	10
+Mechanical Bow	SkyBow_3	Weapon	WeaponBow	1	10
+Mechanical Bow	SkyBow_4	Weapon	WeaponBow	1	10
+Mechanical Bow	SkyBow_5	Weapon	WeaponBow	1	10
+Mechanical Bow Ammo	SkyBowArrow	Ammo	ConsumeBullet	9999	10
+Mechanical Bow Schematic 1	Blueprint_SkyBow_2	Blueprint	Blueprint	9999	1
+Mechanical Bow Schematic 2	Blueprint_SkyBow_3	Blueprint	Blueprint	9999	1
+Mechanical Bow Schematic 3	Blueprint_SkyBow_4	Blueprint	Blueprint	9999	1
+Mechanical Bow Schematic 4	Blueprint_SkyBow_5	Blueprint	Blueprint	9999	1
+Medical Supplies	Medicines	Consume	Medicine	9999	2
+Medium Pal Soul	PalUpgradeStone2	Material	MaterialMonster	9999	2
+Medium Pouch	AdditionalInventory_002	Essential	NONE	9999	2
+Mega Glider	Glider_Good	Glider	Glider	1	2
+Mega Grappling Gun	GrapplingGun2	Weapon	WeaponGrapplingGun	1	2
+Mega Shield	Shield_02	Armor	Shield	1	2
+Mega Sphere	PalSphere_Mega	SpecialWeapon	SPWeaponCaptureBall	9999	2
+Megaboost Gun	PalDopingShot_2	Weapon	WeaponHandgun	1	5
+Melpaca Saddle	SkillUnlock_Alpaca	Essential	Essential_PalGear	999999	0
+Memory Wiping Medicine	StatusPointResetSan	Consume	Drug	9999	4
+Menasting Bounty Token	BossDefeatReward_DarkScorpion	Essential	NONE	9999	1
+Menasting Terra Bounty Token	BossDefeatReward_DarkScorpion_Ground	Essential	NONE	9999	1
+Menasting Terra Ring	Accessory_Otomo_Earth_1	Accessory	Accessory	1	3
+Menasting Terra Ring Schematic	Blueprint_Accessory_Otomo_Earth_1	Blueprint	Blueprint	9999	8
+Meowmere	YakushimaBlade	Weapon	WeaponMelee	1	2
+Metal Armor	CopperArmor	Armor	ArmorBody	1	2
+Metal Armor	CopperArmor_2	Armor	ArmorBody	1	2
+Metal Armor	CopperArmor_3	Armor	ArmorBody	1	2
+Metal Armor	CopperArmor_4	Armor	ArmorBody	1	2
+Metal Armor	CopperArmor_5	Armor	ArmorBody	1	2
+Metal Armor Schematic 1	Blueprint_CopperArmor_2	Blueprint	Blueprint	9999	1
+Metal Armor Schematic 2	Blueprint_CopperArmor_3	Blueprint	Blueprint	9999	1
+Metal Armor Schematic 3	Blueprint_CopperArmor_4	Blueprint	Blueprint	9999	1
+Metal Armor Schematic 4	Blueprint_CopperArmor_5	Blueprint	Blueprint	9999	1
+Metal Axe	Axe_Tier_01	Weapon	WeaponMelee	1	2
+Metal Bat	Bat3	Weapon	WeaponMelee	1	3
+Metal Bat	Bat3_2	Weapon	WeaponMelee	1	3
+Metal Bat	Bat3_3	Weapon	WeaponMelee	1	3
+Metal Bat	Bat3_4	Weapon	WeaponMelee	1	3
+Metal Bat	Bat3_5	Weapon	WeaponMelee	1	3
+Metal Bat Schematic 1	Blueprint_Bat3_2	Blueprint	Blueprint	9999	1
+Metal Bat Schematic 2	Blueprint_Bat3_3	Blueprint	Blueprint	9999	1
+Metal Bat Schematic 3	Blueprint_Bat3_4	Blueprint	Blueprint	9999	1
+Metal Bat Schematic 4	Blueprint_Bat3_5	Blueprint	Blueprint	9999	1
+Metal Detector	MetalDetector	Weapon	NONE	1	3
+Metal Helm	CopperHelmet	Armor	ArmorHead	1	2
+Metal Helm	CopperHelmet_2	Armor	ArmorHead	1	2
+Metal Helm	CopperHelmet_3	Armor	ArmorHead	1	2
+Metal Helm	CopperHelmet_4	Armor	ArmorHead	1	2
+Metal Helm	CopperHelmet_5	Armor	ArmorHead	1	2
+Metal Helm Schematic 1	Blueprint_CopperHelmet_2	Blueprint	Blueprint	9999	1
+Metal Helm Schematic 2	Blueprint_CopperHelmet_3	Blueprint	Blueprint	9999	1
+Metal Helm Schematic 3	Blueprint_CopperHelmet_4	Blueprint	Blueprint	9999	1
+Metal Helm Schematic 4	Blueprint_CopperHelmet_5	Blueprint	Blueprint	9999	1
+Metal Pickaxe	Pickaxe_Tier_01	Weapon	WeaponMelee	1	2
+Metal Spear	Spear_2	Weapon	WeaponMelee	1	2
+Meteor Launcher	Launcher_Meteor	Weapon	WeaponRocketLauncher	1	3
+Meteor Launcher	Launcher_Meteor_5	Weapon	WeaponRocketLauncher	1	3
+Meteor Launcher Schematic 4	Blueprint_Launcher_Meteor_5	Blueprint	Blueprint	9999	1
+Meteorite Ammo	MeteorBullet	Ammo	ConsumeBullet	9999	3
+Meteorite Fragment	MeteorDrop	Material	MaterialStone	9999	1
+Might Elixir	Elixir_attack_02	Consume	ConsumeGainStatusPoints	9999	4
+Might Remedy	Elixir_attack_01	Consume	ConsumeGainStatusPoints	9999	3
+Milk	Milk	Food	FoodMeat	9999	1
+Mimog Effigy	Relic_12	Essential	Essential	9999	9
+Mind Control Meds	MindControlDrug	Consume	Medicine	9999	999
+Minestrone	Minestrone	Food	FoodDishVegetable	9999	3
+Missile Ammo	MissileBullet	Ammo	ConsumeBullet	9999	4
+Modified Pal's Contaminated Core	BossDefeatReward_BossRush	Essential	NONE	9999	1
+Moldron Bounty Token	BossDefeatReward_VolcanoDragon	Essential	NONE	9999	1
+Moldron Cryst Bounty Token	BossDefeatReward_VolcanoDragon_Ice	Essential	NONE	9999	1
+Moldron Cryst Saddle	SkillUnlock_VolcanoDragon_Ice	Essential	Essential_PalGear	9999	0
+Moldron Saddle	SkillUnlock_VolcanoDragon	Essential	Essential_PalGear	9999	0
+Monarch's Crown	Head001	Armor	ArmorHead	1	1
+Monarch's Crown	Head001_2	Armor	ArmorHead	1	1
+Monarch's Crown	Head001_3	Armor	ArmorHead	1	1
+Monarch's Crown	Head001_4	Armor	ArmorHead	1	1
+Monarch's Crown	Head001_5	Armor	ArmorHead	1	1
+Monarch's Crown Schematic 1	Blueprint_Head001_1	Blueprint	Blueprint	9999	1
+Monarch's Crown Schematic 2	Blueprint_Head001_2	Blueprint	Blueprint	9999	1
+Monarch's Crown Schematic 3	Blueprint_Head001_3	Blueprint	Blueprint	9999	1
+Monarch's Crown Schematic 4	Blueprint_Head001_4	Blueprint	Blueprint	9999	1
+Moon Lord Mask	YakushimaHeadEquip005	Armor	ArmorHead	1	99
+Moon Lord Statue Schematic	Blueprint_YakushimaBoss002_Relic	Blueprint	Blueprint	9999	1
+Mossanda Lux Bounty Token	BossDefeatReward_GrassPanda_Electric	Essential	NONE	9999	1
+Mossanda Lux's Grenade Launcher	SkillUnlock_GrassPanda_Electric	Essential	Essential_PalGear	999999	0
+Mossanda's Grenade Launcher	SkillUnlock_GrassPanda	Essential	Essential_PalGear	999999	0
+Mozzarina Cheeseburger	Cheeseburger_2	Food	FoodDishMeat	9999	3
+Mozzarina Hamburger	Hamburger_2	Food	FoodDishMeat	9999	3
+Mozzarina Meat	Meat_CowPal	Food	FoodMeat	9999	2
+Mozzarina Steak	BakedMeat_CowPal	Food	FoodDishMeat	9999	1
+Multi Guided Missile Launcher	MultiGuidedMissileLauncher	Weapon	WeaponRocketLauncher	1	4
+Multi Guided Missile Launcher	MultiGuidedMissileLauncher_2	Weapon	WeaponRocketLauncher	1	4
+Multi Guided Missile Launcher	MultiGuidedMissileLauncher_3	Weapon	WeaponRocketLauncher	1	4
+Multi Guided Missile Launcher	MultiGuidedMissileLauncher_4	Weapon	WeaponRocketLauncher	1	4
+Multi Guided Missile Launcher	MultiGuidedMissileLauncher_5	Weapon	WeaponRocketLauncher	1	4
+Multi Guided Missile Launcher Schematic	Blueprint_MultiGuidedMissileLauncher	Blueprint	Blueprint	9999	1
+Multi Guided Missile Launcher Schematic 1	Blueprint_MultiGuidedMissileLauncher_2	Blueprint	Blueprint	9999	1
+Multi Guided Missile Launcher Schematic 2	Blueprint_MultiGuidedMissileLauncher_3	Blueprint	Blueprint	9999	1
+Multi Guided Missile Launcher Schematic 3	Blueprint_MultiGuidedMissileLauncher_4	Blueprint	Blueprint	9999	1
+Multi Guided Missile Launcher Schematic 4	Blueprint_MultiGuidedMissileLauncher_5	Blueprint	Blueprint	9999	1
+Multiclimate Undershirt	Accessory_HeatColdResist_1	Accessory	Accessory	1	2
+Multiclimate Undershirt	Accessory_HeatColdResist_2	Accessory	Accessory	1	2
+Multiclimate Undershirt	Accessory_HeatColdResist_3	Accessory	Accessory	1	2
+Multiclimate Undershirt Schematic	Blueprint_Accessory_HeatColdResist_1_2	Blueprint	Blueprint	9999	8
+Munchill Effigy	Relic_03	Essential	Essential	9999	9
+Munchill Meat	Meat_IceCrocodile	Food	FoodMeat	9999	3
+Munchill Steak	BakedMeat_IceCrocodile	Food	FoodDishFish	9999	1
+Mushroom	Mushroom	Food	FoodVegetable	9999	1
+Mushroom Cake	Cake02	Food	FoodDishVegetable	9999	2
+Mushroom Quiche	Quiche	Food	FoodDishVegetable	9999	4
+Mushroom Soup	MushroomSoup	Food	FoodDishVegetable	9999	2
+Mushroom Stew	MushroomStew	Food	FoodDishMeat	9999	3
+Musket	Musket	Weapon	WeaponAssaultRifle	1	2
+Musket	Musket_2	Weapon	WeaponAssaultRifle	1	2
+Musket	Musket_3	Weapon	WeaponAssaultRifle	1	2
+Musket	Musket_4	Weapon	WeaponAssaultRifle	1	2
+Musket	Musket_5	Weapon	WeaponAssaultRifle	1	2
+Musket Schematic 1	Blueprint_Musket_2	Blueprint	Blueprint	9999	1
+Musket Schematic 2	Blueprint_Musket_3	Blueprint	Blueprint	9999	1
+Musket Schematic 3	Blueprint_Musket_4	Blueprint	Blueprint	9999	1
+Musket Schematic 4	Blueprint_Musket_5	Blueprint	Blueprint	9999	1
+Mutated Egg	PalEgg_MutationPal_01	Material	MaterialPalEgg	1	1
+Mutated Egg	PalEgg_MutationPal_02	Material	MaterialPalEgg	1	1
+Mysterious Accessory Box	UnlockEquipmentSlot_Accessory_01	Essential	Essential_UnlockPlayerFuture	1	1
+Mysterious Mushroom	PoisonMushroom	Food	FoodVegetable	9999	1
+Mysterious Mushroom Juice	MushroomJuice	Consume	Drug	9999	4
+Mystic Accessory Box	UnlockEquipmentSlot_Accessory_02	Essential	Essential_UnlockPlayerFuture	1	1
+Mythical Wood	Wood_WorldTree	Material	MaterialWood	9999	1
+Mythical Wooden Board	Premium_Processed_Wood	Material	MaterialProccessing	9999	99
+Nail	MachineParts	Material	MaterialProccessing	9999	1
+Necromus Saddle	SkillUnlock_BlackCentaur	Essential	Essential_PalGear	999999	0
+Needoll Bounty Token	BossDefeatReward_CactusDoll	Essential	NONE	9999	1
+Neptilius Bounty Token	BossDefeatReward_PoseidonOrca	Essential	NONE	9999	1
+Neptilius Saddle	SkillUnlock_PoseidonOrca	Essential	Essential_PalGear	9999	0
+Neptilius's Talisman	Otomo_DFWater_ElementBoost_1	Accessory	Accessory	1	3
+Neptilius's Talisman Schematic	Blueprint_Otomo_DFWater_ElementBoost_1	Blueprint	Blueprint	9999	8
+Neutral Awakening Crystal	PalAwakening_Neutral	Consume	NONE	9999	10
+Neutral Radiant Gem	PalAwakening_Material_Neutral	Material	MaterialMonster	9999	5
+Neutral Support Whistle	Otomo_ElementBoost_Normal_1	Accessory	Accessory	1	2
+Neutral Support Whistle	Otomo_ElementBoost_Normal_2	Accessory	Accessory	1	2
+Neutral Support Whistle	Otomo_ElementBoost_Normal_3	Accessory	Accessory	1	2
+Neutral Support Whistle Schematic	Blueprint_Otomo_ElementBoost_Normal_1_2	Blueprint	Blueprint	9999	8
+Night Vision Goggles	NightVisionGoggles	Accessory	Accessory	1	2
+Nightglow	YakushimaLantern001	Weapon	WeaponMelee	1	3
+Nightglow	YakushimaLantern001_2	Weapon	WeaponMelee	1	3
+Nightglow	YakushimaLantern001_3	Weapon	WeaponMelee	1	3
+Nightglow	YakushimaLantern001_4	Weapon	WeaponMelee	1	3
+Nightglow	YakushimaLantern001_5	Weapon	WeaponMelee	1	3
+Nightglow Schematic	Blueprint_YakushimaLantern001	Blueprint	Blueprint	9999	1
+Nightglow Schematic 1	Blueprint_YakushimaLantern001_2	Blueprint	Blueprint	9999	1
+Nightglow Schematic 2	Blueprint_YakushimaLantern001_3	Blueprint	Blueprint	9999	1
+Nightglow Schematic 3	Blueprint_YakushimaLantern001_4	Blueprint	Blueprint	9999	1
+Nightglow Schematic 4	Blueprint_YakushimaLantern001_5	Blueprint	Blueprint	9999	1
+Nightstar Sand	NightStone	Material	MaterialOre	9999	1
+Nitemary Bounty Token	BossDefeatReward_GhostRabbit	Essential	NONE	9999	1
+Nitewing Bounty Token	BossDefeatReward_HawkBird	Essential	NONE	9999	1
+Nitewing Saddle	SkillUnlock_HawkBird	Essential	Essential_PalGear	999999	0
+Normal Parachute	Glider_Old	Glider	Glider	1	1
+Nutrient Tonic	Supplement	Consume	Drug	9999	10
+Nyafia Bounty Token	BossDefeatReward_BadCatgirl	Essential	NONE	9999	1
+Nyafia's Shotgun	SkillUnlock_BadCatgirl	Essential	Essential_PalGear	999999	0
+Old Bow	WeakerBow	Weapon	WeaponBow	1	1
+Old Bow	WeakerBow_2	Weapon	WeaponBow	1	1
+Old Bow	WeakerBow_3	Weapon	WeaponBow	1	1
+Old Bow	WeakerBow_4	Weapon	WeaponBow	1	1
+Old Bow	WeakerBow_5	Weapon	WeaponBow	1	1
+Old Bow Schematic 1	Blueprint_WeakerBow_2	Blueprint	Blueprint	9999	1
+Old Bow Schematic 2	Blueprint_WeakerBow_3	Blueprint	Blueprint	9999	1
+Old Bow Schematic 3	Blueprint_WeakerBow_4	Blueprint	Blueprint	9999	1
+Old Bow Schematic 4	Blueprint_WeakerBow_5	Blueprint	Blueprint	9999	1
+Old Revolver	OldRevolver	Weapon	WeaponHandgun	1	3
+Old Revolver	OldRevolver_2	Weapon	WeaponHandgun	1	3
+Old Revolver	OldRevolver_3	Weapon	WeaponHandgun	1	3
+Old Revolver	OldRevolver_4	Weapon	WeaponHandgun	1	3
+Old Revolver	OldRevolver_5	Weapon	WeaponHandgun	1	3
+Old Revolver Schematic 1	Blueprint_OldRevolver_2	Blueprint	Blueprint	9999	1
+Old Revolver Schematic 2	Blueprint_OldRevolver_3	Blueprint	Blueprint	9999	1
+Old Revolver Schematic 3	Blueprint_OldRevolver_4	Blueprint	Blueprint	9999	1
+Old Revolver Schematic 4	Blueprint_OldRevolver_5	Blueprint	Blueprint	9999	1
+Omascul Bounty Token	BossDefeatReward_MysteryMask	Essential	NONE	9999	1
+Omelet	Omelet	Food	FoodDishMeat	9999	2
+Ominous Egg	PalEgg_WorldTree_01	Material	MaterialPalEgg	1	1
+Ominous Egg	PalEgg_WorldTree_02	Material	MaterialPalEgg	1	1
+Onion	Onion	Food	FoodVegetable	9999	1
+Onion Seeds	OnionSeeds	Material	MaterialMonster	9999	1
+Ophydia Bounty Token	BossDefeatReward_LotusDragon	Essential	NONE	9999	1
+Ophydia Saddle	SkillUnlock_LotusDragon	Essential	Essential_PalGear	9999	0
+Ore	CopperOre	Material	MaterialOre	9999	1
+Orserk's Talisman	Otomo_DFElectricity_ElementBoost_1	Accessory	Accessory	1	3
+Orserk's Talisman Schematic	Blueprint_Otomo_DFElectricity_ElementBoost_1	Blueprint	Blueprint	9999	8
+Overheat Rifle	OverheatRifle	Weapon	WeaponAssaultRifle	1	5
+Overheat Rifle	OverheatRifle_2	Weapon	WeaponAssaultRifle	1	5
+Overheat Rifle	OverheatRifle_3	Weapon	WeaponAssaultRifle	1	5
+Overheat Rifle	OverheatRifle_4	Weapon	WeaponAssaultRifle	1	5
+Overheat Rifle	OverheatRifle_5	Weapon	WeaponAssaultRifle	1	5
+Overheat Rifle Ammo	OverheatRifleBullet	Ammo	ConsumeBullet	9999	5
+Overheat Rifle Schematic 1	Blueprint_OverheatRifle_2	Blueprint	Blueprint	9999	1
+Overheat Rifle Schematic 2	Blueprint_OverheatRifle_3	Blueprint	Blueprint	9999	1
+Overheat Rifle Schematic 3	Blueprint_OverheatRifle_4	Blueprint	Blueprint	9999	1
+Overheat Rifle Schematic 4	Blueprint_OverheatRifle_5	Blueprint	Blueprint	9999	1
+Pal Metal Armor	StealArmor	Armor	ArmorBody	1	4
+Pal Metal Armor	StealArmor_2	Armor	ArmorBody	1	4
+Pal Metal Armor	StealArmor_3	Armor	ArmorBody	1	4
+Pal Metal Armor	StealArmor_4	Armor	ArmorBody	1	4
+Pal Metal Armor	StealArmor_5	Armor	ArmorBody	1	4
+Pal Metal Armor Schematic 1	Blueprint_StealArmor_2	Blueprint	Blueprint	9999	1
+Pal Metal Armor Schematic 2	Blueprint_StealArmor_3	Blueprint	Blueprint	9999	1
+Pal Metal Armor Schematic 3	Blueprint_StealArmor_4	Blueprint	Blueprint	9999	1
+Pal Metal Armor Schematic 4	Blueprint_StealArmor_5	Blueprint	Blueprint	9999	1
+Pal Metal Axe	Axe_Steal	Weapon	WeaponMelee	1	4
+Pal Metal Helm	StealHelmet	Armor	ArmorHead	1	4
+Pal Metal Helm	StealHelmet_2	Armor	ArmorHead	1	4
+Pal Metal Helm	StealHelmet_3	Armor	ArmorHead	1	4
+Pal Metal Helm	StealHelmet_4	Armor	ArmorHead	1	4
+Pal Metal Helm	StealHelmet_5	Armor	ArmorHead	1	4
+Pal Metal Helm Schematic 1	Blueprint_StealHelmet_2	Blueprint	Blueprint	9999	1
+Pal Metal Helm Schematic 2	Blueprint_StealHelmet_3	Blueprint	Blueprint	9999	1
+Pal Metal Helm Schematic 3	Blueprint_StealHelmet_4	Blueprint	Blueprint	9999	1
+Pal Metal Helm Schematic 4	Blueprint_StealHelmet_5	Blueprint	Blueprint	9999	1
+Pal Metal Ingot	StealIngot	Material	MaterialIngot	9999	3
+Pal Metal Pickaxe	Pickaxe_Steal	Weapon	WeaponMelee	1	4
+Pal Recovery Grenade	PalHealingGrenade	Weapon	WeaponThrowObject	9999	2
+Pal Reverser	PalGenderReverse	Consume	ConsumeOther	9999	4
+Pal Sphere	PalSphere	SpecialWeapon	SPWeaponCaptureBall	9999	1
+Pal Tamer's Glasses	Accessory_NonkChecker_1	Accessory	Accessory	1	3
+Pal Tamer's Glasses Schematic	Blueprint_Accessory_NonkChecker_1	Blueprint	Blueprint	9999	8
+Paladius Saddle	SkillUnlock_SaintCentaur	Essential	Essential_PalGear	999999	0
+Paldium Chunk	Pal_crystal_L	Material	MaterialStone	9999	3
+Paldium Fragment	Pal_crystal_S	Material	MaterialOre	9999	2
+Paloxite	WorldTreeOre	Material	MaterialOre	9999	1
+Paloxite Ingot	WorldTreeIngot	Material	MaterialIngot	9999	7
+Palumba Saddle	SkillUnlock_TropicalOstrich	Essential	Essential_PalGear	9999	0
+Pancake	Pancake	Food	FoodDishVegetable	9999	2
+Paper Lantern Schematic	Blueprint_LanternTop	Blueprint	Blueprint	9999	1
+Pelt Armor	FurArmor	Armor	ArmorBody	1	2
+Pelt Armor	FurArmor_2	Armor	ArmorBody	1	2
+Pelt Armor	FurArmor_3	Armor	ArmorBody	1	2
+Pelt Armor	FurArmor_4	Armor	ArmorBody	1	2
+Pelt Armor	FurArmor_5	Armor	ArmorBody	1	2
+Pelt Armor Schematic 1	Blueprint_FurArmor_2	Blueprint	Blueprint	9999	1
+Pelt Armor Schematic 2	Blueprint_FurArmor_3	Blueprint	Blueprint	9999	1
+Pelt Armor Schematic 3	Blueprint_FurArmor_4	Blueprint	Blueprint	9999	1
+Pelt Armor Schematic 4	Blueprint_FurArmor_5	Blueprint	Blueprint	9999	1
+Pendant of Diligence	Accessory_WorkSpeed_1	Accessory	Accessory	1	2
+Pendant of Diligence	Accessory_WorkSpeed_2	Accessory	Accessory	1	2
+Pendant of Diligence	Accessory_WorkSpeed_3	Accessory	Accessory	1	2
+Pendant of Diligence Schematic	Blueprint_Accessory_WorkSpeed_1_2	Blueprint	Blueprint	9999	8
+Pengullet Effigy	Relic_02	Essential	Essential	9999	9
+Pengullet Lux's Rocket Launcher	SkillUnlock_Penguin_Electric	Essential	Essential_PalGear	999999	0
+Pengullet Rocket Launcher	SkillUnlock_Penguin	Essential	Essential_PalGear	999999	0
+Penking Bounty Token	BossDefeatReward_CaptainPenguin	Essential	NONE	9999	1
+Penking Cap	Head016	Armor	ArmorHead	1	1
+Penking Cap	Head016_2	Armor	ArmorHead	1	1
+Penking Cap	Head016_3	Armor	ArmorHead	1	1
+Penking Cap	Head016_4	Armor	ArmorHead	1	1
+Penking Cap	Head016_5	Armor	ArmorHead	1	1
+Penking Cap Schematic 1	Blueprint_Head016_1	Blueprint	Blueprint	9999	1
+Penking Cap Schematic 2	Blueprint_Head016_2	Blueprint	Blueprint	9999	1
+Penking Cap Schematic 3	Blueprint_Head016_3	Blueprint	Blueprint	9999	1
+Penking Cap Schematic 4	Blueprint_Head016_4	Blueprint	Blueprint	9999	1
+Penking Plume	PalItem_CaptainPenguin	Material	MaterialMonster	9999	1
+Petallia Bounty Token	BossDefeatReward_FlowerDoll	Essential	NONE	9999	1
+Phantom Ring	Accessory_Avoid_1	Accessory	Accessory	1	3
+Phantom Ring Schematic	Blueprint_Accessory_Avoid_1	Blueprint	Blueprint	1	8
+Phantom Ring Schematic	Blueprint_Accessory_Avoid_1_fix	Blueprint	Blueprint	9999	8
+Pizza	Pizza	Food	FoodDishMeat	9999	3
+Plasma Cannon	EnergyRocketLauncher	Weapon	WeaponRocketLauncher	1	4
+Plasma Cannon	EnergyRocketLauncher_2	Weapon	WeaponRocketLauncher	1	4
+Plasma Cannon	EnergyRocketLauncher_3	Weapon	WeaponRocketLauncher	1	4
+Plasma Cannon	EnergyRocketLauncher_4	Weapon	WeaponRocketLauncher	1	4
+Plasma Cannon	EnergyRocketLauncher_5	Weapon	WeaponRocketLauncher	1	4
+Plasma Cannon Schematic 1	Blueprint_EnergyRocketLauncher_2	Blueprint	Blueprint	9999	1
+Plasma Cannon Schematic 2	Blueprint_EnergyRocketLauncher_3	Blueprint	Blueprint	9999	1
+Plasma Cannon Schematic 3	Blueprint_EnergyRocketLauncher_4	Blueprint	Blueprint	9999	1
+Plasma Cannon Schematic 4	Blueprint_EnergyRocketLauncher_5	Blueprint	Blueprint	9999	1
+Plasma Cartridge	EnergyLauncherBullet	Ammo	ConsumeBullet	9999	4
+Plasma Multicutter	LaserMiningTool	Weapon	WeaponMelee	1	4
+Plasma Rifle	ElectricArcAssaultRifle	Weapon	WeaponAssaultRifle	1	10
+Plasma Rifle	ElectricArcAssaultRifle_2	Weapon	WeaponAssaultRifle	1	10
+Plasma Rifle	ElectricArcAssaultRifle_3	Weapon	WeaponAssaultRifle	1	10
+Plasma Rifle	ElectricArcAssaultRifle_4	Weapon	WeaponAssaultRifle	1	10
+Plasma Rifle	ElectricArcAssaultRifle_5	Weapon	WeaponAssaultRifle	1	10
+Plasma Rifle Ammo	ElectricArcAssaultRifleBullet	Ammo	ConsumeBullet	9999	10
+Plasma Rifle Schematic 1	Blueprint_ElectricArcAssaultRifle_2	Blueprint	Blueprint	9999	1
+Plasma Rifle Schematic 2	Blueprint_ElectricArcAssaultRifle_3	Blueprint	Blueprint	9999	1
+Plasma Rifle Schematic 3	Blueprint_ElectricArcAssaultRifle_4	Blueprint	Blueprint	9999	1
+Plasma Rifle Schematic 4	Blueprint_ElectricArcAssaultRifle_5	Blueprint	Blueprint	9999	1
+Plasteel	Plastic	Material	MaterialIngot	9999	3
+Plasteel Armor	PlasticArmor	Armor	ArmorBody	1	4
+Plasteel Armor	PlasticArmor_2	Armor	ArmorBody	1	4
+Plasteel Armor	PlasticArmor_3	Armor	ArmorBody	1	4
+Plasteel Armor	PlasticArmor_4	Armor	ArmorBody	1	4
+Plasteel Armor	PlasticArmor_5	Armor	ArmorBody	1	4
+Plasteel Armor Schematic 1	Blueprint_PlasticArmor_2	Blueprint	Blueprint	9999	1
+Plasteel Armor Schematic 2	Blueprint_PlasticArmor_3	Blueprint	Blueprint	9999	1
+Plasteel Armor Schematic 3	Blueprint_PlasticArmor_4	Blueprint	Blueprint	9999	1
+Plasteel Armor Schematic 4	Blueprint_PlasticArmor_5	Blueprint	Blueprint	9999	1
+Plasteel Helmet	PlasticHelmet	Armor	ArmorHead	1	4
+Plasteel Helmet	PlasticHelmet_2	Armor	ArmorHead	1	4
+Plasteel Helmet	PlasticHelmet_3	Armor	ArmorHead	1	4
+Plasteel Helmet	PlasticHelmet_4	Armor	ArmorHead	1	4
+Plasteel Helmet	PlasticHelmet_5	Armor	ArmorHead	1	4
+Plasteel Helmet Schematic 1	Blueprint_PlasticHelmet_2	Blueprint	Blueprint	9999	1
+Plasteel Helmet Schematic 2	Blueprint_PlasticHelmet_3	Blueprint	Blueprint	9999	1
+Plasteel Helmet Schematic 3	Blueprint_PlasticHelmet_4	Blueprint	Blueprint	9999	1
+Plasteel Helmet Schematic 4	Blueprint_PlasticHelmet_5	Blueprint	Blueprint	9999	1
+Poison Arrow	Arrow_Poison	Ammo	ConsumeBullet	9999	1
+Poison Arrow Crossbow	BowGun_Poison	Weapon	WeaponCrossbow	1	999
+Poison Arrow Crossbow	BowGun_Poison_2	Weapon	WeaponCrossbow	1	999
+Poison Arrow Crossbow	BowGun_Poison_3	Weapon	WeaponCrossbow	1	999
+Poison Arrow Crossbow	BowGun_Poison_4	Weapon	WeaponCrossbow	1	999
+Poison Arrow Crossbow	BowGun_Poison_5	Weapon	WeaponCrossbow	1	999
+Poison Arrow Crossbow Schematic 1	Blueprint_BowGun_Poison_2	Blueprint	Blueprint	9999	999
+Poison Arrow Crossbow Schematic 2	Blueprint_BowGun_Poison_3	Blueprint	Blueprint	9999	999
+Poison Arrow Crossbow Schematic 3	Blueprint_BowGun_Poison_4	Blueprint	Blueprint	9999	999
+Poison Arrow Crossbow Schematic 4	Blueprint_BowGun_Poison_5	Blueprint	Blueprint	9999	999
+Poison Bow	Bow_Poison	Weapon	WeaponBow	1	999
+Polapup Saddle	SkillUnlock_IceSeal	Essential	Essential_PalGear	9999	0
+Polapup Terra Saddle	SkillUnlock_IceSeal_Ground	Essential	Essential_PalGear	9999	0
+Polymer	Polymer	Material	MaterialProccessing	9999	3
+Potage	Potage	Food	FoodDishMeat	9999	2
+Potato	Potato	Food	FoodVegetable	9999	1
+Potato Seeds	PotatoSeeds	Material	MaterialMonster	9999	1
+PotatoSeedPotatoes	PotatoSeedPotatoes	Material	MaterialMonster	9999	1
+Power Fruit	Fruit_attack_01	Consume	ConsumePalTalentUp	9999	4
+Power Lotus (L)	Lotus_attack_02	Material	MaterialMonster	9999	4
+Power Lotus (S)	Lotus_attack_01	Material	MaterialMonster	9999	3
+Powerful Fishing Magnet	Salvage_TreasureBoxKey02	Consume	ConsumeOther	9999	4
+Precious Claw	PalItem_ToSell_04	Material	MaterialMonster	9999	1
+Precious Dragon Stone	PalItem_ToSell_01	Material	MaterialMonster	9999	1
+Precious Entrails	PalItem_ToSell_03	Material	MaterialMonster	9999	1
+Precious Pelt	PalItem_ToSell_05	Material	MaterialMonster	9999	1
+Precious Plume	PalItem_ToSell_02	Material	MaterialMonster	9999	1
+Predator Core	PredatorCrystal	Material	MaterialJewelry	9999	4
+Primitive Sword	BronzeSword	Weapon	WeaponMelee	1	2
+Prixter Lux Bounty Token	BossDefeatReward_ScorpionMan_Electric	Essential	NONE	9999	1
+Prototype Shotgun	SkyShotgun	Weapon	WeaponShotgun	1	10
+Prototype Shotgun	SkyShotgun_2	Weapon	WeaponShotgun	1	10
+Prototype Shotgun	SkyShotgun_3	Weapon	WeaponShotgun	1	10
+Prototype Shotgun	SkyShotgun_4	Weapon	WeaponShotgun	1	10
+Prototype Shotgun	SkyShotgun_5	Weapon	WeaponShotgun	1	10
+Prototype Shotgun Ammo	SkyShotgunBullet	Ammo	ConsumeBullet	9999	10
+Prototype Shotgun Schematic 1	Blueprint_SkyShotgun_2	Blueprint	Blueprint	9999	1
+Prototype Shotgun Schematic 2	Blueprint_SkyShotgun_3	Blueprint	Blueprint	9999	1
+Prototype Shotgun Schematic 3	Blueprint_SkyShotgun_4	Blueprint	Blueprint	9999	1
+Prototype Shotgun Schematic 4	Blueprint_SkyShotgun_5	Blueprint	Blueprint	9999	1
+Prunelia Bounty Token	BossDefeatReward_BlueberryFairy	Essential	NONE	9999	1
+Pump-Action Shotgun	PumpActionShotgun	Weapon	WeaponShotgun	1	3
+Pump-Action Shotgun	PumpActionShotgun_2	Weapon	WeaponShotgun	1	3
+Pump-Action Shotgun	PumpActionShotgun_3	Weapon	WeaponShotgun	1	3
+Pump-Action Shotgun	PumpActionShotgun_4	Weapon	WeaponShotgun	1	3
+Pump-Action Shotgun	PumpActionShotgun_5	Weapon	WeaponShotgun	1	3
+Pump-Action Shotgun Schematic 1	Blueprint_PumpActionShotgun_2	Blueprint	Blueprint	9999	1
+Pump-Action Shotgun Schematic 2	Blueprint_PumpActionShotgun_3	Blueprint	Blueprint	9999	1
+Pump-Action Shotgun Schematic 3	Blueprint_PumpActionShotgun_4	Blueprint	Blueprint	9999	1
+Pump-Action Shotgun Schematic 4	Blueprint_PumpActionShotgun_5	Blueprint	Blueprint	9999	1
+Pure Quartz	Quartz	Material	MaterialOre	9999	1
+Pyrin Bounty Token	BossDefeatReward_FireKirin	Essential	NONE	9999	1
+Pyrin Noct Saddle	SkillUnlock_FireKirin_Dark	Essential	Essential_PalGear	999999	0
+Pyrin Saddle	SkillUnlock_FireKirin	Essential	Essential_PalGear	999999	0
+Quadruple Air Dash Boots	Accessory_AirDash4	Accessory	Accessory	1	3
+Quadruple Jump Boots	Accessory_JumpCount_Increase3	Accessory	Accessory	1	10
+Quick Bait	FishingBait_2_B	Consume	NONE	9999	1
+Quivern Botan Saddle	SkillUnlock_SkyDragon_Grass	Essential	Essential_PalGear	999999	0
+Quivern Bounty Token	BossDefeatReward_SkyDragon	Essential	NONE	9999	1
+Quivern Saddle	SkillUnlock_SkyDragon	Essential	Essential_PalGear	999999	0
+Radar Sphere	PalSphere_Robbery	SpecialWeapon	SPWeaponCaptureBall	9999	3
+Ragnahawk Saddle	SkillUnlock_RedArmorBird	Essential	Essential_PalGear	999999	0
+Raw Dumud	Meat_LazyCatfish	Food	FoodFish	9999	2
+Raw Kelpsea	Meat_Kelpie	Food	FoodFish	9999	1
+Rayhound Cryst Saddle	SkillUnlock_Thunderdog_Ice	Essential	Essential_PalGear	9999	0
+Rayhound Saddle	SkillUnlock_ThunderDog	Essential	Essential_PalGear	999999	0
+Rayne Syndicate Flag Schematic	Blueprint_Hunter_GangFlag	Blueprint	Blueprint	9999	1
+Recovery Meds	Potion	Consume	Drug	9999	3
+Red Berries	Berries	Food	FoodVegetable	9999	1
+Red Berries	Berries2	Food	FoodVegetable	9999	1
+Red Wooden Lantern Schematic	Blueprint_Shrine_Lantern	Blueprint	Blueprint	9999	1
+Refined Ingot	IronIngot	Material	MaterialIngot	9999	2
+Refined Metal Armor	IronArmor	Armor	ArmorBody	1	3
+Refined Metal Armor	IronArmor_2	Armor	ArmorBody	1	3
+Refined Metal Armor	IronArmor_3	Armor	ArmorBody	1	3
+Refined Metal Armor	IronArmor_4	Armor	ArmorBody	1	3
+Refined Metal Armor	IronArmor_5	Armor	ArmorBody	1	3
+Refined Metal Armor Schematic 1	Blueprint_IronArmor_2	Blueprint	Blueprint	9999	1
+Refined Metal Armor Schematic 2	Blueprint_IronArmor_3	Blueprint	Blueprint	9999	1
+Refined Metal Armor Schematic 3	Blueprint_IronArmor_4	Blueprint	Blueprint	9999	1
+Refined Metal Armor Schematic 4	Blueprint_IronArmor_5	Blueprint	Blueprint	9999	1
+Refined Metal Axe	Axe_Tier_02	Weapon	WeaponMelee	1	3
+Refined Metal Helm	IronHelmet	Armor	ArmorHead	1	3
+Refined Metal Helm	IronHelmet_2	Armor	ArmorHead	1	3
+Refined Metal Helm	IronHelmet_3	Armor	ArmorHead	1	3
+Refined Metal Helm	IronHelmet_4	Armor	ArmorHead	1	3
+Refined Metal Helm	IronHelmet_5	Armor	ArmorHead	1	3
+Refined Metal Helm Schematic 1	Blueprint_IronHelmet_2	Blueprint	Blueprint	9999	1
+Refined Metal Helm Schematic 2	Blueprint_IronHelmet_3	Blueprint	Blueprint	9999	1
+Refined Metal Helm Schematic 3	Blueprint_IronHelmet_4	Blueprint	Blueprint	9999	1
+Refined Metal Helm Schematic 4	Blueprint_IronHelmet_5	Blueprint	Blueprint	9999	1
+Refined Metal Pickaxe	Pickaxe_Tier_02	Weapon	WeaponMelee	1	3
+Refined Metal Spear	Spear_3	Weapon	WeaponMelee	1	3
+Reindrix Saddle	SkillUnlock_IceDeer	Essential	Essential_PalGear	999999	0
+Reindrix Stew	StewedIceDeer	Food	FoodDishMeat	9999	2
+Reindrix Venison	Meat_IceDeer	Food	FoodMeat	9999	2
+Reinforced Arrow	ReinforcedArrow	Ammo	ConsumeBullet	9999	1
+Relaxaurus Bounty Token	BossDefeatReward_LazyDragon_Electric	Essential	NONE	9999	1
+Relaxaurus Effigy	Relic_10	Essential	Essential	9999	9
+Relaxaurus Lux's Missile Launcher	SkillUnlock_LazyDragon_Electric	Essential	Essential_PalGear	999999	0
+Relaxaurus' Missile Launcher	SkillUnlock_LazyDragon	Essential	Essential_PalGear	999999	0
+Renjishi Bounty Token	BossDefeatReward_KabukiMan	Essential	NONE	9999	1
+Reptyro Bounty Token	BossDefeatReward_VolcanicMonster	Essential	NONE	9999	1
+Reptyro Charm	Accessory_HeatFire_1	Accessory	Accessory	1	3
+Reptyro Charm Schematic	Blueprint_Accessory_HeatFire_1	Blueprint	Blueprint	9999	8
+Reptyro Cryst Saddle	SkillUnlock_VolcanicMonster_Ice	Essential	Essential_PalGear	999999	0
+Reptyro Saddle	SkillUnlock_VolcanicMonster	Essential	Essential_PalGear	999999	0
+Revival Potion	PalRevive	Consume	NONE	9999	5
+Ribbuny Botan Bounty Token	BossDefeatReward_PinkRabbit_Grass	Essential	NONE	9999	1
+Ribbuny Headband	HeadEquip028	Armor	ArmorHead	1	1
+Ribbuny Headband	HeadEquip028_2	Armor	ArmorHead	1	1
+Ribbuny Headband	HeadEquip028_3	Armor	ArmorHead	1	1
+Ribbuny Headband	HeadEquip028_4	Armor	ArmorHead	1	1
+Ribbuny Headband	HeadEquip028_5	Armor	ArmorHead	1	1
+Ribbuny Headband Schematic 1	Blueprint_HeadEquip028_1	Blueprint	Blueprint	9999	1
+Ribbuny Headband Schematic 1	Blueprint_HeadEquip028_5	Blueprint	Blueprint	9999	1
+Ribbuny Headband Schematic 2	Blueprint_HeadEquip028_2	Blueprint	Blueprint	9999	1
+Ribbuny Headband Schematic 3	Blueprint_HeadEquip028_3	Blueprint	Blueprint	9999	1
+Ribbuny Headband Schematic 4	Blueprint_HeadEquip028_4	Blueprint	Blueprint	9999	1
+Ribbuny Ribbon	PalItem_PinkRabbit	Material	MaterialMonster	9999	1
+Rifle Ammo	RifleBullet	Ammo	ConsumeBullet	9999	2
+Ring of Dark Resistance	Accessory_DarkResist_1	Accessory	Accessory	1	2
+Ring of Dark Resistance	Accessory_DarkResist_2	Accessory	Accessory	1	2
+Ring of Dark Resistance	Accessory_DarkResist_3	Accessory	Accessory	1	2
+Ring of Dark Resistance Schematic	Blueprint_Accessory_DarkResist_1_2	Blueprint	Blueprint	9999	8
+Ring of Dragon Resistance	Accessory_DragonResist_1	Accessory	Accessory	1	2
+Ring of Dragon Resistance	Accessory_DragonResist_2	Accessory	Accessory	1	2
+Ring of Dragon Resistance	Accessory_DragonResist_3	Accessory	Accessory	1	2
+Ring of Dragon Resistance Schematic	Blueprint_Accessory_DragonResist_1_2	Blueprint	Blueprint	9999	8
+Ring of Electric Resistance	Accessory_ThunderResist_1	Accessory	Accessory	1	2
+Ring of Electric Resistance	Accessory_ThunderResist_2	Accessory	Accessory	1	2
+Ring of Electric Resistance	Accessory_ThunderResist_3	Accessory	Accessory	1	8
+Ring of Electric Resistance Schematic	Blueprint_Accessory_ThunderResist_1_2	Blueprint	Blueprint	9999	8
+Ring of Fire Resistance	Accessory_FireResist_1	Accessory	Accessory	1	2
+Ring of Fire Resistance	Accessory_FireResist_2	Accessory	Accessory	1	2
+Ring of Fire Resistance	Accessory_FireResist_3	Accessory	Accessory	1	2
+Ring of Fire Resistance Schematic	Blueprint_Accessory_FireResist_1_2	Blueprint	Blueprint	9999	8
+Ring of Freight	Accessory_MaxWeightUp_01	Accessory	Accessory	1	2
+Ring of Freight	Accessory_MaxWeightUp_02	Accessory	Accessory	1	2
+Ring of Freight	Accessory_MaxWeightUp_03	Accessory	Accessory	1	2
+Ring of Freight Schematic	Blueprint_Accessory_MaxWeightUp_01_2	Blueprint	Blueprint	9999	8
+Ring of Grass Resistance	Accessory_LeafResist_1	Accessory	Accessory	1	2
+Ring of Grass Resistance	Accessory_LeafResist_2	Accessory	Accessory	1	2
+Ring of Grass Resistance	Accessory_LeafResist_3	Accessory	Accessory	1	8
+Ring of Grass Resistance Schematic	Blueprint_Accessory_LeafResist_1_2	Blueprint	Blueprint	9999	8
+Ring of Ground Resistance	Accessory_EarthResist_1	Accessory	Accessory	1	2
+Ring of Ground Resistance	Accessory_EarthResist_2	Accessory	Accessory	1	2
+Ring of Ground Resistance	Accessory_EarthResist_3	Accessory	Accessory	1	2
+Ring of Ground Resistance Schematic	Blueprint_Accessory_EarthResist_1_2	Blueprint	Blueprint	9999	8
+Ring of Ice Resistance	Accessory_IceResist_1	Accessory	Accessory	1	2
+Ring of Ice Resistance	Accessory_IceResist_2	Accessory	Accessory	1	8
+Ring of Ice Resistance	Accessory_IceResist_3	Accessory	Accessory	1	2
+Ring of Ice Resistance Schematic	Blueprint_Accessory_IceResist_1_2	Blueprint	Blueprint	9999	8
+Ring of Mercy	Accessory_Nonkilling	Accessory	Accessory	1	2
+Ring of Neutral Resistance	Accessory_NormalResist_1	Accessory	Accessory	1	2
+Ring of Neutral Resistance	Accessory_NormalResist_2	Accessory	Accessory	1	2
+Ring of Neutral Resistance	Accessory_NormalResist_3	Accessory	Accessory	1	2
+Ring of Neutral Resistance Schematic	Blueprint_Accessory_NormalResist_1_2	Blueprint	Blueprint	9999	8
+Ring of Trust	Otomo_PalConfidence_Increase_1	Accessory	Accessory	1	3
+Ring of Trust Schematic	Blueprint_Otomo_PalConfidence_Increase_1_fix	Blueprint	Blueprint	9999	8
+Ring of Water Resistance	Accessory_AquaResist_1	Accessory	Accessory	1	2
+Ring of Water Resistance	Accessory_AquaResist_2	Accessory	Accessory	1	2
+Ring of Water Resistance	Accessory_AquaResist_3	Accessory	Accessory	1	2
+Ring of Water Resistance Schematic	Blueprint_Accessory_AquaResist_1_2	Blueprint	Blueprint	9999	8
+Ripe Starfruit	Rankup_Arbitrary	Consume	ConsumePalRankUp	9999	6
+Risky Bait	FishingBait_3_B	Consume	NONE	9999	1
+Roast Eikthyrdeer	BakedMeat_Deer	Food	FoodDishMeat	9999	1
+Roast Reindrix	BakedMeat_IceDeer	Food	FoodDishMeat	9999	1
+Roast Rushoar	BakedMeat_Boar	Food	FoodDishMeat	9999	1
+Rocket Ammo	ExplosiveBullet	Ammo	ConsumeBullet	9999	4
+Rocket Launcher	Launcher_Default	Weapon	WeaponRocketLauncher	1	4
+Rocket Launcher	Launcher_Default_2	Weapon	WeaponRocketLauncher	1	4
+Rocket Launcher	Launcher_Default_3	Weapon	WeaponRocketLauncher	1	4
+Rocket Launcher	Launcher_Default_4	Weapon	WeaponRocketLauncher	1	4
+Rocket Launcher	Launcher_Default_5	Weapon	WeaponRocketLauncher	1	4
+Rocket Launcher Schematic 1	Blueprint_Launcher_Default_2	Blueprint	Blueprint	9999	1
+Rocket Launcher Schematic 2	Blueprint_Launcher_Default_3	Blueprint	Blueprint	9999	1
+Rocket Launcher Schematic 3	Blueprint_Launcher_Default_4	Blueprint	Blueprint	9999	1
+Rocket Launcher Schematic 4	Blueprint_Launcher_Default_5	Blueprint	Blueprint	9999	1
+Rocky Egg	PalEgg_Earth_01	Material	MaterialPalEgg	1	1
+Rocky Egg	PalEgg_Earth_02	Material	MaterialPalEgg	1	1
+Rooby Effigy	Relic_04	Essential	Essential	9999	9
+Roujay Saddle	SkillUnlock_ThiefBird	Essential	Essential_PalGear	9999	0
+Ruby	Ruby	Material	MaterialJewelry	9999	2
+Rushoar Bacon 'n' Eggs	BaconEggs	Food	FoodDishMeat	9999	2
+Rushoar Gyoza	Gyoza	Food	FoodDishMeat	9999	2
+Rushoar Hot Dog	HotDog_2	Food	FoodDishMeat	9999	3
+Rushoar Pork	Meat_Boar	Food	FoodMeat	9999	2
+Rushoar Saddle	SkillUnlock_Boar	Essential	Essential_PalGear	999999	0
+Salad	Salad	Food	FoodDishVegetable	9999	2
+Salt-Grilled Skutlass	GrilledSwordCutlassFish	Food	FoodDishFish	9999	1
+Sandwich	Sandwich	Food	FoodDishMeat	9999	1
+Sapphire	Sapphire	Material	MaterialJewelry	9999	4
+Saya Hat	GYM_Head_Sakurajima	Armor	ArmorHead	1	99
+Scatter Sphere Launcher	SphereLauncher	Weapon	WeaponRocketLauncher	1	3
+Scorching Egg	PalEgg_Fire_01	Material	MaterialPalEgg	1	1
+Scorching Egg	PalEgg_Fire_02	Material	MaterialPalEgg	1	1
+Scrapped Tissue Sample	MeaninglessItem_ButcheringImportPal	Material	MaterialMonster	99999999	0
+Seafoam Echobone	WhaleWhistleFragment_03	Essential	Essential	9999	1
+Seafood Pasta	OctopusGirl_Takoyaki2	Food	FoodDishFish	9999	3
+Seafood Salad	Seafood_Salada	Food	FoodDishFish	9999	3
+Seafood Soup	SeafoodSoup	Food	FoodDishFish	9999	1
+Selyne Saddle	SkillUnlock_MoonQueen	Essential	Essential_PalGear	9999	0
+Semi-Auto Rifle	SemiAutoRifle	Weapon	WeaponAssaultRifle	1	3
+Semi-Auto Rifle	SemiAutoRifle_2	Weapon	WeaponAssaultRifle	1	3
+Semi-Auto Rifle	SemiAutoRifle_3	Weapon	WeaponAssaultRifle	1	3
+Semi-Auto Rifle	SemiAutoRifle_4	Weapon	WeaponAssaultRifle	1	3
+Semi-Auto Rifle	SemiAutoRifle_5	Weapon	WeaponAssaultRifle	1	3
+Semi-Auto Rifle Schematic 1	Blueprint_SemiAutoRifle_2	Blueprint	Blueprint	9999	1
+Semi-Auto Rifle Schematic 2	Blueprint_SemiAutoRifle_3	Blueprint	Blueprint	9999	1
+Semi-Auto Rifle Schematic 3	Blueprint_SemiAutoRifle_4	Blueprint	Blueprint	9999	1
+Semi-Auto Rifle Schematic 4	Blueprint_SemiAutoRifle_5	Blueprint	Blueprint	9999	1
+Semi-Auto Shotgun	SemiAutoShotgun	Weapon	WeaponShotgun	1	4
+Semi-Auto Shotgun	SemiAutoShotgun_2	Weapon	WeaponShotgun	1	4
+Semi-Auto Shotgun	SemiAutoShotgun_3	Weapon	WeaponShotgun	1	4
+Semi-Auto Shotgun	SemiAutoShotgun_4	Weapon	WeaponShotgun	1	4
+Semi-Auto Shotgun	SemiAutoShotgun_5	Weapon	WeaponShotgun	1	4
+Semi-Auto Shotgun Schematic 1	Blueprint_SemiAutoShotgun_2	Blueprint	Blueprint	9999	1
+Semi-Auto Shotgun Schematic 2	Blueprint_SemiAutoShotgun_3	Blueprint	Blueprint	9999	1
+Semi-Auto Shotgun Schematic 3	Blueprint_SemiAutoShotgun_4	Blueprint	Blueprint	9999	1
+Semi-Auto Shotgun Schematic 4	Blueprint_SemiAutoShotgun_5	Blueprint	Blueprint	9999	1
+Shadowbeak Saddle	SkillUnlock_BlackGriffon	Essential	Essential_PalGear	999999	0
+Shaolong Saddle	SkillUnlock_BlueSkyDragon	Essential	Essential_PalGear	9999	0
+Shock Grenade	FragGrenade_Elec	Weapon	WeaponThrowObject	9999	2
+Shotgun Shell	ShotgunBullet	Ammo	ConsumeBullet	9999	2
+Shroomer Hat	HeadEquip058	Armor	ArmorHead	1	99
+Shroomer Noct Saddle	SkillUnlock_MushroomDragon_Dark	Essential	Essential_PalGear	9999	0
+Shroomer Saddle	SkillUnlock_MushroomDragon	Essential	Essential_PalGear	9999	0
+Shroomly Bounty Token	BossDefeatReward_MushroomLady	Essential	NONE	9999	1
+Sibelyx Bounty Token	BossDefeatReward_WhiteMoth	Essential	NONE	9999	1
+Sibelyx Hat	HeadEquip024	Armor	ArmorHead	1	99
+Silent Echobone	WhaleWhistleFragment_02	Essential	Essential	9999	1
+Silk Hat	Head007	Armor	ArmorHead	1	1
+Silk Hat	Head007_2	Armor	ArmorHead	1	1
+Silk Hat	Head007_3	Armor	ArmorHead	1	1
+Silk Hat	Head007_4	Armor	ArmorHead	1	1
+Silk Hat	Head007_5	Armor	ArmorHead	1	1
+Silk Hat Schematic 1	Blueprint_Head007_1	Blueprint	Blueprint	9999	1
+Silk Hat Schematic 2	Blueprint_Head007_2	Blueprint	Blueprint	9999	1
+Silk Hat Schematic 3	Blueprint_Head007_3	Blueprint	Blueprint	9999	1
+Silk Hat Schematic 4	Blueprint_Head007_4	Blueprint	Blueprint	9999	1
+Silvance's Plume	BossDefeatReward_Mothman	Essential	NONE	9999	1
+Silvegis Bounty Token	BossDefeatReward_WhiteShieldDragon	Essential	NONE	9999	1
+Silvegis Emblem	Accessory_PPDF_1	Accessory	Accessory	1	3
+Silvegis Emblem Schematic	Blueprint_Accessory_PPDF_1	Blueprint	Blueprint	9999	8
+Silvegis Saddle	SkillUnlock_WhiteShieldDragon	Essential	Essential_PalGear	9999	0
+Silver Key	TreasureBoxKey02	Consume	ConsumeOther	9999	1
+Simple Bait	FishingBait_1	Consume	NONE	9999	1
+Single-Shot Rifle	SingleShotRifle	Weapon	WeaponAssaultRifle	1	3
+Single-Shot Rifle	SingleShotRifle_2	Weapon	WeaponAssaultRifle	1	3
+Single-Shot Rifle	SingleShotRifle_3	Weapon	WeaponAssaultRifle	1	3
+Single-Shot Rifle	SingleShotRifle_4	Weapon	WeaponAssaultRifle	1	3
+Single-Shot Rifle	SingleShotRifle_5	Weapon	WeaponAssaultRifle	1	3
+Single-Shot Rifle Schematic 1	Blueprint_SingleShotRifle_2	Blueprint	Blueprint	9999	1
+Single-Shot Rifle Schematic 2	Blueprint_SingleShotRifle_3	Blueprint	Blueprint	9999	1
+Single-Shot Rifle Schematic 3	Blueprint_SingleShotRifle_4	Blueprint	Blueprint	9999	1
+Single-Shot Rifle Schematic 4	Blueprint_SingleShotRifle_5	Blueprint	Blueprint	9999	1
+Single-Shot Sphere Launcher	SphereLauncher_Once	Weapon	WeaponRocketLauncher	1	2
+Skill Fruit: Air Blade	SkillCard_AirBlade	Consume	ConsumeWazaMachine	9999	1
+Skill Fruit: Air Cannon	SkillCard_AirCanon	Consume	ConsumeWazaMachine	9999	1
+Skill Fruit: Holy Burst	SkillCard_HolyBlast	Consume	ConsumeWazaMachine	9999	1
+Skill Fruit: Implode	SkillCard_SelfDestruct	Consume	ConsumeWazaMachine	9999	1
+Skill Fruit: Pal Blast	SkillCard_HyperBeam	Consume	ConsumeWazaMachine	9999	1
+Skill Fruit: Power Bomb	SkillCard_PowerBall	Consume	ConsumeWazaMachine	9999	1
+Skill Fruit: Power Shot	SkillCard_PowerShot	Consume	ConsumeWazaMachine	9999	1
+Skutlass Sashimi	Meat_SwordCutlassFish	Food	FoodMeat	9999	3
+Slider Module	SphereModule_Curve2	SphereModule	SphereModule	1	1
+Slowatt Bounty Token	BossDefeatReward_ElecLizard	Essential	NONE	9999	1
+Small Feed Bag	AutoMealPouch_Tier1	Essential	Essential_UnlockPlayerFuture	9999	1
+Small Pal Soul	PalUpgradeStone	Material	MaterialMonster	9999	2
+Small Pouch	AdditionalInventory_001	Essential	NONE	9999	1
+SMG	SubmachineGun	Weapon	WeaponAssaultRifle	1	3
+SMG	SubmachineGun_2	Weapon	WeaponAssaultRifle	1	3
+SMG	SubmachineGun_3	Weapon	WeaponAssaultRifle	1	3
+SMG	SubmachineGun_4	Weapon	WeaponAssaultRifle	1	3
+SMG	SubmachineGun_5	Weapon	WeaponAssaultRifle	1	3
+SMG Schematic 1	Blueprint_SubmachineGun_2	Blueprint	Blueprint	9999	1
+SMG Schematic 2	Blueprint_SubmachineGun_3	Blueprint	Blueprint	9999	1
+SMG Schematic 3	Blueprint_SubmachineGun_4	Blueprint	Blueprint	9999	1
+SMG Schematic 4	Blueprint_SubmachineGun_5	Blueprint	Blueprint	9999	1
+Smokie Bounty Token	BossDefeatReward_BlackPuppy	Essential	NONE	9999	1
+Smokie Cryst's Harness	SkillUnlock_BlackPuppy_Ice	Essential	Essential_PalGear	9999	0
+Smokie's Harness	SkillUnlock_BlackPuppy	Essential	Essential_PalGear	9999	0
+Sniper Module	SphereModule_Sniper	SphereModule	SphereModule	1	1
+Sniper Module II	SphereModule_Sniper2	SphereModule	SphereModule	1	1
+Snock Bounty Token	BossDefeatReward_ElecSnail	Essential	NONE	9999	1
+Soft Hat	Head005	Armor	ArmorHead	1	1
+Soft Hat	Head005_2	Armor	ArmorHead	1	1
+Soft Hat	Head005_3	Armor	ArmorHead	1	1
+Soft Hat	Head005_4	Armor	ArmorHead	1	1
+Soft Hat	Head005_5	Armor	ArmorHead	1	1
+Soft Hat Schematic 1	Blueprint_Head005_1	Blueprint	Blueprint	9999	1
+Soft Hat Schematic 2	Blueprint_Head005_2	Blueprint	Blueprint	9999	1
+Soft Hat Schematic 3	Blueprint_Head005_3	Blueprint	Blueprint	9999	1
+Soft Hat Schematic 4	Blueprint_Head005_4	Blueprint	Blueprint	9999	1
+Sol Sphere	PalSphere_Ancient_1	SpecialWeapon	SPWeaponCaptureBall	9999	10
+Solmora Lux Saddle	SkillUnlock_KingSunfish_Thunder	Essential	Essential_PalGear	9999	0
+Solmora Saddle	SkillUnlock_KingSunfish	Essential	Essential_PalGear	9999	0
+Soralite	SkyIslandOre	Material	MaterialOre	9999	1
+Soralite Ingot	SkyislandIngot	Material	MaterialIngot	9999	7
+Special Cake	Cake05	Food	FoodDishVegetable	9999	5
+Speed Elixir	Elixir_workspeed_02	Consume	ConsumeGainStatusPoints	9999	4
+Speed Lotus (L)	Lotus_workspeed_02	Material	MaterialMonster	9999	4
+Speed Lotus (S)	Lotus_workspeed_01	Material	MaterialMonster	9999	3
+Speed Remedy	Elixir_workspeed_01	Consume	ConsumeGainStatusPoints	9999	3
+Spirit Emperor's Baton	Otomo_ATLeaf_ElementBoost_1	Accessory	Accessory	1	3
+Spirit Emperor's Baton Schematic	Blueprint_Otomo_ATLeaf_ElementBoost_1	Blueprint	Blueprint	9999	8
+Splatterina Bounty Token	BossDefeatReward_GrimGirl	Essential	NONE	9999	1
+Splatterina Hat	HeadEquip061	Armor	ArmorHead	1	99
+Spring Rolls	SpringRolls	Food	FoodDishMeat	9999	3
+Stamina Elixir	Elixir_stamina_02	Consume	ConsumeGainStatusPoints	9999	4
+Stamina Lotus (L)	Lotus_stamina_02	Material	MaterialMonster	9999	4
+Stamina Lotus (S)	Lotus_stamina_01	Material	MaterialMonster	9999	3
+Stamina Remedy	Elixir_stamina_01	Consume	ConsumeGainStatusPoints	9999	3
+Starfruit ☆1	Rankup_1	Consume	ConsumePalRankUp	9999	1
+Starfruit ☆2	Rankup_2	Consume	ConsumePalRankUp	9999	2
+Starfruit ☆3	Rankup_3	Consume	ConsumePalRankUp	9999	3
+Starfruit ☆4	Rankup_4	Consume	ConsumePalRankUp	9999	4
+Starryon Bounty Token	BossDefeatReward_NightBlueHorse	Essential	NONE	9999	1
+Starryon Primo Saddle	SkillUnlock_NightBlueHorse_Neutral	Essential	Essential_PalGear	9999	0
+Starryon Saddle	SkillUnlock_NightBlueHorse	Essential	Essential_PalGear	9999	0
+Stew	Stew	Food	FoodDishVegetable	9999	1
+Stewed Galeclaw	Eaglestew	Food	FoodDishMeat	9999	2
+Stir-Fried Vegetables	StirFriedVegetables	Food	FoodDishVegetable	9999	2
+Stir-Fried Veggies	FriedVegetables	Food	FoodDishMeat	9999	2
+Stone	Stone	Material	MaterialStone	9999	1
+Stone Axe	Axe_Tier_00	Weapon	WeaponMelee	1	1
+Stone Pickaxe	Pickaxe_Tier_00	Weapon	WeaponMelee	1	1
+Stone Spear	Spear	Weapon	WeaponMelee	1	1
+Stout Fruit	Fruit__defense_01	Consume	ConsumePalTalentUp	9999	4
+Strange Juice	Narcotic	Consume	Drug	9999	3
+Stun Baton	ElecBaton	Weapon	WeaponMelee	1	2
+Successful Bounty Token	BountyProof_1	Material	MaterialJewelry	9999	4
+Sulfur	Sulfur	Material	MaterialOre	9999	1
+Summoning Altar	PalSummon	Consume	ConsumeOther	9999	1
+Sunreach Rapid-Fire Ammo	SkyLightBullet	Ammo	ConsumeBullet	9999	9999
+Sunreach Single-Shot Ammo	SkyHeavyBullet	Ammo	ConsumeBullet	9999	9999
+Surfent Saddle	SkillUnlock_Serpent	Essential	Essential_PalGear	999999	0
+Surfent Terra Saddle	SkillUnlock_Serpent_Ground	Essential	Essential_PalGear	999999	0
+Suspicious Juice	Opium	Consume	Drug	9999	2
+Suzaku Aqua Saddle	SkillUnlock_Suzaku_Water	Essential	Essential_PalGear	999999	0
+Suzaku Bounty Token	BossDefeatReward_Suzaku	Essential	NONE	9999	1
+Suzaku Saddle	SkillUnlock_Suzaku	Essential	Essential_PalGear	999999	0
+Swee Cap	HeadEquip031	Armor	ArmorHead	1	1
+Swee Cap	HeadEquip031_2	Armor	ArmorHead	1	1
+Swee Cap	HeadEquip031_3	Armor	ArmorHead	1	1
+Swee Cap	HeadEquip031_4	Armor	ArmorHead	1	1
+Swee Cap	HeadEquip031_5	Armor	ArmorHead	1	1
+Swee Cap Schematic 1	Blueprint_HeadEquip031_1	Blueprint	Blueprint	9999	1
+Swee Cap Schematic 1	Blueprint_HeadEquip031_5	Blueprint	Blueprint	9999	1
+Swee Cap Schematic 2	Blueprint_HeadEquip031_2	Blueprint	Blueprint	9999	1
+Swee Cap Schematic 3	Blueprint_HeadEquip031_3	Blueprint	Blueprint	9999	1
+Swee Cap Schematic 4	Blueprint_HeadEquip031_4	Blueprint	Blueprint	9999	1
+Swee Hair	PalItem_MopBaby	Material	MaterialMonster	9999	1
+Sweepa Bounty Token	BossDefeatReward_MopKing	Essential	NONE	9999	1
+Sweepa Saddle	SkillUnlock_MopKing	Essential	Essential_PalGear	999999	0
+Sweet Bait	FishingBait_1_B	Consume	NONE	9999	1
+Sword	Sword	Weapon	WeaponMelee	1	2
+Sword	Sword_2	Weapon	WeaponMelee	1	2
+Sword	Sword_3	Weapon	WeaponMelee	1	2
+Sword	Sword_4	Weapon	WeaponMelee	1	2
+Sword	Sword_5	Weapon	WeaponMelee	1	2
+Sword Schematic 1	Blueprint_Sword_2	Blueprint	Blueprint	9999	1
+Sword Schematic 2	Blueprint_Sword_3	Blueprint	Blueprint	9999	1
+Sword Schematic 3	Blueprint_Sword_4	Blueprint	Blueprint	9999	1
+Sword Schematic 4	Blueprint_Sword_5	Blueprint	Blueprint	9999	1
+Tactical Grenade Launcher	SkyGrenadeLauncher	Weapon	WeaponRocketLauncher	1	10
+Tactical Grenade Launcher	SkyGrenadeLauncher_2	Weapon	WeaponRocketLauncher	1	10
+Tactical Grenade Launcher	SkyGrenadeLauncher_3	Weapon	WeaponRocketLauncher	1	10
+Tactical Grenade Launcher	SkyGrenadeLauncher_4	Weapon	WeaponRocketLauncher	1	10
+Tactical Grenade Launcher	SkyGrenadeLauncher_5	Weapon	WeaponRocketLauncher	1	10
+Tactical Grenade Launcher Ammo	SkyGrenadeLauncherBullet	Ammo	ConsumeBullet	9999	10
+Tactical Grenade Launcher Schematic 1	Blueprint_SkyGrenadeLauncher_2	Blueprint	Blueprint	9999	1
+Tactical Grenade Launcher Schematic 2	Blueprint_SkyGrenadeLauncher_3	Blueprint	Blueprint	9999	1
+Tactical Grenade Launcher Schematic 3	Blueprint_SkyGrenadeLauncher_4	Blueprint	Blueprint	9999	1
+Tactical Grenade Launcher Schematic 4	Blueprint_SkyGrenadeLauncher_5	Blueprint	Blueprint	9999	1
+Tanzee Effigy	Relic_06	Essential	Essential	9999	9
+Tanzee Ignis's Assault Rifle	SkillUnlock_Monkey_Fire	Essential	Essential_PalGear	999999	0
+Tanzee's Assault Rifle	SkillUnlock_Monkey	Essential	Essential_PalGear	999999	0
+Tarantris Bounty Token	BossDefeatReward_PurpleSpider	Essential	NONE	9999	1
+Tarantriss Hat	HeadEquip062	Armor	ArmorHead	1	99
+Tarantriss Saddle	SkillUnlock_PurpleSpider	Essential	Essential_PalGear	9999	0
+Terra Blade	YakushimaBlade002	Weapon	WeaponMelee	1	3
+Terra Blade	YakushimaBlade002_2	Weapon	WeaponMelee	1	3
+Terra Blade	YakushimaBlade002_3	Weapon	WeaponMelee	1	3
+Terra Blade	YakushimaBlade002_4	Weapon	WeaponMelee	1	3
+Terra Blade	YakushimaBlade002_5	Weapon	WeaponMelee	1	3
+Terra Blade Schematic	Blueprint_YakushimaBlade002	Blueprint	Blueprint	9999	1
+Terra Blade Schematic 1	Blueprint_YakushimaBlade002_2	Blueprint	Blueprint	9999	1
+Terra Blade Schematic 2	Blueprint_YakushimaBlade002_3	Blueprint	Blueprint	9999	1
+Terra Blade Schematic 3	Blueprint_YakushimaBlade002_4	Blueprint	Blueprint	9999	1
+Terra Blade Schematic 4	Blueprint_YakushimaBlade002_5	Blueprint	Blueprint	9999	1
+Terraprisma	YakushimaBlade003	Weapon	WeaponMelee	1	3
+Terraprisma	YakushimaBlade003_2	Weapon	WeaponMelee	1	3
+Terraprisma	YakushimaBlade003_3	Weapon	WeaponMelee	1	3
+Terraprisma	YakushimaBlade003_4	Weapon	WeaponMelee	1	3
+Terraprisma	YakushimaBlade003_5	Weapon	WeaponMelee	1	3
+Terraprisma Schematic	Blueprint_YakushimaBlade003	Blueprint	Blueprint	9999	1
+Terraprisma Schematic 1	Blueprint_YakushimaBlade003_2	Blueprint	Blueprint	9999	1
+Terraprisma Schematic 2	Blueprint_YakushimaBlade003_3	Blueprint	Blueprint	9999	1
+Terraprisma Schematic 3	Blueprint_YakushimaBlade003_4	Blueprint	Blueprint	9999	1
+Terraprisma Schematic 4	Blueprint_YakushimaBlade003_5	Blueprint	Blueprint	9999	1
+Tetroise Bounty Token	BossDefeatReward_CubeTurtle	Essential	NONE	9999	1
+Tetroise Primo Bounty Token	BossDefeatReward_CubeTurtle_Neutral	Essential	NONE	9999	1
+Tetroise Primo Saddle	SkillUnlock_CubeTurtle_Neutral	Essential	Essential_PalGear	9999	0
+Tetroise Saddle	SkillUnlock_CubeTurtle	Essential	Essential_PalGear	9999	0
+Thermal Core	Thermal_Core	Material	MaterialProccessing	9999	4
+Thermal Undershirt	Accessory_CoolResist_1	Accessory	Accessory	1	2
+Thermal Undershirt	Accessory_CoolResist_2	Accessory	Accessory	1	2
+Thermal Undershirt	Accessory_CoolResist_3	Accessory	Accessory	1	2
+Thermal Undershirt Schematic	Blueprint_Accessory_CoolResist_1_2	Blueprint	Blueprint	9999	8
+Three Shot Bow	Bow_Triple	Weapon	WeaponBow	1	1
+Thunder Skill Fruit: All Range Thunder	SkillCard_RangeThunder	Consume	ConsumeWazaMachine	9999	1
+Tidewind Echobone	WhaleWhistleFragment_04	Essential	Essential	9999	1
+Tocotoco Cap	Head013	Armor	ArmorHead	1	1
+Tocotoco Cap	Head013_2	Armor	ArmorHead	1	1
+Tocotoco Cap	Head013_3	Armor	ArmorHead	1	1
+Tocotoco Cap	Head013_4	Armor	ArmorHead	1	1
+Tocotoco Cap	Head013_5	Armor	ArmorHead	1	1
+Tocotoco Cap Schematic 1	Blueprint_Head013_1	Blueprint	Blueprint	9999	1
+Tocotoco Cap Schematic 2	Blueprint_Head013_2	Blueprint	Blueprint	9999	1
+Tocotoco Cap Schematic 3	Blueprint_Head013_3	Blueprint	Blueprint	9999	1
+Tocotoco Cap Schematic 4	Blueprint_Head013_4	Blueprint	Blueprint	9999	1
+Tocotoco Feather	PalItem_ColorfulBird	Material	MaterialMonster	9999	1
+Tocotoco's Gloves	SkillUnlock_ColorfulBird	Essential	Essential_PalGear	999999	0
+Tomato	Tomato	Food	FoodVegetable	9999	1
+Tomato Seeds	TomatoSeeds	Material	MaterialMonster	9999	1
+Toxin Filtering Membrane	UniqueMaterial_FlowerPrince	Material	MaterialMonster	9999	3
+Training Crystal	LvUP_01	Consume	ConsumePalLevelUp	9999	4
+Training Manual (L)	ExpBoost_03	Consume	ConsumePalGainExp	9999	3
+Training Manual (M)	ExpBoost_02	Consume	ConsumePalGainExp	9999	2
+Training Manual (S)	ExpBoost_01	Consume	ConsumePalGainExp	9999	1
+Training Manual (XL)	ExpBoost_04	Consume	ConsumePalGainExp	9999	4
+Treasure Map	TreasureMap01	Consume	NONE	9999	1
+Treasure Map	TreasureMap02	Consume	NONE	9999	1
+Treasure Map	TreasureMap03	Consume	NONE	9999	1
+Treasure Map	TreasureMap04	Consume	NONE	9999	1
+Treasure Map	TreasureMap05	Consume	NONE	9999	1
+Tricorne	Head008	Armor	ArmorHead	1	1
+Tricorne	Head008_2	Armor	ArmorHead	1	1
+Tricorne	Head008_3	Armor	ArmorHead	1	1
+Tricorne	Head008_4	Armor	ArmorHead	1	1
+Tricorne	Head008_5	Armor	ArmorHead	1	1
+Tricorne Schematic 1	Blueprint_Head008_1	Blueprint	Blueprint	9999	1
+Tricorne Schematic 2	Blueprint_Head008_2	Blueprint	Blueprint	9999	1
+Tricorne Schematic 3	Blueprint_Head008_3	Blueprint	Blueprint	9999	1
+Tricorne Schematic 4	Blueprint_Head008_4	Blueprint	Blueprint	9999	1
+Triple Air Dash Boots	Accessory_AirDash3	Accessory	Accessory	1	3
+Triple Jump Boots	Accessory_JumpCount_Increase2	Accessory	Accessory	1	10
+Tropical Outfit	ClothArmorHeat	Armor	ArmorBody	1	1
+Tropical Outfit	ClothArmorHeat_2	Armor	ArmorBody	1	1
+Tropical Outfit	ClothArmorHeat_3	Armor	ArmorBody	1	1
+Tropical Outfit	ClothArmorHeat_4	Armor	ArmorBody	1	1
+Tropical Outfit	ClothArmorHeat_5	Armor	ArmorBody	1	1
+Tropical Outfit Schematic 1	Blueprint_ClothArmorHeat_2	Blueprint	Blueprint	9999	1
+Tropical Outfit Schematic 2	Blueprint_ClothArmorHeat_3	Blueprint	Blueprint	9999	1
+Tropical Outfit Schematic 3	Blueprint_ClothArmorHeat_4	Blueprint	Blueprint	9999	1
+Tropical Outfit Schematic 4	Blueprint_ClothArmorHeat_5	Blueprint	Blueprint	9999	1
+Tundra Outfit	ClothArmorCold	Armor	ArmorBody	1	1
+Tundra Outfit	ClothArmorCold_2	Armor	ArmorBody	1	1
+Tundra Outfit	ClothArmorCold_3	Armor	ArmorBody	1	1
+Tundra Outfit	ClothArmorCold_4	Armor	ArmorBody	1	1
+Tundra Outfit	ClothArmorCold_5	Armor	ArmorBody	1	1
+Tundra Outfit Schematic 1	Blueprint_ClothArmorCold_2	Blueprint	Blueprint	9999	1
+Tundra Outfit Schematic 2	Blueprint_ClothArmorCold_3	Blueprint	Blueprint	9999	1
+Tundra Outfit Schematic 3	Blueprint_ClothArmorCold_4	Blueprint	Blueprint	9999	1
+Tundra Outfit Schematic 4	Blueprint_ClothArmorCold_5	Blueprint	Blueprint	9999	1
+Turtacle Cap	HeadEquip054	Armor	ArmorHead	1	99
+Twin Knights Bounty Token	BossDefeatReward_SaintCentaur	Essential	NONE	9999	1
+Ultimate Sphere	PalSphere_Ultimate	SpecialWeapon	SPWeaponCaptureBall	9999	6
+Ultra Grappling Gun	GrapplingGun5	Weapon	WeaponGrapplingGun	1	5
+Ultra Shield	Shield_Ultra	Armor	Shield	1	4
+Ultra Sphere	PalSphere_Master	SpecialWeapon	SPWeaponCaptureBall	9999	5
+Univolt Bounty Token	BossDefeatReward_Kirin	Essential	NONE	9999	1
+Univolt Cryst Saddle	SkillUnlock_Kirin_Ice	Essential	Essential_PalGear	9999	0
+Univolt Saddle	SkillUnlock_Kirin	Essential	Essential_PalGear	999999	0
+V1 Armor	Octavia001_Armor	Armor	ArmorBody	1	3
+V1 Armor	Octavia001_Armor_5	Armor	ArmorBody	1	3
+V1 Armor Schematic 4	Blueprint_Octavia001_Armor_5	Blueprint	Blueprint	9999	1
+V2 Armor	Octavia002_Armor	Armor	ArmorBody	1	4
+V2 Armor	Octavia002_Armor_5	Armor	ArmorBody	1	4
+V2 Armor Schematic 4	Blueprint_Octavia002_Armor_5	Blueprint	Blueprint	9999	1
+Vaelet Bounty Token	BossDefeatReward_VioletFairy	Essential	NONE	9999	1
+Vaelet Ring	Accessory_Otomo_Leaf_1	Accessory	Accessory	1	3
+Vaelet Ring Schematic	Blueprint_Accessory_Otomo_Leaf_1	Blueprint	Blueprint	9999	8
+Vanguard Charm	Accessory_HCHP_1	Accessory	Accessory	1	3
+Vanguard Charm Schematic	Blueprint_Accessory_HCHP_1	Blueprint	Blueprint	9999	8
+Vanwyrm Cryst Saddle	SkillUnlock_BirdDragon_Ice	Essential	Essential_PalGear	999999	0
+Vanwyrm Saddle	SkillUnlock_BirdDragon	Essential	Essential_PalGear	999999	0
+Vegetable Cake	Cake03	Food	FoodDishVegetable	9999	3
+Venom Gland	Venom	Material	MaterialMonster	9999	1
+Verdant Egg	PalEgg_Leaf_01	Material	MaterialPalEgg	1	1
+Verdant Egg	PalEgg_Leaf_02	Material	MaterialPalEgg	1	1
+Verdash Bounty Token	BossDefeatReward_GrassRabbitMan	Essential	NONE	9999	1
+Victor Hat	GYM_Head_Snow	Armor	ArmorHead	1	99
+Vital Elixir	Elixir_hp_02	Consume	ConsumeGainStatusPoints	9999	4
+Vital Remedy	Elixir_hp_01	Consume	ConsumeGainStatusPoints	9999	3
+Vortex Beater	YakushimaGun001	Weapon	WeaponAssaultRifle	1	3
+Vortex Beater	YakushimaGun001_2	Weapon	WeaponAssaultRifle	1	3
+Vortex Beater	YakushimaGun001_3	Weapon	WeaponAssaultRifle	1	3
+Vortex Beater	YakushimaGun001_4	Weapon	WeaponAssaultRifle	1	3
+Vortex Beater	YakushimaGun001_5	Weapon	WeaponAssaultRifle	1	3
+Vortex Beater Schematic	Blueprint_YakushimaGun001	Blueprint	Blueprint	9999	1
+Vortex Beater Schematic 1	Blueprint_YakushimaGun001_2	Blueprint	Blueprint	9999	1
+Vortex Beater Schematic 2	Blueprint_YakushimaGun001_3	Blueprint	Blueprint	9999	1
+Vortex Beater Schematic 3	Blueprint_YakushimaGun001_4	Blueprint	Blueprint	9999	1
+Vortex Beater Schematic 4	Blueprint_YakushimaGun001_5	Blueprint	Blueprint	9999	1
+Wandering Merchant Charm	Accessory_HCMW_1	Accessory	Accessory	1	3
+Wandering Merchant Charm Schematic	Blueprint_Accessory_HCMW_1	Blueprint	Blueprint	9999	8
+Warsect Bounty Token	BossDefeatReward_HerculesBeetle	Essential	NONE	9999	1
+Warsect Terra Bounty Token	BossDefeatReward_HerculesBeetle_Ground	Essential	NONE	9999	1
+Warsect Terra's Belt	Accessory_DFHP_1	Accessory	Accessory	1	3
+Warsect Terra's Belt Schematic	Blueprint_Accessory_DFHP_1	Blueprint	Blueprint	9999	8
+Water Awakening Crystal	PalAwakening_Water	Consume	NONE	9999	10
+Water Grenade	FragGrenade_Water	Weapon	WeaponThrowObject	9999	2
+Water Radiant Gem	PalAwakening_Material_Water	Material	MaterialMonster	9999	5
+Water Skill Fruit: Acid Rain	SkillCard_AcidRain	Consume	ConsumeWazaMachine	9999	1
+Water Skill Fruit: Aqua Burst	SkillCard_WaterBall	Consume	ConsumeWazaMachine	9999	1
+Water Skill Fruit: Aqua Gun	SkillCard_WaterGun	Consume	ConsumeWazaMachine	9999	1
+Water Skill Fruit: Aqua Surge	SkillCard_RipTide	Consume	ConsumeWazaMachine	9999	1
+Water Skill Fruit: Bubble Blast	SkillCard_BubbleShot	Consume	ConsumeWazaMachine	9999	1
+Water Skill Fruit: Curtain Splash	SkillCard_WallSplash	Consume	ConsumeWazaMachine	9999	1
+Water Skill Fruit: Geyser Gush	SkillCard_SeaGush	Consume	ConsumeWazaMachine	9999	1
+Water Skill Fruit: Hydro Jet	SkillCard_AquaJet	Consume	ConsumeWazaMachine	9999	1
+Water Skill Fruit: Hydro Laser	SkillCard_HydroPump	Consume	ConsumeWazaMachine	9999	1
+Water Skill Fruit: Hydro Slicer	SkillCard_HydroSlicer	Consume	ConsumeWazaMachine	9999	1
+Water Skill Fruit: Splash	SkillCard_LineGeyser	Consume	ConsumeWazaMachine	9999	1
+Water Skill Fruit: Torrential Blast	SkillCard_DiversionLaser	Consume	ConsumeWazaMachine	9999	1
+Water Support Whistle	Otomo_ElementBoost_Water_1	Accessory	Accessory	1	2
+Water Support Whistle	Otomo_ElementBoost_Water_2	Accessory	Accessory	1	2
+Water Support Whistle	Otomo_ElementBoost_Water_3	Accessory	Accessory	1	2
+Water Support Whistle Schematic	Blueprint_Otomo_ElementBoost_Water_1_2	Blueprint	Blueprint	9999	8
+Whalaska Bounty Token	BossDefeatReward_IceNarwhal	Essential	NONE	9999	1
+Whalaska Ignis Bounty Token	BossDefeatReward_IceNarwhal_Fire	Essential	NONE	9999	1
+Whalaska Ignis Saddle	SkillUnlock_IceNarwhal_Fire	Essential	Essential_PalGear	9999	0
+Whalaska Saddle	SkillUnlock_IceNarwhal	Essential	Essential_PalGear	9999	0
+Wheat	Wheat	Food	FoodVegetable	9999	1
+Wheat Seeds	WheatSeeds	Material	MaterialMonster	9999	1
+Wine	Wine	Food	FoodProcessed	9999	1
+Wing Cell	WingGlider_Fuel	Consume	ConsumeOther	9999	10
+Wing Pack	WingGlider	Glider	Glider	1	10
+Wire Fence Schematic	Blueprint_Wire_Fence	Blueprint	Blueprint	9999	1
+Wistella Bounty Token	BossDefeatReward_MoonChild	Essential	NONE	9999	1
+Witch Hat	Head004	Armor	ArmorHead	1	1
+Witch Hat	Head004_2	Armor	ArmorHead	1	1
+Witch Hat	Head004_3	Armor	ArmorHead	1	1
+Witch Hat	Head004_4	Armor	ArmorHead	1	1
+Witch Hat	Head004_5	Armor	ArmorHead	1	1
+Witch Hat Schematic 1	Blueprint_Head004_1	Blueprint	Blueprint	9999	1
+Witch Hat Schematic 2	Blueprint_Head004_2	Blueprint	Blueprint	9999	1
+Witch Hat Schematic 3	Blueprint_Head004_3	Blueprint	Blueprint	9999	1
+Witch Hat Schematic 4	Blueprint_Head004_4	Blueprint	Blueprint	9999	1
+Witch's Crown	HeadEquip001_purple	Armor	ArmorHead	1	99
+Wixen Bounty Token	BossDefeatReward_FoxMage	Essential	NONE	9999	1
+Wood	Wood	Material	MaterialWood	9999	1
+Wooden Barricade Schematic	Blueprint_WoodenBarricade	Blueprint	Blueprint	9999	1
+Wooden Board	Processed_Wood	Material	MaterialProccessing	9999	1
+Wooden Club	Bat	Weapon	WeaponMelee	1	1
+Wool	Wool	Material	MaterialMonster	9999	1
+World Tree Holy Water	WorldTreeHolyWater	Consume	NONE	9999	1
+Wumpo Botan Bounty Token	BossDefeatReward_Yeti_Grass	Essential	NONE	9999	1
+Wumpo Botan Saddle	SkillUnlock_Yeti_Grass	Essential	Essential_PalGear	999999	0
+Wumpo Charm	Accessory_ColdIce_1	Accessory	Accessory	1	3
+Wumpo Charm Schematic	Blueprint_Accessory_ColdIce_1	Blueprint	Blueprint	9999	8
+Wumpo Saddle	SkillUnlock_Yeti	Essential	Essential_PalGear	999999	0
+Xenogard Saddle	SkillUnlock_WhiteAlienDragon	Essential	Essential_PalGear	9999	0
+Xenolord (Ultra) Slab	PalSummon_DarkMechaDragon_2	Consume	ConsumeOther	9999	1
+Xenolord (Ultra) Slab Fragment	PalSummon_DarkMechaDragon_Parts_2	Blueprint	Blueprint	9999	1
+Xenolord Saddle	SkillUnlock_DarkMechaDragon	Essential	Essential_PalGear	9999	0
+Xenolord Slab	PalSummon_DarkMechaDragon	Consume	ConsumeOther	9999	1
+Xenolord Slab Fragment	PalSummon_DarkMechaDragon_Parts	Blueprint	Blueprint	9999	1
+Xenolord's head	HeadEquip044	Armor	ArmorHead	1	99
+Yakumo Effigy	Relic_11	Essential	Essential	9999	9
+Yakumo Saddle	SkillUnlock_GuardianDog	Essential	Essential_PalGear	999999	0
+Yakumo Statue Schematic	Blueprint_GuardianDogStatue	Blueprint	Blueprint	9999	1
+Zenara Hat	HeadEquip049	Armor	ArmorHead	1	99
+Zoe Hat	GYM_Head_Grass	Armor	ArmorHead	1	99
+Zoe's Halloween Costume	QuestItem_Zoe_Halloweenskin_1	Consume	ConsumeOther	1	1
+Zoe's Halloween Costume Schematic	Blueprint_Zoe_Halloweenskin_1	Blueprint	Blueprint	9999	1
+Zoe's Tattered Memento	QuestItem_Zoe_1	Consume	ConsumeOther	1	1
