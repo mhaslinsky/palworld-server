@@ -1,0 +1,23 @@
+README.md
+  s_bde73c666a7db3::t_cabd372a3e01fd 18
+terraform/terraform.tfvars.example
+  s_bde73c666a7db3::t_f9c02b6773b7db 22
+terraform/variables.tf
+  s_bde73c666a7db3::t_eb85973ad16907 69
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "4e313e049ab67e5e398da13eadf58d941a816ba2",
+  "prompts": {},
+  "sessions": {
+    "s_bde73c666a7db3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d1460eae-3c2d-4c2f-a31d-505196b4f586",
+        "model": "unknown"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    }
+  }
+}
