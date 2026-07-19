@@ -205,14 +205,27 @@ export const handler = async () => {
     return {status: "SLEEPING", state: instance.state};
   }
 
-  // Both checks run before ANY alert is delivered. Delivering as we go would let a
-  // failed first delivery (notify throws by design) skip the second check entirely,
-  // hiding a dead watcher behind a stale backup.
+  // Both checks run before ANY alert is delivered, so a delivery failure cannot
+  // skip a check that has not happened yet.
   const backups = await checkBackups();
   const watcher = await checkWatcher(instance.launchTime);
 
+  // Every alert gets its own delivery ATTEMPT. notify() throws by design, so a bare
+  // `for (...) await notify(...)` would abandon the second alert when the first
+  // fails - one broken thing hiding another, which is the whole failure mode this
+  // function exists to prevent. Failures are collected and re-thrown together: the
+  // invocation must still fail loudly (that is what the CloudWatch alarm watches),
+  // but not at the cost of an alert that would otherwise have got through.
+  const deliveryFailures = [];
   for (const alert of [backups.alert, watcher.alert].filter(Boolean)) {
-    await notify(alert);
+    try {
+      await notify(alert);
+    } catch (error) {
+      deliveryFailures.push(error.message);
+    }
+  }
+  if (deliveryFailures.length > 0) {
+    throw new Error(`${deliveryFailures.length} alert(s) NOT delivered: ${deliveryFailures.join("; ")}`);
   }
 
   // Worst-case wins, so a single "OK" can never paper over the other check.

@@ -17,10 +17,11 @@ import {SSMClient} from "@aws-sdk/client-ssm";
 const MINUTE = 60_000;
 const ago = minutes => new Date(Date.now() - minutes * MINUTE);
 
-let delivered = [];
+let delivered = [];   // alerts ATTEMPTED, whether or not the POST succeeded
 
 function install({state = "running", upMinutes = 600, backupAgeMinutes = 5,
-                  backupSize = 3_000_000, rosterAgeMinutes = 2, objects = true}) {
+                  backupSize = 3_000_000, rosterAgeMinutes = 2, objects = true,
+                  failDeliveryNumber = null}) {
   delivered = [];
 
   EC2Client.prototype.send = async () => ({
@@ -43,6 +44,9 @@ function install({state = "running", upMinutes = 600, backupAgeMinutes = 5,
 
   global.fetch = async (_url, options) => {
     delivered.push(JSON.parse(options.body).content);
+    if (failDeliveryNumber === delivered.length) {
+      return {ok: false, status: 429, statusText: "Too Many Requests"};
+    }
     return {ok: true, status: 200};
   };
 }
@@ -100,6 +104,23 @@ if (delivered.length !== 2) {
   failures++;
 } else {
   console.log("PASS  both faults alerted independently");
+}
+
+console.log("\n--- RED: a failed delivery must not swallow the OTHER alert ---");
+// notify() throws on a non-2xx, so a delivery loop that does not catch will
+// abandon the remaining alerts - one broken thing hiding another.
+install({backupAgeMinutes: 120, rosterAgeMinutes: 940, failDeliveryNumber: 1});
+let threw = false;
+try {
+  await handler();
+} catch {
+  threw = true;   // the invocation MUST still fail; the CloudWatch alarm watches it
+}
+if (delivered.length === 2 && threw) {
+  console.log("PASS  both alerts attempted despite the first failing, and the invocation still threw");
+} else {
+  console.log(`FAIL  attempted=${delivered.length} (want 2), threw=${threw} (want true)`);
+  failures++;
 }
 
 console.log(`\n${failures === 0 ? "ALL PASS" : failures + " FAILURE(S)"}`);
