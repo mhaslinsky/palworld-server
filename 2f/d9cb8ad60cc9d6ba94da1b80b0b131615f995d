@@ -1,0 +1,29 @@
+reference/README.md
+  s_1fc195a5a47aa4::t_7bb37e5b1d5a99 1-46
+reference/palworld-item-ids.tsv
+  s_1fc195a5a47aa4::t_1f07d752ba12fc 1-2373
+scripts/compensation/apply.mjs
+  s_1fc195a5a47aa4::t_4d8d16d455d8f8 1-122
+scripts/compensation/psp.mjs
+  s_1fc195a5a47aa4::t_6256c70c2df3ab 1-110
+scripts/compensation/roster.mjs
+  s_1fc195a5a47aa4::t_aa6344fbf30195 1-27
+scripts/compensation/verify.mjs
+  s_1fc195a5a47aa4::t_ee099b2288f858 1-55
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "2fd9cb8ad60cc9d6ba94da1b80b0b131615f995d",
+  "prompts": {},
+  "sessions": {
+    "s_1fc195a5a47aa4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "93249842-eeb7-4aff-b632-d0468e7a0fc9",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    }
+  }
+}
