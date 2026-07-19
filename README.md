@@ -28,16 +28,21 @@ graph TB
         sns["SNS alerts<br/>(not via Discord)"]
         ec2["EC2 instance state"]
 
-        subgraph linux["Linux game box - t3.xlarge, on demand"]
+        subgraph linux["Linux game box - t3.xlarge, on demand - DISPOSABLE"]
             game["PalServer<br/>REST on 127.0.0.1 only"]
             idle["palworld-idle.timer<br/>every 2 min"]
             bk["palworld-backup.timer<br/>every 30 min"]
+            root[("root volume 50GB<br/>OS + SteamCMD install<br/>rebuilt from user_data")]
+        end
+
+        subgraph store["Persistent storage - OUTLIVES the instance"]
+            world[("world volume - 20GB gp3<br/>prevent_destroy<br/>pinned to us-east-1f")]
+            snaps[("EBS snapshots - DLM<br/>twice daily, retain 10")]
+            s3[("S3 backups - versioned<br/>every 30 min, off-box")]
         end
 
         presence["presence daemon<br/>t4g.nano - ALWAYS ON"]
-        world[("world volume 20GB<br/>prevent_destroy")]
-        s3[("S3 backups<br/>versioned")]
-        win["Windows box - stopped<br/>mod-capable, not cut over"]
+        win["Windows box - stopped<br/>own save volume, not cut over"]
     end
 
     slash --> lambda
@@ -45,8 +50,10 @@ graph TB
     idle --> |poll localhost| game
     idle --> |push roster| ssm
     idle --> |"shutdown -h now after 30 min empty"| ec2
-    bk --> s3
-    game --- world
+    game --> |"saves written here, NOT to root"| world
+    world -.-> |"attached /dev/xvdf, mounted by UUID<br/>RequiresMountsFor: no mount = server refuses to start"| game
+    world --> snaps
+    bk --> |"tar + integrity gate + size floor"| s3
     ssm --> |read| presence
     presence --> hook
     ssm --> |read roster age| monitor
@@ -76,11 +83,33 @@ counts as "players present", so a transient blip can never stop a server people 
 The cost of that choice is that a *broken* watcher never stops the box and never complains —
 which is why its liveness is watched from off-box (below).
 
-**Storage is shaped by the 2026-07-18 incident.** The world lives on its own EBS volume
-(`world_volume.tf`, 20 GB, `prevent_destroy`), mounted by UUID at `Pal/Saved/SaveGames`, and
-`palworld.service` carries `RequiresMountsFor` so an unmounted volume stops the server rather
-than silently generating an empty world. An instance replacement is now survivable instead of
-fatal. See `AGENTS.md` for the full rules this produced.
+**Storage is shaped by the 2026-07-18 incident: the world is not on the box.**
+
+EBS is network-attached storage that lives in the availability zone, not on the instance —
+so the world volume (`world_volume.tf`, 20 GB gp3, encrypted) is a separate object that stays
+put when the instance is stopped, replaced, or destroyed. It attaches at `/dev/xvdf` and is
+mounted **by UUID** (never a device name, which can renumber) at `Pal/Saved/SaveGames`.
+
+That separation is the actual fix. The instance-level guards — `prevent_destroy`,
+`delete_on_termination = false`, `user_data_replace_on_change = false` — only reduce the
+*chance* of a replacement, and each is one edit away from being removed by the same change
+that destroys the box. Moving the data off the instance is what makes a replacement
+**survivable** rather than merely unlikely: rebuild the box freely, the world does not care.
+
+Three properties worth knowing:
+
+- **`palworld.service` carries `RequiresMountsFor`**, so if the volume is not mounted the
+  server refuses to start rather than starting and generating a fresh empty world on the root
+  disk. That exact failure is how a restore once "succeeded" while serving nothing.
+- **The volume is pinned to its AZ** (`us-east-1f`). Any rebuilt instance must launch there.
+  Moving zones is a snapshot-and-restore, not a re-attach.
+- **The root volume is disposable by design** — OS and SteamCMD install only, reproducible
+  from `user_data`. It also carries `delete_on_termination = false` as a second line of
+  defence, left over from when the world still lived on it.
+
+Three independent copies protect the world: the volume itself, DLM snapshots twice daily
+(retain 10), and the 30-minute S3 backups — the only genuinely off-box copy of the three.
+See `AGENTS.md` for the full rules this produced.
 
 **Two things watch the box, both from outside it.**
 
