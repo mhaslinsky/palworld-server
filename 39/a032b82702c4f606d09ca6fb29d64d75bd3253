@@ -1,0 +1,38 @@
+discord-bot/package.json
+  s_bde73c666a7db3::t_21cf6759ef2a82 9-11
+  s_bde73c666a7db3::t_d89af65d710477 1-8,12-13
+discord-bot/backup-monitor/index.mjs
+  s_bde73c666a7db3::t_658b8cba17713c 130-131,136-137,141-142,150-151,155-156,160-223
+  s_bde73c666a7db3::t_b98af091a910d2 9-12
+  s_bde73c666a7db3::t_d88cd31f1c648c 14-17
+  s_bde73c666a7db3::t_b6cf115d46a843 81-90,92-109
+  s_bde73c666a7db3::t_dcceb1d37dfa0b 18-21,23,38-43
+discord-bot/tests/backup-monitor.test.mjs
+  s_bde73c666a7db3::t_13b686ee81c77a 1-106
+terraform/backup_monitor.tf
+  s_bde73c666a7db3::t_d11c6a7c39e6a1 115-123
+  s_bde73c666a7db3::t_24802f470324e6 2-3,5-11
+  s_bde73c666a7db3::t_888b1c4caef7a4 68-69,71,73
+AGENTS.md
+  s_bde73c666a7db3::t_98fd49da1a4244 85-88
+.gitignore
+  s_bde73c666a7db3::t_6563429404181d 31-33
+discord-bot/package-lock.json
+  s_bde73c666a7db3::t_8b8279ee1ae555 1-501
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "39a032b82702c4f606d09ca6fb29d64d75bd3253",
+  "prompts": {},
+  "sessions": {
+    "s_bde73c666a7db3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d1460eae-3c2d-4c2f-a31d-505196b4f586",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    }
+  }
+}
