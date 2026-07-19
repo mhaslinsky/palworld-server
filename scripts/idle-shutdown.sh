@@ -8,7 +8,7 @@
 #   - announces "server up" once per boot,
 #   - warns the channel WARN_BEFORE_MIN before the idle shutdown fires,
 #   - shuts the box down after THRESHOLD_MIN minutes of zero players (OS shutdown
-#     -> AWS stops the instance; the world save survives on the root EBS).
+#     -> AWS stops the instance; the world survives on its own EBS volume).
 #
 # Design notes (from the crucible critique panel):
 #  - localhost-only: the REST API and its admin password never cross the network,

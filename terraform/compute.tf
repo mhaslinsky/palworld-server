@@ -28,7 +28,7 @@ resource "aws_instance" "server" {
   iam_instance_profile   = aws_iam_instance_profile.instance.name
 
   # Local `shutdown -h now` must STOP (not terminate) the instance so billing halts
-  # but the world save on the root volume survives.
+  # while both EBS volumes - root and the world volume - survive.
   instance_initiated_shutdown_behavior = "stop"
 
   root_block_device {
@@ -36,6 +36,13 @@ resource "aws_instance" "server" {
     volume_size = var.root_volume_gb
     encrypted   = true
     tags        = { Name = "${var.project_name}-root" }
+
+    # The world now lives on aws_ebs_volume.world, not here - but this stays
+    # false as a second line of defence. On 2026-07-18 an instance replacement
+    # deleted this volume while it still held the world and took ~4.5 hours of
+    # the group's progress with it. Orphaning it costs cents and makes that
+    # failure recoverable by reattaching instead of unrecoverable.
+    delete_on_termination = false
   }
 
   user_data = templatefile("${path.module}/user_data.sh.tftpl", {
@@ -58,12 +65,51 @@ resource "aws_instance" "server" {
     webhook_param = local.webhook_param_name
     roster_param  = local.roster_param_name
 
-    # Injected verbatim as a value, so bash ${...} inside it is NOT re-interpolated by templatefile.
-    idle_script = file("${path.module}/../scripts/idle-shutdown.sh")
+    # The watcher and backup scripts are FETCHED from S3 at boot, not embedded:
+    # embedding both blew EC2's hard 16 KB user_data limit, and hosting them means
+    # a script fix no longer changes the user_data hash (so it cannot force a
+    # player-facing instance rebuild just to deploy a one-line change).
+    backup_bucket = aws_s3_bucket.backups.id
+
+    # Game-balance settings belong in code, not applied by hand to a running box.
+    # These were runtime `sed` edits until 2026-07-18, so when the instance was
+    # replaced the server came back at ENGINE DEFAULTS - which drops the base Pal
+    # cap from 50 to 15 and ejects every Pal over it onto the ground. Everything
+    # here must end with a trailing comma: it is spliced in front of the rest of
+    # the single-line OptionSettings tuple.
+    game_settings = join("", [
+      "bAllowGlobalPalboxImport=True,",
+      "bAllowGlobalPalboxExport=True,",
+      "PalSpawnNumRate=2.000000,",
+      "BaseCampWorkerMaxNum=50,",
+      "BaseCampMaxNumInGuild=10,",
+      "DeathPenalty=Item,",
+      "PalEggDefaultHatchingTime=0.030000,",
+    ])
   })
 
-  # New user_data should rebuild the box (fine — world save is snapshotted by DLM; back up first for safety).
-  user_data_replace_on_change = true
+  # Leave this false.
+  #
+  # It was true until 2026-07-18, when a one-word fix to a COMMENT in
+  # user_data.sh.tftpl changed the rendered script's hash, replaced this instance,
+  # and deleted the world with its root volume - about 4.5 hours of the group's
+  # progress, gone. Terraform cannot tell an inert comment from a real change.
+  #
+  # The world now lives on its own volume, so a replacement is survivable rather
+  # than fatal - but it still drops every player mid-session and re-runs SteamCMD
+  # into whatever build is current, so it stays a deliberate act.
+  #
+  # With this false, boot-script edits no longer apply automatically: apply them
+  # on the box (SSM) or do a DELIBERATE, backup-first replacement.
+  user_data_replace_on_change = false
+
+  lifecycle {
+    # Replacement is no longer world-destroying (the world is on its own volume),
+    # but it is still player-facing downtime plus an unplanned game update. Make
+    # Terraform refuse and error out rather than doing it quietly; removing this
+    # flag is the explicit, two-step opt-in required to rebuild the box on purpose.
+    prevent_destroy = true
+  }
 
   tags = { Name = var.project_name }
 }

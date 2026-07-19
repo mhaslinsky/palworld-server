@@ -1,0 +1,227 @@
+<powershell>
+# Palworld Windows game-server bootstrap.
+#
+# !! THIS FILE MUST STAY PURE ASCII !!
+# EC2Launch does not decode user_data as UTF-8: any multi-byte character (an em-dash
+# in a COMMENT is enough) arrives mangled, and the replacement bytes can include a
+# quote character, which breaks the PowerShell parse so NOTHING runs. Cost two failed
+# rebuilds on 2026-07-18. Emoji in the injected scripts are safe only because those
+# are gzip+base64'd. Check with: grep -P '[^\x00-\x7F]' on this file.
+#
+# Codifies the sequence proven interactively on 2026-07-18 (see AIDB
+# 2026-07-11-windows-migration-plan). Two findings are load-bearing here:
+#   1. PalServer.exe (the wrapper) HANGS in session 0 - it never spawns its child, so
+#      a headless launch through it yields a running-but-dead server. Launch
+#      Pal\Binaries\Win64\PalServer-Win64-Shipping.exe directly instead.
+#   2. SteamCMD's first invocation only self-updates and silently skips app_update, so
+#      the install needs a retry loop (same as the Linux user_data).
+#
+# Deliberately does NOT run steamcmd on every boot: an unattended update can land a
+# build that breaks the mod (BLOCKER 1). Updates are a separate, deliberate task.
+$ErrorActionPreference = "Continue"
+Start-Transcript -Path "C:\palworld-bootstrap.log" -Append
+
+# --- Persistent SaveGames volume (BLOCKER 4) ---------------------------------
+# The world must never live on the root volume: user_data_replace_on_change would
+# put it one Terraform change away from a wipe. Attach may lag first boot, so this
+# is guarded and idempotent (only ever touches a RAW disk).
+# Only format when EXACTLY ONE blank disk is present. Taking the first of several
+# RAW disks would format whichever the enumeration happened to return first - and
+# formatting the wrong volume is unrecoverable. Ambiguity is a stop condition, not
+# something to resolve by guessing.
+$rawDisks = @(Get-Disk | Where-Object { $_.PartitionStyle -eq 'RAW' })
+if ($rawDisks.Count -gt 1) {
+  Write-Output "ERROR: $($rawDisks.Count) blank disks present ($($rawDisks.Number -join ', ')) - refusing to guess which one is the save volume. Initialize it manually."
+  Write-EventLog -LogName Application -Source "Palworld" -EventId 107 -EntryType Error `
+    -Message "ambiguous RAW disks; save volume not initialized" -ErrorAction SilentlyContinue
+} elseif ($rawDisks.Count -eq 1) {
+  Write-Output "initializing blank disk $($rawDisks[0].Number) as the save volume"
+  $rawDisks[0] | Initialize-Disk -PartitionStyle GPT -PassThru |
+    New-Partition -DriveLetter ${save_drive_letter} -UseMaximumSize |
+    Format-Volume -FileSystem NTFS -NewFileSystemLabel "${save_volume_label}" -Confirm:$false
+}
+New-Item -ItemType Directory -Force -Path "${save_drive_letter}:\PalServer\SaveGames" | Out-Null
+
+# --- Firewall ----------------------------------------------------------------
+# Only the game port faces the internet. REST (8212) and RCON (25575) stay closed
+# here AND in the security group - the watcher polls them on 127.0.0.1 only.
+if (-not (Get-NetFirewallRule -DisplayName "Palworld game ${game_udp_port}/udp" -ErrorAction SilentlyContinue)) {
+  New-NetFirewallRule -DisplayName "Palworld game ${game_udp_port}/udp" -Direction Inbound `
+    -Protocol UDP -LocalPort ${game_udp_port} -Action Allow | Out-Null
+}
+
+Set-Service AmazonSSMAgent -StartupType Automatic -ErrorAction SilentlyContinue
+Start-Service AmazonSSMAgent -ErrorAction SilentlyContinue
+
+# --- AWS CLI (the watcher's SSM reads/writes need it) -------------------------
+# The base AMI ships AWS Tools for PowerShell but not aws.exe; the watcher mirrors
+# the Linux script's aws-cli calls, so install it.
+if (-not (Test-Path "C:\Program Files\Amazon\AWSCLIV2\aws.exe")) {
+  $ProgressPreference = "SilentlyContinue"
+  Invoke-WebRequest -Uri "https://awscli.amazonaws.com/AWSCLIV2.msi" -OutFile "C:\AWSCLIV2.msi"
+  Start-Process msiexec.exe -ArgumentList "/i C:\AWSCLIV2.msi /qn" -Wait
+  $env:Path += ";C:\Program Files\Amazon\AWSCLIV2"
+  [Environment]::SetEnvironmentVariable("Path", $env:Path, [EnvironmentVariableTarget]::Machine)
+}
+
+# --- Palworld dedicated server ------------------------------------------------
+New-Item -ItemType Directory -Force -Path C:\steamcmd | Out-Null
+if (-not (Test-Path C:\steamcmd\steamcmd.exe)) {
+  $ProgressPreference = "SilentlyContinue"
+  Invoke-WebRequest -Uri https://steamcdn-a.akamaihd.net/client/installer/steamcmd.zip -OutFile C:\steamcmd\steamcmd.zip
+  Expand-Archive -Path C:\steamcmd\steamcmd.zip -DestinationPath C:\steamcmd -Force
+}
+if (-not (Test-Path C:\PalServer\Pal\Binaries\Win64\PalServer-Win64-Shipping.exe)) {
+  # Finding 2: first run only self-updates, so retry until the binary exists.
+  for ($attempt = 1; $attempt -le 3; $attempt++) {
+    & C:\steamcmd\steamcmd.exe +force_install_dir C:\PalServer +login anonymous +app_update 2394010 validate +quit | Out-Null
+    if (Test-Path C:\PalServer\Pal\Binaries\Win64\PalServer-Win64-Shipping.exe) { break }
+  }
+  # Say so when all three attempts failed. Without this the bootstrap continues
+  # past a missing server, registers tasks against a binary that isn't there, and
+  # exits 0 - a "successful" boot with nothing to play on.
+  if (-not (Test-Path C:\PalServer\Pal\Binaries\Win64\PalServer-Win64-Shipping.exe)) {
+    Write-Output "ERROR: SteamCMD failed to install PalServer after 3 attempts - the server binary is MISSING and this box cannot serve"
+    Write-EventLog -LogName Application -Source "Palworld" -EventId 106 -EntryType Error `
+      -Message "SteamCMD install failed after 3 attempts; PalServer-Win64-Shipping.exe missing" -ErrorAction SilentlyContinue
+  }
+}
+
+# --- SaveGames -> persistent volume (junction) --------------------------------
+$saveLink = "C:\PalServer\Pal\Saved\SaveGames"
+$saveTarget = "${save_drive_letter}:\PalServer\SaveGames"
+New-Item -ItemType Directory -Force -Path "C:\PalServer\Pal\Saved" | Out-Null
+if (Test-Path $saveLink) {
+  $item = Get-Item $saveLink -Force
+  if (-not $item.LinkType) { Remove-Item $saveLink -Recurse -Force }  # never clobber an existing junction
+}
+if (-not (Test-Path $saveLink)) {
+  New-Item -ItemType Junction -Path $saveLink -Target $saveTarget | Out-Null
+}
+
+# --- Mod .paks ----------------------------------------------------------------
+# Staged on the persistent volume because Nexus requires a login - they cannot be
+# re-downloaded at boot. Copying (not linking) keeps the game reading a normal local
+# path; the volume copy is the durable master across instance rebuilds.
+$modSource = "${save_drive_letter}:\PalServer\mods"
+$modDest = "C:\PalServer\Pal\Content\Paks\~mods"
+New-Item -ItemType Directory -Force -Path $modSource, $modDest | Out-Null
+$paks = Get-ChildItem $modSource -Filter *.pak -ErrorAction SilentlyContinue
+if ($paks) {
+  $paks | Copy-Item -Destination $modDest -Force
+  Write-Output "restored $($paks.Count) mod pak(s) from $modSource"
+} else {
+  # Not fatal - a vanilla server still runs. But say so loudly rather than booting
+  # "successfully" with the mod silently absent.
+  Write-Output "WARNING: no .pak files staged in $modSource - server will run VANILLA (no relaxed building)"
+}
+
+# --- Server config ------------------------------------------------------------
+$cfgDir = "C:\PalServer\Pal\Saved\Config\WindowsServer"
+New-Item -ItemType Directory -Force -Path $cfgDir | Out-Null
+$opts = '${option_settings}'
+Set-Content -Path (Join-Path $cfgDir "PalWorldSettings.ini") `
+  -Value "[/Script/Pal.PalGameWorldSettings]`r`nOptionSettings=($opts)`r`n" -Encoding UTF8 -NoNewline
+
+# --- Watcher config -----------------------------------------------------------
+# Webhook/roster are SSM parameter NAMES, not values: baking the webhook in would make
+# rotating it rebuild the instance (user_data_replace_on_change).
+@{
+  GamePort      = ${game_udp_port}
+  MaxPlayers    = ${max_players}
+  RestPort      = ${rest_api_port}
+  AdminPassword = '${admin_password}'
+  ThresholdMin  = ${idle_minutes}
+  WarnBeforeMin = ${warn_before_minutes}
+  ServerLabel   = '${server_name}'
+  ServerAddress = '${server_address}'
+  # Where the watcher looks for Level.sav to PROVE a save reached disk before it
+  # allows the box to power off.
+  SaveRoot      = '${save_drive_letter}:\PalServer\SaveGames'
+  AwsRegion     = '${aws_region}'
+  WebhookParam  = '${webhook_param}'
+  RosterParam   = '${roster_param}'
+  BackupBucket  = '${backup_bucket}'
+} | ConvertTo-Json | Set-Content -Path "C:\PalServer\idle.conf.json" -Encoding UTF8
+
+New-Item -ItemType Directory -Force -Path C:\PalServer\scripts | Out-Null
+# Scripts come from S3, not embedded here: embedding them blew EC2's hard 16 KB
+# user_data limit once the watcher grew a save-verification step. Fetching them
+# also means a script fix does not require an instance rebuild to deploy.
+#
+# The .ps1 files carry a UTF-8 BOM in the repo and s3 cp preserves bytes exactly.
+# The BOM is load-bearing: PowerShell 5.1 reads a BOM-less .ps1 as ANSI, so any
+# non-ASCII byte (an emoji in a Discord message) mangles into something that can
+# contain a quote, breaking the parse so the script never runs.
+$scriptSource = "s3://${backup_bucket}/scripts/windows"
+$awsExe = "C:\Program Files\Amazon\AWSCLIV2\aws.exe"
+# Verify each download against S3's OWN ETag rather than a hash baked in here: a
+# hash in user_data would make every script edit change the user_data hash and
+# force an instance rebuild, undoing the reason the scripts live in S3 at all.
+# A size floor alone is not enough - half a PowerShell script usually still
+# parses, which is the worst failure mode: it runs and does the wrong subset.
+# (ETag == MD5 for these single-part uploads; a multipart ETag has a "-N" suffix,
+# which is treated as unverifiable rather than as a mismatch.)
+foreach ($scriptName in @("palworld-launch.ps1", "palworld-idle.ps1", "backup-to-s3.ps1")) {
+  $dest = "C:\PalServer\scripts\$scriptName"
+  & $awsExe s3 cp "$scriptSource/$scriptName" $dest --region ${aws_region} --only-show-errors
+  $bad = $null
+  if (-not (Test-Path $dest)) {
+    $bad = "file not present after download"
+  } else {
+    $etag = (& $awsExe s3api head-object --bucket "${backup_bucket}" --key "scripts/windows/$scriptName" `
+      --region ${aws_region} --query ETag --output text 2>$null)
+    $etag = if ($etag) { $etag.Trim('"').ToLower() } else { $null }
+    $actual = (Get-FileHash $dest -Algorithm MD5).Hash.ToLower()
+    if (-not $etag) {
+      Write-Output "WARNING: could not read ETag for $scriptName - integrity unverified (continuing)"
+    } elseif ($etag -like "*-*") {
+      Write-Output "NOTE: $scriptName has a multipart ETag - integrity unverified (continuing)"
+    } elseif ($actual -ne $etag) {
+      $bad = "checksum mismatch (S3 ETag $etag, downloaded $actual)"
+    }
+  }
+  if ($bad) {
+    # Loud, because a missing or corrupt watcher means no idle shutdown (the box
+    # then bills around the clock) and no watchdog - both of which are otherwise
+    # invisible until someone reads the bill or notices the server is down.
+    Write-Output "ERROR: $scriptName from $scriptSource is unusable - $bad. The server will run WITHOUT its watchdog/idle-shutdown."
+    Write-EventLog -LogName Application -Source "Palworld" -EventId 102 -EntryType Error `
+      -Message "bootstrap script $scriptName unusable: $bad" -ErrorAction SilentlyContinue
+    Remove-Item $dest -Force -ErrorAction SilentlyContinue
+  }
+}
+
+New-EventLog -LogName Application -Source "Palworld" -ErrorAction SilentlyContinue
+
+# --- Scheduled tasks ----------------------------------------------------------
+# Launcher at boot; watcher every 2 min. The watcher re-invokes the launcher when the
+# server process is missing, which is what makes it a watchdog - the launcher's own
+# trigger is -AtStartup only, so without that call a crash would go unnoticed until
+# the next reboot. Both run as SYSTEM: the same session-0 context the direct-exe
+# launch was verified under.
+$psExe = "powershell.exe"
+$principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
+
+$launchAction = New-ScheduledTaskAction -Execute $psExe `
+  -Argument "-NoProfile -ExecutionPolicy Bypass -File C:\PalServer\scripts\palworld-launch.ps1"
+Register-ScheduledTask -TaskName "PalworldLaunch" -Action $launchAction -Principal $principal `
+  -Trigger (New-ScheduledTaskTrigger -AtStartup) -Force | Out-Null
+
+$idleAction = New-ScheduledTaskAction -Execute $psExe `
+  -Argument "-NoProfile -ExecutionPolicy Bypass -File C:\PalServer\scripts\palworld-idle.ps1"
+$idleTrigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(5) `
+  -RepetitionInterval (New-TimeSpan -Minutes 2)
+Register-ScheduledTask -TaskName "PalworldIdle" -Action $idleAction -Principal $principal `
+  -Trigger $idleTrigger -Force | Out-Null
+
+$backupAction = New-ScheduledTaskAction -Execute $psExe `
+  -Argument "-NoProfile -ExecutionPolicy Bypass -File C:\PalServer\scripts\backup-to-s3.ps1"
+$backupTrigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(5) `
+  -RepetitionInterval (New-TimeSpan -Minutes 30)
+Register-ScheduledTask -TaskName "PalworldBackup" -Action $backupAction -Principal $principal `
+  -Trigger $backupTrigger -Force | Out-Null
+
+Start-ScheduledTask -TaskName "PalworldLaunch"
+Stop-Transcript
+</powershell>

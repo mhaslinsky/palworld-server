@@ -24,6 +24,71 @@ apt-get install -y curl jq lib32gcc-s1 steamcmd awscli
 id -u steam >/dev/null 2>&1 || useradd -m -s /bin/bash steam
 install -d -o steam -g steam /home/steam/palworld
 
+# --- 2b. Mount the dedicated world volume BEFORE anything writes a save ---
+#
+# The world must not live on the root volume: on 2026-07-18 an instance
+# replacement deleted the root volume and took ~4.5h of the group's progress with
+# it. The volume is created and attached by Terraform (world_volume.tf); this is
+# the half that makes it actually hold the world on a rebuilt box.
+#
+# Ordering matters - this runs before SteamCMD so the save directory is already
+# the mount point the first time the server writes to it.
+SAVEDIR=/home/steam/palworld/Pal/Saved/SaveGames
+install -d -o steam -g steam /home/steam/palworld/Pal/Saved
+install -d -o steam -g steam "$${SAVEDIR}"
+
+# The attachment can lag instance boot, so wait rather than racing it. Nitro
+# exposes the volume as an NVMe device, so the /dev/xvdf request name does not
+# appear - find the attached, unmounted, unformatted disk instead.
+world_dev=""
+for wait_attempt in $(seq 1 30); do
+  for candidate in $(lsblk -dpno NAME); do
+    # Skip anything mounted, holding a filesystem, or carrying partitions: this
+    # must never select the root disk.
+    [ -n "$(lsblk -no MOUNTPOINT "$${candidate}" | tr -d ' \n')" ] && continue
+    [ "$(lsblk -no NAME "$${candidate}" | wc -l)" -ne 1 ] && continue
+    cand_fstype="$(lsblk -dno FSTYPE "$${candidate}" 2>/dev/null || true)"
+    cand_label="$(lsblk -dno LABEL "$${candidate}" 2>/dev/null | tr -d ' ' || true)"
+    # Either a blank disk (first boot) or one we formatted on a previous boot.
+    if [ -z "$${cand_fstype}" ] || [ "$${cand_label}" = "palworld-world" ]; then
+      world_dev="$${candidate}"
+      break
+    fi
+  done
+  [ -n "$${world_dev}" ] && break
+  echo "waiting for the world volume to attach ($${wait_attempt}/30)" >&2
+  sleep 10
+done
+
+if [ -z "$${world_dev}" ]; then
+  # Fail the bootstrap rather than starting a server that would write a brand new
+  # world to the root disk and look perfectly healthy while doing it.
+  echo "FATAL: world volume never appeared; refusing to start on root-volume storage" >&2
+  exit 1
+fi
+
+# Format ONLY a blank disk. A disk that already carries the label holds the world
+# and must never be reformatted - that would be the data loss this prevents.
+if [ -z "$(lsblk -dno FSTYPE "$${world_dev}" 2>/dev/null)" ]; then
+  echo "formatting blank world volume $${world_dev}" >&2
+  mkfs.ext4 -q -L palworld-world "$${world_dev}"
+fi
+
+world_uuid="$(blkid -s UUID -o value "$${world_dev}")"
+if [ -z "$${world_uuid}" ]; then
+  echo "FATAL: no UUID for $${world_dev} after mkfs" >&2
+  exit 1
+fi
+# By UUID, not device name: NVMe device ordering is not stable across reboots.
+# NOT nofail - an unmounted world volume must stop the boot, not silently fall
+# back to the root disk.
+grep -q "$${world_uuid}" /etc/fstab || \
+  echo "UUID=$${world_uuid} $${SAVEDIR} ext4 defaults 0 2" >> /etc/fstab
+mountpoint -q "$${SAVEDIR}" || mount "$${SAVEDIR}"
+mountpoint -q "$${SAVEDIR}" || { echo "FATAL: $${SAVEDIR} did not mount" >&2; exit 1; }
+chown -R steam:steam "$${SAVEDIR}"
+echo "world volume mounted: $$(findmnt -no SOURCE,TARGET "$${SAVEDIR}")" >&2
+
 # --- 3. Install the Palworld dedicated server (SteamCMD app 2394010) ---
 # SteamCMD self-updates and re-execs on its first run; an +app_update issued in
 # that same invocation races the restart and dies with "Missing configuration".
@@ -57,7 +122,7 @@ chown steam:steam /home/steam/.steam/sdk64/steamclient.so || true
 install -d -o steam -g steam /home/steam/palworld/Pal/Saved/Config/LinuxServer
 cat > /home/steam/palworld/Pal/Saved/Config/LinuxServer/PalWorldSettings.ini <<EOF
 [/Script/Pal.PalGameWorldSettings]
-OptionSettings=(ServerName="${server_name}",ServerPassword="${server_password}",AdminPassword="${admin_password}",PublicPort=8211,RCONEnabled=True,RCONPort=${rcon_port},RESTAPIEnabled=True,RESTAPIPort=${rest_api_port})
+OptionSettings=(${game_settings}ServerName="${server_name}",ServerPassword="${server_password}",AdminPassword="${admin_password}",PublicPort=8211,RCONEnabled=True,RCONPort=${rcon_port},RESTAPIEnabled=True,RESTAPIPort=${rest_api_port})
 EOF
 chown -R steam:steam /home/steam/palworld/Pal/Saved
 
@@ -84,7 +149,7 @@ EOF
 
 # --- 7. Idle-shutdown config (root-only; carries the REST admin password) ---
 # The watcher `.`-sources this file, so every value is single-quoted: an unquoted
-# value containing a space (SERVER_LABEL="Pow World") is parsed as a command, and
+# value containing a space (SERVER_LABEL="Pal World") is parsed as a command, and
 # the watcher dies 127 before it can ever poll. Single quotes also neutralize
 # $, backticks, and \ in a generated password.
 # The terminator is quoted so bash performs NO expansion when writing the file:
@@ -104,14 +169,36 @@ SERVER_ADDRESS='${server_address}'
 AWS_REGION='${aws_region}'
 WEBHOOK_PARAM='${webhook_param}'
 ROSTER_PARAM='${roster_param}'
+BACKUP_BUCKET='${backup_bucket}'
 EOF
 chmod 0600 /etc/palworld/idle.conf
 
-# --- 8. Idle-shutdown script (injected verbatim from scripts/idle-shutdown.sh) ---
-cat > /usr/local/bin/palworld-idle.sh <<'PALIDLE'
-${idle_script}
-PALIDLE
-chmod 0755 /usr/local/bin/palworld-idle.sh
+# --- 8. Bootstrap scripts (fetched from S3, not embedded) ---
+# Embedding them here blew EC2's hard 16 KB user_data limit once the backup script
+# joined the watcher. Fetching also means a script fix does not change the
+# user_data hash, so it never forces an instance rebuild to deploy.
+#
+# A missing script is FATAL: without the watcher the box never idle-shuts-down and
+# bills around the clock, and without the backup script there are no recovery
+# points - both of which are invisible until the bill or the next incident.
+fetch_script() {
+  script_name="$1"
+  dest="$2"
+  for fetch_attempt in 1 2 3; do
+    if aws s3 cp "s3://${backup_bucket}/scripts/linux/$${script_name}" "$${dest}" \
+        --region ${aws_region} --only-show-errors; then
+      chmod 0755 "$${dest}"
+      return 0
+    fi
+    echo "fetch of $${script_name} failed (attempt $${fetch_attempt}/3); retrying" >&2
+    sleep 10
+  done
+  echo "FATAL: could not fetch $${script_name} from s3://${backup_bucket}/scripts/linux/" >&2
+  return 1
+}
+
+fetch_script idle-shutdown.sh /usr/local/bin/palworld-idle.sh || exit 1
+fetch_script backup-to-s3.sh /usr/local/bin/palworld-backup.sh || exit 1
 
 # --- 9. Idle timer: first check 5 min after boot, then every 2 min ---
 cat > /etc/systemd/system/palworld-idle.service <<'EOF'
@@ -135,7 +222,52 @@ OnUnitActiveSec=2min
 WantedBy=timers.target
 EOF
 
+# --- 9b. Rolling off-box backup: script + 30-minute timer ---
+# Without this a rebuilt box produces NO backups. The freshness monitor would
+# alert, but the recovery points would already have stopped - and the whole point
+# of this system is that the box is disposable.
+
+cat > /etc/systemd/system/palworld-backup.service <<'EOF'
+[Unit]
+Description=Palworld world backup to S3
+After=network-online.target
+# The world lives on the mounted volume; backing up an unmounted path would
+# archive an empty directory and publish it as a healthy backup.
+RequiresMountsFor=/home/steam/palworld/Pal/Saved/SaveGames
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/palworld-backup.sh
+EOF
+
+cat > /etc/systemd/system/palworld-backup.timer <<'EOF'
+[Unit]
+Description=Palworld world backup every 30 minutes
+
+[Timer]
+# First run a few minutes after boot so the server is up and the REST force-save
+# can succeed, then every 30 min.
+OnBootSec=3min
+OnUnitActiveSec=30min
+AccuracySec=1min
+Unit=palworld-backup.service
+
+[Install]
+WantedBy=timers.target
+EOF
+
+# --- 9c. The game server must not start without its world volume ---
+# If the volume ever fails to mount, the server would otherwise start on an empty
+# directory and generate a brand new world - looking entirely healthy while
+# serving nothing anyone recognises. That is the empty-world failure mode.
+install -d /etc/systemd/system/palworld.service.d
+cat > /etc/systemd/system/palworld.service.d/10-world-mount.conf <<'EOF'
+[Unit]
+RequiresMountsFor=/home/steam/palworld/Pal/Saved/SaveGames
+EOF
+
 # --- 10. Enable + start ---
 systemctl daemon-reload
 systemctl enable --now palworld.service
 systemctl enable --now palworld-idle.timer
+systemctl enable --now palworld-backup.timer
