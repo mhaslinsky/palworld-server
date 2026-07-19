@@ -1,0 +1,19 @@
+discord-bot/tests/backup-monitor.test.mjs
+  s_bde73c666a7db3::t_ba9368314a5d54 83-87,89
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "79e9c2083facf3258d0264fe0274a0a5ab423844",
+  "prompts": {},
+  "sessions": {
+    "s_bde73c666a7db3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d1460eae-3c2d-4c2f-a31d-505196b4f586",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    }
+  }
+}
