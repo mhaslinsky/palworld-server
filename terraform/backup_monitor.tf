@@ -1,11 +1,14 @@
 # ---------------------------------------------------------------------------
-# Backup freshness monitor - the off-box observer for the on-box backup job.
+# Off-box observer for the two timers that run ON the game box: the backup job and
+# the idle-shutdown watcher.
 #
-# The backup timer runs on the game box, so every way it can die is invisible from
-# outside: dead timer, expired IAM, full disk, failed force-save, replaced instance.
-# A backup system nobody is watching is a backup system that has already stopped
-# and not told you. This is the piece that makes the backups trustworthy rather
-# than merely present.
+# Both run on the box, so every way they can die is invisible from outside: dead
+# timer, expired IAM, full disk, failed force-save, replaced instance. A backup
+# system nobody is watching is a backup system that has already stopped and not
+# told you. The idle watcher is worse - it fails OPEN (any error counts as "players
+# present"), so a dead one never stops the box and never complains; on 2026-07-19
+# that cost ~16h of continuous billing after a reboot killed an un-enabled timer.
+# This is the piece that makes both trustworthy rather than merely present.
 #
 # Keys off instance state on purpose: the box stops itself when empty, so "no
 # backups while stopped" is correct, not a fault. Alarming on that would train
@@ -62,10 +65,12 @@ data "aws_iam_policy_document" "backup_monitor" {
     resources = [aws_s3_bucket.backups.arn]
   }
 
+  # The roster is read for its LastModifiedDate, not its contents: it is the only
+  # off-box evidence that the idle watcher is still alive.
   statement {
-    sid       = "ReadWebhook"
+    sid       = "ReadWebhookAndRoster"
     actions   = ["ssm:GetParameter"]
-    resources = [aws_ssm_parameter.discord_webhook_url.arn]
+    resources = [aws_ssm_parameter.discord_webhook_url.arn, aws_ssm_parameter.roster.arn]
   }
 
   statement {
@@ -107,6 +112,15 @@ resource "aws_lambda_function" "backup_monitor" {
       STALE_MINUTES = "45" # the job runs every 30 min; 45 tolerates one missed run
       MIN_BYTES     = "1000000"
       WEBHOOK_PARAM = aws_ssm_parameter.discord_webhook_url.name
+
+      # Idle-watcher liveness. The watcher rewrites the roster every 2 min, so 10
+      # tolerates four missed cycles before alerting.
+      ROSTER_PARAM         = aws_ssm_parameter.roster.name
+      ROSTER_STALE_MINUTES = "10"
+      # A cold boot runs SteamCMD before the REST API answers, and the watcher
+      # publishes nothing until it does. Suppress the alert until the instance has
+      # been up this long, or every normal start would raise a false alarm.
+      BOOT_GRACE_MINUTES = "20"
     }
   }
 

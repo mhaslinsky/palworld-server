@@ -6,15 +6,21 @@
 // needed. That is exactly how ~4.5h of the group's progress was lost on
 // 2026-07-18: the only surviving copy was one pulled off by hand that morning.
 //
-// This runs on a schedule, OUTSIDE the box, and answers one question: is there a
-// recent world backup in S3? It deliberately keys off instance state, because the
-// box stops itself when empty and "no backups while stopped" is correct behaviour,
-// not a fault -- alarming on that would train everyone to ignore the alarm.
+// Every check here keys off instance state first, because the box stops itself
+// when empty: "no backups while stopped" and "no roster while stopped" are both
+// correct behaviour, not faults. Alarming on either would train everyone to ignore
+// the alarm -- which is how the real one gets missed.
 //
-// Distinguishes three states, never collapsing them into "fine":
-//   OK        - instance running, fresh object present
-//   SLEEPING  - instance stopped, no backup expected
+// It also watches palworld-idle.timer, via the roster parameter that watcher
+// rewrites every cycle. The watcher fails OPEN (any error counts as "players
+// present"), so a dead one never stops the box and never complains -- a stale
+// roster is the only evidence it leaves. See commit history for 2026-07-19.
+//
+// Distinguishes these states, never collapsing them into "fine":
+//   OK        - instance running, fresh backup present, watcher publishing
+//   SLEEPING  - instance stopped, neither timer expected to run
 //   STALE     - instance running, newest object older than the threshold  -> alert
+//   WATCHER_DEAD - instance running past its grace period, roster not updating -> alert
 //   UNKNOWN   - the check itself failed (API error) -> alert, because a check that
 //               cannot run has NOT cleared anything
 
@@ -29,6 +35,12 @@ const PREFIX = process.env.BACKUP_PREFIX || "world/linux/";
 const STALE_MINUTES = Number(process.env.STALE_MINUTES || 45);
 const MIN_BYTES = Number(process.env.MIN_BYTES || 1_000_000);
 const WEBHOOK_PARAM = process.env.WEBHOOK_PARAM;
+const ROSTER_PARAM = process.env.ROSTER_PARAM;
+const ROSTER_STALE_MINUTES = Number(process.env.ROSTER_STALE_MINUTES || 10);
+// The watcher publishes nothing until the game's REST API answers, and a cold boot
+// runs SteamCMD before that. Without this grace the monitor would cry wolf after
+// every single start - and an alarm that fires on normal operation gets muted.
+const BOOT_GRACE_MINUTES = Number(process.env.BOOT_GRACE_MINUTES || 20);
 
 const ec2 = new EC2Client({region: REGION});
 const s3 = new S3Client({region: REGION});
@@ -66,9 +78,35 @@ async function notify(content) {
   }
 }
 
-async function instanceState() {
+/**
+ * State plus how long the instance has been up, which the watcher check needs to
+ * tell "not started yet" from "started and broken".
+ *
+ * LaunchTime is the right clock for both cases it has to survive: a stop/start
+ * refreshes it (so a cold boot gets its full grace period), while an in-place OS
+ * reboot does not (so a watcher killed by a reboot - exactly the 2026-07-19
+ * failure - is reported promptly instead of being handed a fresh grace period).
+ */
+async function instanceStatus() {
   const result = await ec2.send(new DescribeInstancesCommand({InstanceIds: [INSTANCE_ID]}));
-  return result.Reservations?.[0]?.Instances?.[0]?.State?.Name ?? "unknown";
+  const instance = result.Reservations?.[0]?.Instances?.[0];
+  return {
+    state: instance?.State?.Name ?? "unknown",
+    launchTime: instance?.LaunchTime ?? null,
+  };
+}
+
+/**
+ * Age in minutes of the roster parameter the idle watcher rewrites every cycle.
+ * Returns null when no parameter is configured (the check is then skipped, and
+ * says so - it does not report a pass it never performed).
+ */
+async function rosterAgeMinutes() {
+  if (!ROSTER_PARAM) return null;
+  const result = await ssm.send(new GetParameterCommand({Name: ROSTER_PARAM}));
+  const modified = result.Parameter?.LastModifiedDate;
+  if (!modified) throw new Error(`${ROSTER_PARAM} has no LastModifiedDate`);
+  return Math.round((Date.now() - new Date(modified).getTime()) / 60000);
 }
 
 /** Newest object under the prefix. S3 has no "sort by date", so page and track the max. */
@@ -89,32 +127,19 @@ async function newestBackup() {
   return newest;
 }
 
-export const handler = async () => {
-  let state;
-  try {
-    state = await instanceState();
-  } catch (error) {
-    // The check itself failed. Silence here would read as an all-clear.
-    await notify(`⚠️ **Backup monitor could not run** — EC2 lookup failed: ${error.message}`);
-    return {status: "UNKNOWN", reason: error.message};
-  }
-
-  if (state !== "running") {
-    console.log(`instance ${state} — no backup expected`);
-    return {status: "SLEEPING", state};
-  }
-
+/** Backups: is there a recent, plausibly-sized object? */
+async function checkBackups() {
   let newest;
   try {
     newest = await newestBackup();
   } catch (error) {
-    await notify(`⚠️ **Backup monitor could not run** — S3 list failed: ${error.message}`);
-    return {status: "UNKNOWN", reason: error.message};
+    return {status: "UNKNOWN", reason: error.message,
+      alert: `⚠️ **Backup monitor could not run** — S3 list failed: ${error.message}`};
   }
 
   if (!newest) {
-    await notify(`🚨 **No world backups exist at all** in \`s3://${BUCKET}/${PREFIX}\` while the server is running. Backups are NOT protecting you.`);
-    return {status: "STALE", reason: "no objects"};
+    return {status: "STALE", reason: "no objects",
+      alert: `🚨 **No world backups exist at all** in \`s3://${BUCKET}/${PREFIX}\` while the server is running. Backups are NOT protecting you.`};
   }
 
   const ageMinutes = Math.round((Date.now() - new Date(newest.LastModified).getTime()) / 60000);
@@ -122,15 +147,78 @@ export const handler = async () => {
   // A tiny object is a failed backup wearing a success costume: the on-box script
   // has a size floor, but if it is ever bypassed this catches the empty-world class.
   if (newest.Size < MIN_BYTES) {
-    await notify(`🚨 **Latest world backup looks corrupt** — \`${newest.Key}\` is only ${newest.Size} bytes (floor ${MIN_BYTES}). Treat backups as unreliable until checked.`);
-    return {status: "STALE", reason: "undersized", key: newest.Key, size: newest.Size};
+    return {status: "STALE", reason: "undersized", key: newest.Key, size: newest.Size,
+      alert: `🚨 **Latest world backup looks corrupt** — \`${newest.Key}\` is only ${newest.Size} bytes (floor ${MIN_BYTES}). Treat backups as unreliable until checked.`};
   }
 
   if (ageMinutes > STALE_MINUTES) {
-    await notify(`🚨 **World backups have stopped** — newest is \`${newest.Key}\`, ${ageMinutes} min old (threshold ${STALE_MINUTES} min) while the server is running. Check \`palworld-backup.timer\` on the box.`);
-    return {status: "STALE", ageMinutes, key: newest.Key};
+    return {status: "STALE", ageMinutes, key: newest.Key,
+      alert: `🚨 **World backups have stopped** — newest is \`${newest.Key}\`, ${ageMinutes} min old (threshold ${STALE_MINUTES} min) while the server is running. Check \`palworld-backup.timer\` on the box.`};
   }
 
-  console.log(`OK — newest ${newest.Key}, ${ageMinutes}m old, ${newest.Size} bytes`);
   return {status: "OK", ageMinutes, key: newest.Key, size: newest.Size};
+}
+
+/** Idle watcher: is it still publishing the roster? */
+async function checkWatcher(launchTime) {
+  if (!ROSTER_PARAM) {
+    // Not configured. Report that honestly rather than as a pass - a check that
+    // did not run has cleared nothing.
+    return {status: "SKIPPED", reason: "ROSTER_PARAM not set"};
+  }
+
+  let ageMinutes;
+  try {
+    ageMinutes = await rosterAgeMinutes();
+  } catch (error) {
+    return {status: "UNKNOWN", reason: error.message,
+      alert: `⚠️ **Idle-watcher check could not run** — reading \`${ROSTER_PARAM}\` failed: ${error.message}`};
+  }
+
+  const upMinutes = launchTime
+    ? Math.round((Date.now() - new Date(launchTime).getTime()) / 60000)
+    : null;
+  if (upMinutes !== null && upMinutes < BOOT_GRACE_MINUTES) {
+    return {status: "BOOTING", upMinutes, rosterAgeMinutes: ageMinutes};
+  }
+
+  if (ageMinutes > ROSTER_STALE_MINUTES) {
+    return {status: "WATCHER_DEAD", rosterAgeMinutes: ageMinutes, upMinutes,
+      alert: `🚨 **Idle-shutdown watcher is not running** — \`${ROSTER_PARAM}\` has not updated in ${ageMinutes} min (threshold ${ROSTER_STALE_MINUTES} min) while the server is up. The box will NOT stop when empty and is billing continuously. Check \`systemctl status palworld-idle.timer\` — and \`systemctl is-enabled\` it, not just \`is-active\`.`};
+  }
+
+  return {status: "OK", rosterAgeMinutes: ageMinutes};
+}
+
+export const handler = async () => {
+  let instance;
+  try {
+    instance = await instanceStatus();
+  } catch (error) {
+    // The check itself failed. Silence here would read as an all-clear.
+    await notify(`⚠️ **Backup monitor could not run** — EC2 lookup failed: ${error.message}`);
+    return {status: "UNKNOWN", reason: error.message};
+  }
+
+  if (instance.state !== "running") {
+    console.log(`instance ${instance.state} — neither timer expected to run`);
+    return {status: "SLEEPING", state: instance.state};
+  }
+
+  // Both checks run before ANY alert is delivered. Delivering as we go would let a
+  // failed first delivery (notify throws by design) skip the second check entirely,
+  // hiding a dead watcher behind a stale backup.
+  const backups = await checkBackups();
+  const watcher = await checkWatcher(instance.launchTime);
+
+  for (const alert of [backups.alert, watcher.alert].filter(Boolean)) {
+    await notify(alert);
+  }
+
+  // Worst-case wins, so a single "OK" can never paper over the other check.
+  const failed = [backups, watcher].some(check => check.alert);
+  const status = failed ? (watcher.alert ? watcher.status : backups.status) : "OK";
+
+  console.log(`${status} — backups:${backups.status} watcher:${watcher.status}`);
+  return {status, backups, watcher};
 };

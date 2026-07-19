@@ -82,6 +82,10 @@ This codebase has produced several failures that reported success:
   Scheduled Task's SYSTEM context, inside a bare `try/catch`
 - a restore that "succeeded" while serving a freshly generated **empty** world
 - a `user_data` that never ran at all because an em-dash in a comment broke the parse
+- a systemd timer that was `start`ed but never `enable`d, so it worked perfectly
+  until the next reboot and then never came back. `systemctl status` said `active`
+  right up to the reboot; only `is-enabled` would have said `disabled`. **Check
+  `is-enabled`, not just `is-active`** - and prefer `enable --now` to `start`.
 
 So: after a change, ask the running system what it thinks is true (`/v1/api/settings`,
 `/v1/api/info`, `aws s3 ls`, the served world GUID) rather than trusting the command's
