@@ -1,0 +1,41 @@
+discord-bot/tests/backup-monitor.test.mjs
+  s_bde73c666a7db3::t_f46ab8680ea469 130-132,134,136-143
+  s_bde73c666a7db3::t_9d7ef988fde5d9 121-129,133,135,144-148,165-184
+  s_bde73c666a7db3::t_86ce36dc29b208 149-164
+  s_bde73c666a7db3::t_3a3ee4886acea3 24-25
+  s_bde73c666a7db3::t_52218876e9fcb3 41-44,46
+  s_bde73c666a7db3::t_7d3ccc1a14bacd 92-94,96
+discord-bot/backup-monitor/index.mjs
+  s_bde73c666a7db3::t_0c624b1795f7c4 175-181
+  s_bde73c666a7db3::t_5b114dc3b6312d 37-48,51,55-57
+  s_bde73c666a7db3::t_ae484e72ae261a 270-275,277-280
+  s_bde73c666a7db3::t_765fa1bd813049 245-248
+  s_bde73c666a7db3::t_409b7ba6735588 191-194,196-197
+  s_bde73c666a7db3::t_c80f1f56f2b129 151
+  s_bde73c666a7db3::t_caec27f7367410 74-82,86,88
+  s_bde73c666a7db3::t_41dd29d12dfb1b 216-220,222
+  s_bde73c666a7db3::t_b4abd62ad47dd6 22-23,26-27
+AGENTS.md
+  s_bde73c666a7db3::t_959cc04eeb999e 56-59,66-76
+  s_bde73c666a7db3::t_ceaf8adb12f0ac 77
+terraform/backup_monitor.tf
+  s_bde73c666a7db3::t_c9363ca48df979 134,173
+terraform/ssm.tf
+  s_bde73c666a7db3::t_1d6e762fdfdb37 9-12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "97c0b0c28a0d49ae55fc4445b1226e8e263468e4",
+  "prompts": {},
+  "sessions": {
+    "s_bde73c666a7db3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d1460eae-3c2d-4c2f-a31d-505196b4f586",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    }
+  }
+}
