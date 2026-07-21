@@ -43,7 +43,7 @@ data "aws_iam_policy_document" "discord_bot" {
   statement {
     sid       = "StartOnlyThisInstance"
     actions   = ["ec2:StartInstances"]
-    resources = ["arn:aws:ec2:${var.aws_region}:${data.aws_caller_identity.current.account_id}:instance/${aws_instance.server.id}"]
+    resources = ["arn:aws:ec2:${var.aws_region}:${data.aws_caller_identity.current.account_id}:instance/${aws_instance.server_windows[0].id}"]
   }
 
   # DescribeInstances does not support resource-level permissions; AWS requires "*".
@@ -108,7 +108,7 @@ resource "aws_lambda_function" "discord_bot" {
     variables = {
       DISCORD_PUBLIC_KEY = var.discord_public_key
       DISCORD_APP_ID     = var.discord_app_id
-      INSTANCE_ID        = aws_instance.server.id
+      INSTANCE_ID        = aws_instance.server_windows[0].id
       SERVER_ADDRESS     = "${aws_eip.server.public_ip}:8211"
       ALLOWED_USER_IDS   = join(",", var.discord_allowed_user_ids)
       ROSTER_PARAM       = aws_ssm_parameter.roster.name

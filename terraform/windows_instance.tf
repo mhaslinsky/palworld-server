@@ -9,10 +9,11 @@
 # unverified in research) and codified here only once each step was proven on the
 # real box — 2026-07-18, including a confirmed in-game sky-build through the mod.
 #
-# Rebuild safety: BOTH the world and the mod .paks live on the persistent D: volume,
-# so user_data_replace_on_change can rebuild this instance without losing either.
-# The .paks cannot be fetched at boot (Nexus requires a login), which is exactly why
-# they are staged on the volume rather than downloaded.
+# Rebuild safety: BOTH the world and the UE4SS building mod (Nexus 1898) live on the
+# persistent D: volume, so user_data_replace_on_change can rebuild this instance
+# without losing either. The mod cannot be fetched at boot (Nexus requires a login),
+# so an extracted, proven-good copy is staged on the volume at D:\PalServer\ue4ss-stage
+# and overlaid into Win64 on boot (robocopy /E, never /MIR) - see windows_user_data.ps1.tftpl.
 # ---------------------------------------------------------------------------
 
 resource "aws_instance" "server_windows" {
@@ -64,6 +65,9 @@ resource "aws_instance" "server_windows" {
 
     # Mirrors the live Linux OptionSettings so behaviour is identical after cutover.
     option_settings = join(",", [
+      # Base structure decay OFF (owner decision). Kept near the FRONT: OptionSettings
+      # is one line and tail keys are the first casualty if it is ever truncated.
+      "BuildObjectDeteriorationDamageRate=0.000000",
       "bAllowGlobalPalboxImport=True",
       "bAllowGlobalPalboxExport=True",
       "PalSpawnNumRate=2.000000",

@@ -21,6 +21,11 @@
 $ErrorActionPreference = "Continue"
 Start-Transcript -Path "C:\palworld-bootstrap.log" -Append
 
+# Register the event source FIRST: Write-EventLog silently discards events for an
+# unregistered source, so any error logged before this (SteamCMD, scripts, UE4SS)
+# would be lost on first boot. Errors still hit the transcript above regardless.
+New-EventLog -LogName Application -Source "Palworld" -ErrorAction SilentlyContinue
+
 # --- Persistent SaveGames volume (BLOCKER 4) ---------------------------------
 # The world must never live on the root volume: user_data_replace_on_change would
 # put it one Terraform change away from a wipe. Attach may lag first boot, so this
@@ -99,21 +104,55 @@ if (-not (Test-Path $saveLink)) {
   New-Item -ItemType Junction -Path $saveLink -Target $saveTarget | Out-Null
 }
 
-# --- Mod .paks ----------------------------------------------------------------
-# Staged on the persistent volume because Nexus requires a login - they cannot be
-# re-downloaded at boot. Copying (not linking) keeps the game reading a normal local
-# path; the volume copy is the durable master across instance rebuilds.
-$modSource = "${save_drive_letter}:\PalServer\mods"
-$modDest = "C:\PalServer\Pal\Content\Paks\~mods"
-New-Item -ItemType Directory -Force -Path $modSource, $modDest | Out-Null
-$paks = Get-ChildItem $modSource -Filter *.pak -ErrorAction SilentlyContinue
-if ($paks) {
-  $paks | Copy-Item -Destination $modDest -Force
-  Write-Output "restored $($paks.Count) mod pak(s) from $modSource"
+# --- Building mod: UE4SS + Building Restrictions Disabler (Nexus 1898) ---------
+# The dedicated server needs UE4SS as a loader (it does not mount ~mods paks), and the
+# old paks CONFLICT with mod 1898 - so restore UE4SS + 1898 only, never the paks. The
+# durable master is an EXTRACTED tree on D: (the proven-good live install, not the Nexus
+# zips) overlaid with robocopy /E. Nexus needs a login, so no boot-time fetch. See AIDB
+# windows-building-mod-ue4ss.
+$ue4ssStage = "${save_drive_letter}:\PalServer\ue4ss-stage\Win64"
+$win64 = "C:\PalServer\Pal\Binaries\Win64"
+$modOk = $false
+if (Test-Path "$ue4ssStage\ue4ss\UE4SS.dll") {
+  # /E overlays onto Win64; NEVER /MIR or /PURGE - that would delete the game binaries.
+  robocopy "$ue4ssStage" "$win64" /E /R:2 /W:2 | Out-Null
+  $rc = $LASTEXITCODE   # 0-7 = success, >=8 = failure
+  if ($rc -ge 8) {
+    Write-Output "ERROR: robocopy of UE4SS failed (exit $rc) - building mod NOT installed"
+    Write-EventLog -LogName Application -Source "Palworld" -EventId 108 -EntryType Error `
+      -Message "UE4SS restore robocopy failed exit $rc" -ErrorAction SilentlyContinue
+  } else {
+    # Verify EVERY load-bearing file: a partial tree boots VANILLA while looking OK.
+    $modDir  = "$win64\ue4ss\Mods\BuildingRestrictionsDisabler"
+    $modsTxt = "$win64\ue4ss\Mods\mods.txt"
+    $enableLine = (Test-Path $modsTxt) -and `
+      (Select-String -Path $modsTxt -Pattern 'BuildingRestrictionsDisabler\s*:\s*1' -Quiet)
+    $modOk = (Test-Path "$win64\dwmapi.dll") -and `
+             (Test-Path "$win64\ue4ss\UE4SS.dll") -and `
+             (Test-Path "$modDir\dlls\main.dll") -and `
+             (Test-Path "$modDir\enabled.txt") -and `
+             $enableLine -and `
+             (Test-Path "$win64\PalServer-Win64-Shipping.exe")
+  }
 } else {
-  # Not fatal - a vanilla server still runs. But say so loudly rather than booting
-  # "successfully" with the mod silently absent.
-  Write-Output "WARNING: no .pak files staged in $modSource - server will run VANILLA (no relaxed building)"
+  Write-Output "ERROR: no UE4SS durable stage at $ue4ssStage - cannot install building mod"
+  Write-EventLog -LogName Application -Source "Palworld" -EventId 108 -EntryType Error `
+    -Message "UE4SS durable stage missing at $ue4ssStage" -ErrorAction SilentlyContinue
+}
+if ($modOk) {
+  Write-Output "UE4SS + BuildingRestrictionsDisabler restored and VERIFIED from $ue4ssStage"
+} else {
+  # Not a hard throw: that would skip the watcher/idle setup below. EventId 108 is the signal.
+  Write-Output "ERROR: UE4SS restore INCOMPLETE - server will run VANILLA (no relaxed building)"
+  Write-EventLog -LogName Application -Source "Palworld" -EventId 108 -EntryType Error `
+    -Message "UE4SS restore incomplete after robocopy; server vanilla" -ErrorAction SilentlyContinue
+}
+# Defensive: the old conflicting paks must never sit in ~mods alongside mod 1898.
+# We no longer copy them, but a stray pak here breaks the mod - remove it and warn.
+$strayPaks = Get-ChildItem "C:\PalServer\Pal\Content\Paks\~mods" -Filter *.pak -ErrorAction SilentlyContinue
+if ($strayPaks) {
+  Write-Output "WARNING: removing $($strayPaks.Count) stray pak(s) from ~mods - they conflict with UE4SS mod 1898"
+  $strayPaks | Remove-Item -Force -ErrorAction SilentlyContinue
 }
 
 # --- Server config ------------------------------------------------------------
@@ -191,8 +230,6 @@ foreach ($scriptName in @("palworld-launch.ps1", "palworld-idle.ps1", "backup-to
     Remove-Item $dest -Force -ErrorAction SilentlyContinue
   }
 }
-
-New-EventLog -LogName Application -Source "Palworld" -ErrorAction SilentlyContinue
 
 # --- Scheduled tasks ----------------------------------------------------------
 # Launcher at boot; watcher every 2 min. The watcher re-invokes the launcher when the

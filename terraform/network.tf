@@ -46,5 +46,5 @@ resource "aws_eip" "server" {
 
 resource "aws_eip_association" "server" {
   allocation_id = aws_eip.server.id
-  instance_id   = aws_instance.server.id
+  instance_id   = aws_instance.server_windows[0].id
 }
