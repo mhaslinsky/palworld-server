@@ -31,3 +31,6 @@ secrets/
 
 # Dev-only deps for discord-bot/tests — never shipped (each Lambda zips its own subdir)
 node_modules/
+
+# Claude Code local settings (per-machine permission allowlist)
+.claude/settings.local.json
