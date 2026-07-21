@@ -1,0 +1,66 @@
+.claude/commands/opsx/propose.md
+  s_3d6b811224970e::t_4dfe48ecbe2d41 1-110
+.claude/skills/openspec-archive-change/SKILL.md
+  s_3d6b811224970e::t_4dfe48ecbe2d41 1-118
+.claude/skills/openspec-apply-change/SKILL.md
+  s_3d6b811224970e::t_4dfe48ecbe2d41 1-160
+openspec/config.yaml
+  s_3d6b811224970e::t_4dfe48ecbe2d41 1-20
+openspec/changes/windows-cutover/.openspec.yaml
+  s_3d6b811224970e::t_a9942f1fa5afb5 1-2
+openspec/changes/windows-cutover/tasks.md
+  s_3d6b811224970e::t_d965f3c354c317 20-22
+  s_3d6b811224970e::t_664bedf23f9933 7,36-42
+  s_3d6b811224970e::t_58ae8a76e2c0cb 23-28
+  s_3d6b811224970e::t_75746b41a41df7 1-2,43-62
+  s_3d6b811224970e::t_96e3c0ec363152 19
+  s_3d6b811224970e::t_4c0588a932ba18 29-35
+  s_3d6b811224970e::t_60a152d2ccc365 3-6
+  s_3d6b811224970e::t_88b49f2abd452a 8-15
+  s_3d6b811224970e::t_e11f35b9fa3b27 18
+  s_3d6b811224970e::t_234b5ae4e6ceee 16-17
+.claude/commands/opsx/update.md
+  s_3d6b811224970e::t_4dfe48ecbe2d41 1-82
+.claude/commands/opsx/archive.md
+  s_3d6b811224970e::t_4dfe48ecbe2d41 1-161
+.claude/skills/openspec-explore/SKILL.md
+  s_3d6b811224970e::t_4dfe48ecbe2d41 1-290
+.claude/commands/opsx/apply.md
+  s_3d6b811224970e::t_4dfe48ecbe2d41 1-156
+.claude/skills/openspec-sync-specs/SKILL.md
+  s_3d6b811224970e::t_4dfe48ecbe2d41 1-148
+.claude/commands/opsx/explore.md
+  s_3d6b811224970e::t_4dfe48ecbe2d41 1-175
+.claude/commands/opsx/sync.md
+  s_3d6b811224970e::t_4dfe48ecbe2d41 1-144
+openspec/changes/windows-cutover/proposal.md
+  s_3d6b811224970e::t_6392f0d742bc5e 1-45
+.claude/skills/openspec-propose/SKILL.md
+  s_3d6b811224970e::t_4dfe48ecbe2d41 1-114
+openspec/changes/windows-cutover/design.md
+  s_3d6b811224970e::t_57e843749f56e2 1-55
+.gitignore
+  s_3d6b811224970e::t_b3357c40abd3d9 34-36
+openspec/changes/windows-cutover/specs/windows-game-server/spec.md
+  s_3d6b811224970e::t_8d8b52e5effed6 1-78
+docs/client-mods.md
+  s_3d6b811224970e::t_a269b7065dbcd6 1-59
+.claude/skills/openspec-update-change/SKILL.md
+  s_3d6b811224970e::t_4dfe48ecbe2d41 1-86
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "af31e704062983d14204609512496bc23cb2235a",
+  "prompts": {},
+  "sessions": {
+    "s_3d6b811224970e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0a4d686f-f2b5-4506-b1d4-69a3500b265f",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    }
+  }
+}
