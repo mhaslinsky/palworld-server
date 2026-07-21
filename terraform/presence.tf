@@ -151,7 +151,7 @@ resource "aws_instance" "presence" {
   }
 
   user_data = templatefile("${path.module}/presence_user_data.sh.tftpl", {
-    instance_id    = aws_instance.server.id
+    instance_id    = aws_instance.server_windows[0].id
     roster_param   = aws_ssm_parameter.roster.name
     server_address = "${aws_eip.server.public_ip}:8211"
     token_param    = aws_ssm_parameter.discord_bot_token.name

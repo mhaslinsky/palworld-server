@@ -106,9 +106,9 @@ resource "aws_lambda_function" "backup_monitor" {
 
   environment {
     variables = {
-      INSTANCE_ID   = aws_instance.server.id
+      INSTANCE_ID   = aws_instance.server_windows[0].id
       BACKUP_BUCKET = aws_s3_bucket.backups.id
-      BACKUP_PREFIX = "world/linux/"
+      BACKUP_PREFIX = "world/windows/"
       STALE_MINUTES = "45" # the job runs every 30 min; 45 tolerates one missed run
       MIN_BYTES     = "1000000"
       WEBHOOK_PARAM = aws_ssm_parameter.discord_webhook_url.name
