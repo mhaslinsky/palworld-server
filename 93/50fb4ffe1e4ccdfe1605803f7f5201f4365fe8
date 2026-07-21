@@ -1,0 +1,35 @@
+terraform/windows_instance.tf
+  s_be9fbcbd237222::t_70151b233ba83a 12-15
+  s_be9fbcbd237222::t_c85b2531bdc57f 16
+  s_be9fbcbd237222::t_40b878cba8978b 68-70
+terraform/windows_user_data.ps1.tftpl
+  s_be9fbcbd237222::t_99574f7a23c615 107,113-114,116,118,122,136,139-141,147,149-155
+  s_be9fbcbd237222::t_b26932b9cd7366 24-28
+  s_be9fbcbd237222::t_f89c48c6c72b7b 108-112,117,119,121,125,135,138,145-146,148
+  s_1fc195a5a47aa4::t_7405673d857d53 144
+  s_be9fbcbd237222::t_2194570f2077b8 115,120,123-124,126-134,142-143
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "9350fb4ffe1e4ccdfe1605803f7f5201f4365fe8",
+  "prompts": {},
+  "sessions": {
+    "s_1fc195a5a47aa4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "93249842-eeb7-4aff-b632-d0468e7a0fc9",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    },
+    "s_be9fbcbd237222": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8de50bc7-8458-4b36-9a5f-472f6163a4f6",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": null
+    }
+  }
+}
