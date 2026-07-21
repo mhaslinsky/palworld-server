@@ -1,0 +1,26 @@
+terraform/network.tf
+  s_be9fbcbd237222::t_4af13913d0f2fe 49
+terraform/backup_monitor.tf
+  s_be9fbcbd237222::t_a9ad8e960686e9 109,111
+terraform/discord.tf
+  s_be9fbcbd237222::t_b5f4549fd9bb3a 111
+  s_be9fbcbd237222::t_1636839ef667c8 46
+terraform/presence.tf
+  s_be9fbcbd237222::t_3abbde5b8e1a1e 154
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "9e59f152116da8c9d82783fce25f9096ed17c89b",
+  "prompts": {},
+  "sessions": {
+    "s_be9fbcbd237222": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8de50bc7-8458-4b36-9a5f-472f6163a4f6",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    }
+  }
+}
