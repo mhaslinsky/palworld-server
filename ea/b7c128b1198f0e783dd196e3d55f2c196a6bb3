@@ -1,0 +1,20 @@
+scripts/backup-to-s3.ps1
+  s_8ee40ea41dd20c::t_eb87b7e8b7b5e6 77-82,84-92
+  s_8ee40ea41dd20c::t_365402c3ee1136 32,41,71-76,83,93-98,111
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "eab7c128b1198f0e783dd196e3d55f2c196a6bb3",
+  "prompts": {},
+  "sessions": {
+    "s_8ee40ea41dd20c": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f8a07-6e3e-76b3-a340-aebc968c892e",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    }
+  }
+}
