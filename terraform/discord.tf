@@ -43,7 +43,7 @@ data "aws_iam_policy_document" "discord_bot" {
   statement {
     sid       = "StartOnlyThisInstance"
     actions   = ["ec2:StartInstances"]
-    resources = ["arn:aws:ec2:${var.aws_region}:${data.aws_caller_identity.current.account_id}:instance/${aws_instance.server_windows[0].id}"]
+    resources = ["arn:aws:ec2:${var.aws_region}:${data.aws_caller_identity.current.account_id}:instance/${local.active_game_instance_id}"]
   }
 
   # DescribeInstances does not support resource-level permissions; AWS requires "*".
@@ -67,9 +67,11 @@ data "aws_iam_policy_document" "discord_bot" {
 
   # Read-only: the instance owns this value, the bot only reports it.
   statement {
-    sid       = "ReadRoster"
-    actions   = ["ssm:GetParameter"]
-    resources = [aws_ssm_parameter.roster.arn]
+    sid     = "ReadRosterWindows"
+    actions = ["ssm:GetParameter"]
+    # Post-cutover the live roster is the Windows watcher's param; keep the legacy
+    # main-roster ARN too so a Linux rollback (windows disabled) still reads.
+    resources = [aws_ssm_parameter.roster.arn, try(aws_ssm_parameter.roster_windows[0].arn, aws_ssm_parameter.roster.arn)]
   }
 }
 
@@ -108,10 +110,10 @@ resource "aws_lambda_function" "discord_bot" {
     variables = {
       DISCORD_PUBLIC_KEY = var.discord_public_key
       DISCORD_APP_ID     = var.discord_app_id
-      INSTANCE_ID        = aws_instance.server_windows[0].id
+      INSTANCE_ID        = local.active_game_instance_id
       SERVER_ADDRESS     = "${aws_eip.server.public_ip}:8211"
       ALLOWED_USER_IDS   = join(",", var.discord_allowed_user_ids)
-      ROSTER_PARAM       = aws_ssm_parameter.roster.name
+      ROSTER_PARAM       = local.windows_roster_param_name
     }
   }
 

@@ -10,7 +10,7 @@ output "connect_address" {
 
 output "instance_id" {
   description = "EC2 instance ID — used by the Discord start bot (phase 2) and for manual start/stop."
-  value       = aws_instance.server.id
+  value       = local.active_game_instance_id
 }
 
 output "ssh_command" {
@@ -20,17 +20,17 @@ output "ssh_command" {
 
 output "ssm_session_command" {
   description = "Keyless shell via SSM Session Manager (no open SSH port needed)."
-  value       = "aws ssm start-session --target ${aws_instance.server.id} --profile ${var.aws_profile} --region ${var.aws_region}"
+  value       = "aws ssm start-session --target ${local.active_game_instance_id} --profile ${var.aws_profile} --region ${var.aws_region}"
 }
 
 output "manual_start_command" {
   description = "Start the server by hand (until the Discord bot is built)."
-  value       = "aws ec2 start-instances --instance-ids ${aws_instance.server.id} --profile ${var.aws_profile} --region ${var.aws_region}"
+  value       = "aws ec2 start-instances --instance-ids ${local.active_game_instance_id} --profile ${var.aws_profile} --region ${var.aws_region}"
 }
 
 output "manual_stop_command" {
   description = "Stop the server by hand."
-  value       = "aws ec2 stop-instances --instance-ids ${aws_instance.server.id} --profile ${var.aws_profile} --region ${var.aws_region}"
+  value       = "aws ec2 stop-instances --instance-ids ${local.active_game_instance_id} --profile ${var.aws_profile} --region ${var.aws_region}"
 }
 
 output "discord_interactions_endpoint_url" {
