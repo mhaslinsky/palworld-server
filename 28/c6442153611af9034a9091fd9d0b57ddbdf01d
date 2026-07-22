@@ -1,0 +1,20 @@
+terraform/presence.tf
+  s_8057cff4bb14d1::t_cf6e44ec23bcfc 162
+  s_8057cff4bb14d1::t_10b6397ae3405d 98-107
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "28c6442153611af9034a9091fd9d0b57ddbdf01d",
+  "prompts": {},
+  "sessions": {
+    "s_8057cff4bb14d1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "91d838dc-dd8b-4705-b5d2-673f84d34ba5",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    }
+  }
+}
