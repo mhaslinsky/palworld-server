@@ -1,0 +1,55 @@
+discord-bot/ask-worker/index.mjs
+  s_8057cff4bb14d1::t_d92052916eb965 108-111
+  s_8057cff4bb14d1::t_b56cb2ba467dbe 1-72,80-107,112-261
+  s_8057cff4bb14d1::t_dc2cade16ee768 73-79
+openspec/changes/discord-ask-command/tasks.md
+  s_8057cff4bb14d1::t_bf8dc7ec44af8a 3
+  s_8057cff4bb14d1::t_23e5e1fc8a3839 4-5,10-12,16-19,23-27,31-36,40,44-46
+discord-bot/src/index.mjs
+  s_8057cff4bb14d1::t_4fae73c9d61e70 244,247,251,263
+  s_8057cff4bb14d1::t_fcb5f56c092904 47-57,61
+  s_8057cff4bb14d1::t_88a8380b6c13a3 196-243,245-246,248-250,252-262,264-268
+  s_8057cff4bb14d1::t_46f8951175994d 302-307
+  s_8057cff4bb14d1::t_98659a829dc283 20
+discord-bot/register-commands.mjs
+  s_8057cff4bb14d1::t_5e8b99869c55e1 1-60
+terraform/discord.tf
+  s_8057cff4bb14d1::t_f4afa8ab3d20f0 133-138
+  s_8057cff4bb14d1::t_a858baabb81df7 68-83
+terraform/discord_ask.tf
+  s_8057cff4bb14d1::t_f7a0431a5c7ec5 15-25
+  s_8057cff4bb14d1::t_56d06cdbaddd85 96
+  s_8057cff4bb14d1::t_00fdfb16603013 1-14,26-95,97-139,148-162
+  s_8057cff4bb14d1::t_bcf0f1aef8ce91 140-147
+discord-bot/tests/ask-worker.test.mjs
+  s_8057cff4bb14d1::t_25b48dac5fe4e3 1-156
+discord-bot/README.md
+  s_8057cff4bb14d1::t_305e04ecdf8daf 23-61
+discord-bot/tests/ask-entry.test.mjs
+  s_8057cff4bb14d1::t_0e57237898fddd 1-153
+discord-bot/package.json
+  s_8057cff4bb14d1::t_7c4cdc09fa0b93 6,9-10
+  s_8057cff4bb14d1::t_ee234295f4d24f 12
+terraform/variables.tf
+  s_8057cff4bb14d1::t_931b5faa251744 179,181
+  s_8057cff4bb14d1::t_f00ba457d932b6 169-178,180,182-189,192,194-236
+  s_8057cff4bb14d1::t_bd44327a4951d4 190-191,193
+discord-bot/package-lock.json
+  s_8057cff4bb14d1::t_e148475e92f033 9-10,12,34-79,101-120,165-167,185-187,191,202-204,208,221-223,227-234,246-248,252-253,264-266,270-275,287-289,293,304-306,310-312,323-406,455-473,475-477,481,511-513,517-518,567-569,581-583,587,660-676
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "d0c7c37ab203d5d43a8c83567d80684162f01d8f",
+  "prompts": {},
+  "sessions": {
+    "s_8057cff4bb14d1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "91d838dc-dd8b-4705-b5d2-673f84d34ba5",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    }
+  }
+}
