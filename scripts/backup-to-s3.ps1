@@ -29,6 +29,7 @@ if (-not (Test-Path $awsExe)) {
 $saveRoot = $conf.SaveRoot
 $stamp = (Get-Date).ToUniversalTime().ToString("yyyyMMddTHHmmssZ")
 $archive = "$env:TEMP\palworld-backup-$stamp.zip"
+$stageRoot = "$env:TEMP\palworld-backup-stage-$stamp"
 # 1 MB floor: a real world is a few MB, a freshly generated empty one ~120 KB.
 $minBytes = 1000000
 
@@ -37,6 +38,7 @@ function Fail([string]$reason) {
   Write-EventLog -LogName Application -Source "Palworld" -EventId 110 -EntryType Error `
     -Message "backup failed: $reason" -ErrorAction SilentlyContinue
   Remove-Item $archive -Force -ErrorAction SilentlyContinue
+  Remove-Item $stageRoot -Recurse -Force -ErrorAction SilentlyContinue
   exit 1
 }
 
@@ -66,7 +68,34 @@ $key = if ($degraded) { "world/windows-degraded/$stamp.zip" } else { "world/wind
 if ($degraded) { Write-Output "DEGRADED: $degraded - publishing under world/windows-degraded/" }
 
 # --- archive + integrity gates ------------------------------------------------
-Compress-Archive -Path "$saveRoot\*" -DestinationPath $archive -CompressionLevel Optimal -Force
+# Palworld prunes its internal backup\world timestamps while the server runs. Archive
+# a stable copy of the current world so that rotation cannot delete a file mid-ZIP.
+$saveSlot = $levelSav.Directory.Parent.Name
+$worldGuid = $levelSav.Directory.Name
+$stagedWorld = Join-Path (Join-Path $stageRoot $saveSlot) $worldGuid
+$internalBackups = Join-Path $levelSav.Directory.FullName "backup"
+try {
+  New-Item -ItemType Directory -Force -Path $stagedWorld | Out-Null
+  & robocopy.exe $levelSav.Directory.FullName $stagedWorld /E /XD $internalBackups `
+    /R:3 /W:1 /NFL /NDL /NJH /NJS /NP | Out-Null
+  $copyResult = $LASTEXITCODE
+  if ($copyResult -ge 8) { Fail "staging copy failed (robocopy exit $copyResult)" }
+
+  $stagedLevelSav = Join-Path $stagedWorld "Level.sav"
+  $stagedPlayerCount = @(
+    Get-ChildItem (Join-Path $stagedWorld "Players\*.sav") -ErrorAction SilentlyContinue
+  ).Count
+  if (-not (Test-Path $stagedLevelSav)) { Fail "staging copy has no Level.sav" }
+  if ($stagedPlayerCount -lt 1) { Fail "staging copy has no player saves" }
+} catch {
+  Fail "staging current world failed: $($_.Exception.Message)"
+}
+
+try {
+  Compress-Archive -Path "$stageRoot\*" -DestinationPath $archive -CompressionLevel Optimal -Force
+} catch {
+  Fail "archive creation failed: $($_.Exception.Message)"
+}
 if (-not (Test-Path $archive)) { Fail "archive missing after compression" }
 $size = (Get-Item $archive).Length
 # Open it: a truncated zip usually still exists at a plausible size.
@@ -79,6 +108,7 @@ try {
 if ($entries -lt 1) { Fail "archive contains no entries" }
 # Size floor catches the empty-world class - a restored shell passes every other check.
 if ($size -lt $minBytes) { Fail "archive only $size bytes, below $minBytes floor - refusing to publish a suspect backup" }
+Remove-Item $stageRoot -Recurse -Force -ErrorAction SilentlyContinue
 
 # --- upload, then PROVE the object exists -------------------------------------
 & $awsExe s3 cp $archive "s3://$bucket/$key" --region $conf.AwsRegion --only-show-errors
