@@ -1,0 +1,35 @@
+terraform/backup_monitor.tf
+  s_be9fbcbd237222::t_ba2b4c0b5400ab 118
+  s_be9fbcbd237222::t_19b4a1442abb48 73
+  s_be9fbcbd237222::t_8cc7f801b45079 109
+terraform/windows.tf
+  s_be9fbcbd237222::t_4748ff75c3308a 25-30
+terraform/discord.tf
+  s_be9fbcbd237222::t_075045ad5c9c46 72-74
+  s_be9fbcbd237222::t_02c52f27eb04e2 113
+  s_be9fbcbd237222::t_7d79911d3ad9bc 46
+  s_be9fbcbd237222::t_796822d2fdd60c 70-71
+  s_be9fbcbd237222::t_efbfd935dbb6c7 116
+terraform/presence.tf
+  s_be9fbcbd237222::t_a3a4ddc36a6e03 154
+terraform/network.tf
+  s_be9fbcbd237222::t_bfdb9aa9919704 49
+terraform/outputs.tf
+  s_be9fbcbd237222::t_86657936d01f08 13,23,28,33
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "0735cd5fb6b5be5ca8fff15af22019fe61a10cd5",
+  "prompts": {},
+  "sessions": {
+    "s_be9fbcbd237222": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8de50bc7-8458-4b36-9a5f-472f6163a4f6",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    }
+  }
+}
