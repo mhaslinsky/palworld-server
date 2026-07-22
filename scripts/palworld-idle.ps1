@@ -87,8 +87,10 @@ function Send-Notify([string]$content) {
   if (-not $url) { return }
   try {
     $body = @{ content = $content } | ConvertTo-Json -Compress
+    # Windows PowerShell 5.1 otherwise sends string bodies through the ANSI code page.
+    $bodyBytes = [Text.Encoding]::UTF8.GetBytes($body)
     Invoke-RestMethod -Uri $url -Method Post -ContentType 'application/json' `
-      -Body $body -TimeoutSec 5 | Out-Null
+      -Body $bodyBytes -TimeoutSec 5 | Out-Null
   } catch { }
 }
 
