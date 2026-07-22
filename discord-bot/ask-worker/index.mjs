@@ -189,8 +189,9 @@ async function answerQuestion(question) {
   let searchesUsed = 0;
 
   for (let turn = 0; turn < MAX_TOOL_TURNS; turn++) {
-    const canSearch = searchesUsed < MAX_SEARCHES;
-    const reply = await invokeModel(messages, { withTools: canSearch });
+    // Tools stay declared once the history holds tool_use blocks — dropping them
+    // mid-conversation risks an API validation error. Budget is enforced below.
+    const reply = await invokeModel(messages, { withTools: true });
 
     if (reply.stop_reason !== "tool_use") {
       return textFromContent(reply.content) || CANNED_NO_ANSWER;
@@ -214,9 +215,13 @@ async function answerQuestion(question) {
     messages.push({ role: "user", content: toolResults });
   }
 
-  // Loop bound reached with no final text: force one last answer WITHOUT tools so the
-  // model must produce prose rather than another tool call (never post a bare result).
-  const forced = await invokeModel(messages, { withTools: false });
+  // Turn bound hit while still requesting tools: instruct rather than untool, so a
+  // runaway model can never leave the user with a bare tool result.
+  messages.push({
+    role: "user",
+    content: "Answer now in plain prose using what you already have. Do not search again.",
+  });
+  const forced = await invokeModel(messages, { withTools: true });
   return textFromContent(forced.content) || CANNED_NO_ANSWER;
 }
 
