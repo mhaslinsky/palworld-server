@@ -1,0 +1,19 @@
+scripts/palworld-idle.ps1
+  s_8ee40ea41dd20c::t_687e64553e83b8 90-91,93
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "d8bc043069b58decf40e03d7c87887fb619c2877",
+  "prompts": {},
+  "sessions": {
+    "s_8ee40ea41dd20c": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f8a07-6e3e-76b3-a340-aebc968c892e",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    }
+  }
+}
