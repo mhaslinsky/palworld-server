@@ -1,0 +1,31 @@
+terraform/variables.tf
+  s_8057cff4bb14d1::t_ec3444dbfd089f 237-242
+openspec/changes/discord-ask-command/specs/discord-qa-bot/spec.md
+  s_8057cff4bb14d1::t_45744525d2fa29 66-72
+discord-bot/tests/ask-worker.test.mjs
+  s_8057cff4bb14d1::t_e79186023bca64 150-170
+  s_8057cff4bb14d1::t_c3faeab633b50b 33-34,36
+  s_8057cff4bb14d1::t_2934639f724c08 80,83
+discord-bot/ask-worker/index.mjs
+  s_8057cff4bb14d1::t_8ca796a09d9291 255-257,265-276,278-279,281-291
+  s_8057cff4bb14d1::t_5981df2c0fb39b 47
+  s_8057cff4bb14d1::t_a27ffb9d851aed 39-41
+terraform/discord_ask.tf
+  s_8057cff4bb14d1::t_ec3444dbfd089f 149
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "1062c8e47f5cea392d81ac6145bfa4dd9acb7837",
+  "prompts": {},
+  "sessions": {
+    "s_8057cff4bb14d1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "91d838dc-dd8b-4705-b5d2-673f84d34ba5",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    }
+  }
+}
