@@ -68,3 +68,22 @@ Non-goals: no game-server integration (the bot never touches the Palworld box or
    to ownership, or if a safe write path removes the maintenance burden (Codex's minimum:
    owner-only `/remember` writing verbatim to `corpus/pending/`, worker cannot read
    `pending/`, writer cannot write `trusted/`, S3 versioning + read-back verification).
+
+4. **`@bot` mention as an alternative to `/ask`.** Slash commands are *push* (Discord
+   POSTs the signed interaction to the Lambda). Reading `@bot what's a Lamball` is *pull*
+   — it needs an open Gateway socket plus the privileged `MESSAGE_CONTENT` intent. The
+   socket already exists: the presence daemon (`discord-bot/presence/index.mjs`) holds one
+   permanently, but connects with `intents: 0` precisely because it only publishes presence.
+   Would require: enabling `MESSAGE_CONTENT` in the Discord dev portal, handling
+   `MESSAGE_CREATE` + self-mention filtering in the daemon, and granting the presence box
+   `lambda:InvokeFunction` on the ask-worker (it has none today).
+   **The load-bearing risk is not the plumbing — it is guard bypass.** The allowlist,
+   per-user cooldown, and question-length cap all live in the ENTRY Lambda
+   (`discord-bot/src/index.mjs`), which a mention path never touches. Building this without
+   porting those guards turns `@bot` into an uncapped, uncooled route to paid Bedrock +
+   Parallel calls — routing around the exact spend control this change exists to enforce.
+   Any implementation must SHARE the guards (extract them, or have the daemon call the
+   entry Lambda rather than the worker), never duplicate them.
+   **Deferred pending evidence:** use `/ask` first. If the group instinctively @-mentions
+   the bot instead, that is the signal to build it. Mentions also fire accidentally and
+   offer no structured input field, so `/ask` may simply be better.
