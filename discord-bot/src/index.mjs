@@ -17,6 +17,7 @@ import { createPublicKey, verify as verifySignature } from "node:crypto";
 import { EC2Client, StartInstancesCommand, DescribeInstancesCommand } from "@aws-sdk/client-ec2";
 import { LambdaClient, InvokeCommand } from "@aws-sdk/client-lambda";
 import { SSMClient, GetParameterCommand } from "@aws-sdk/client-ssm";
+import { DynamoDBClient, PutItemCommand, DeleteItemCommand, ConditionalCheckFailedException } from "@aws-sdk/client-dynamodb";
 
 const DISCORD_PUBLIC_KEY = process.env.DISCORD_PUBLIC_KEY;
 const DISCORD_APP_ID = process.env.DISCORD_APP_ID;
@@ -43,9 +44,21 @@ const ROSTER_PARAM = process.env.ROSTER_PARAM;
 // every 2 minutes; past this the server is likely mid-shutdown or already gone.
 const ROSTER_MAX_AGE_SECONDS = 360;
 
+// --- /ask (Palworld Q&A) config ---
+const ASK_WORKER_FUNCTION_NAME = process.env.ASK_WORKER_FUNCTION_NAME;
+const COOLDOWN_TABLE = process.env.COOLDOWN_TABLE;
+// NaN-safe: a typo in the env var must not silently disable the cap or the cooldown.
+const intEnv = (name, fallback) => {
+  const parsed = Number.parseInt(process.env[name] ?? "", 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+};
+const ASK_COOLDOWN_SECONDS = intEnv("ASK_COOLDOWN_SECONDS", 60);
+const ASK_MAX_QUESTION_CHARS = intEnv("ASK_MAX_QUESTION_CHARS", 300);
+
 const ec2 = new EC2Client({});
 const lambda = new LambdaClient({});
 const ssm = new SSMClient({});
+const ddb = new DynamoDBClient({});
 
 // Discord publishes the app's Ed25519 key as raw hex; node:crypto wants SPKI DER.
 // The 12-byte prefix is the fixed SubjectPublicKeyInfo header for Ed25519.
@@ -180,6 +193,93 @@ async function runWorker({ command, interactionToken }) {
   }
 }
 
+function optionValue(interaction, name) {
+  const option = (interaction.data?.options ?? []).find((entry) => entry.name === name);
+  return typeof option?.value === "string" ? option.value : null;
+}
+
+// Atomically claim the per-user cooldown BEFORE deferring, so a rejected request
+// never reaches the model. A conditional PutItem is the whole rate limiter: it writes
+// only if the user has no record, or their last accepted ask is older than the window.
+// ReturnValuesOnConditionCheckFailure gives us the existing timestamp on rejection in
+// the same call, so we can tell the user how long to wait without a second read.
+// Fail CLOSED: a store outage denies the request rather than letting an uncapped
+// (uncooled) model call through — the guarded resource here is spend.
+async function claimCooldown(userId) {
+  const now = Math.floor(Date.now() / 1000);
+  try {
+    await ddb.send(
+      new PutItemCommand({
+        TableName: COOLDOWN_TABLE,
+        Item: {
+          user_id: { S: userId },
+          last_ts: { N: String(now) },
+          ttl: { N: String(now + ASK_COOLDOWN_SECONDS) },
+        },
+        ConditionExpression: "attribute_not_exists(user_id) OR last_ts < :threshold",
+        ExpressionAttributeValues: { ":threshold": { N: String(now - ASK_COOLDOWN_SECONDS) } },
+        ReturnValuesOnConditionCheckFailure: "ALL_OLD",
+      }),
+    );
+    return { ok: true };
+  } catch (error) {
+    if (error instanceof ConditionalCheckFailedException) {
+      const lastTs = Number(error.Item?.last_ts?.N ?? now);
+      const remaining = Math.max(1, ASK_COOLDOWN_SECONDS - (now - lastTs));
+      return { ok: false, message: `⏳ Hang on — you can ask again in ${remaining}s.` };
+    }
+    console.error("cooldown store error", error?.name ?? error);
+    return { ok: false, message: "⚠️ Couldn't check the cooldown just now — try again in a moment." };
+  }
+}
+
+// Release a just-made cooldown claim. Called ONLY when dispatch failed before the
+// worker ran (so nothing was spent and there is no retry-spam to cap) — a user must
+// not eat the full window for our own infra hiccup. Best-effort: a failed release
+// just means they wait out the window, which is the pre-fix behaviour.
+async function releaseCooldown(userId) {
+  try {
+    await ddb.send(new DeleteItemCommand({ TableName: COOLDOWN_TABLE, Key: { user_id: { S: userId } } }));
+  } catch (error) {
+    console.error("cooldown release failed", error?.name ?? error);
+  }
+}
+
+// The /ask HTTP path: validate + gate + claim cooldown, then hand off to the
+// ask-worker. We AWAIT the async invoke before returning the deferred ACK — returning
+// first can let the frozen Lambda environment drop the in-flight invoke. If the invoke
+// fails we have not deferred yet, so we answer with an ephemeral error rather than
+// leaving a permanent "thinking…".
+async function handleAsk(interaction, userId) {
+  const question = optionValue(interaction, "question");
+  if (!question || !question.trim()) {
+    return httpResponse(200, ephemeral("Ask me something: `/ask <your Palworld question>`"));
+  }
+  if (question.length > ASK_MAX_QUESTION_CHARS) {
+    return httpResponse(200, ephemeral(`⚠️ That question is too long (max ${ASK_MAX_QUESTION_CHARS} characters).`));
+  }
+
+  const cooldown = await claimCooldown(userId);
+  if (!cooldown.ok) return httpResponse(200, ephemeral(cooldown.message));
+
+  try {
+    await lambda.send(
+      new InvokeCommand({
+        FunctionName: ASK_WORKER_FUNCTION_NAME,
+        InvocationType: "Event",
+        Payload: Buffer.from(JSON.stringify({ question: question.trim(), interactionToken: interaction.token })),
+      }),
+    );
+  } catch (error) {
+    console.error("ask-worker invoke failed", error?.name ?? error);
+    // Dispatch failed => nothing ran => release the claim so the user isn't penalized.
+    await releaseCooldown(userId);
+    return httpResponse(200, ephemeral("❌ Couldn't start answering just now — try again in a moment."));
+  }
+
+  return httpResponse(200, { type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE });
+}
+
 export async function handler(event) {
   // Async self-invoke: no HTTP envelope, just our own payload.
   if (event?.__worker === true) {
@@ -213,6 +313,12 @@ export async function handler(event) {
   }
 
   const command = interaction.data?.name;
+
+  // /ask has its own worker (Bedrock + web search) and its own cooldown gate.
+  if (command === "ask") {
+    return await handleAsk(interaction, userId);
+  }
+
   if (command !== "palworld-start" && command !== "palworld-status") {
     return httpResponse(200, ephemeral(`Unknown command \`${command}\`.`));
   }
