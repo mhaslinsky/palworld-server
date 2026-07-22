@@ -3,7 +3,17 @@
 - [x] 1.1 Enable Amazon Bedrock model access for Claude Haiku 4.5; confirm with a red/green invoke from the CLI using the EXACT id the Lambda will use — likely the cross-region inference profile `us.anthropic.claude-haiku-4-5-*`, NOT the bare foundation-model id (bare id → ValidationException; IAM scoped only to the foundation-model ARN → AccessDenied). Record the exact id + ARN(s) for IAM.
 - [x] 1.4 Verify the `nodejs22.x`-bundled `@aws-sdk/client-bedrock-runtime` exposes `Converse` with tool support; if not, plan to use raw `InvokeModel` with an Anthropic messages body (both keep zero npm install).
 - [x] 1.2 Confirm the current Parallel AI fast Search API surface against live docs: endpoint URL, auth header, request body, response shape, and the exact "fast/turbo" tier + rate limits. Do NOT code from memory.
-- [ ] 1.3 Obtain a Parallel AI API key for the bot.
+- [x] 1.3 Obtain a Parallel AI API key for the bot.
+
+> **Bedrock access note (2026-07-22):** invocation is gated behind an account-level
+> Anthropic **use-case form**, submitted via the Bedrock console (chat playground or
+> Model access). Enforcement began mid-build, which is why an early red/green invoke
+> succeeded and later ones failed. `get-foundation-model-availability` reports
+> `AUTHORIZED` even while every invoke fails — do NOT use it as a readiness check;
+> use `bedrock get-use-case-for-model-access` (errors until the form is on file) plus
+> a real `invoke-model`. The form record replicates to all regions immediately, but
+> entitlement propagates per-region: us-east-1 (the deploy region) cleared in ~1 min
+> while us-east-2/us-west-2 lagged.
 
 ## 2. Secret + cooldown infrastructure (Terraform)
 
