@@ -29,9 +29,13 @@ The system SHALL enforce a per-user cooldown of a configurable number of seconds
 - **WHEN** an allowlisted user invokes `/ask` and no accepted `/ask` exists within the cooldown window
 - **THEN** the handler atomically records the new timestamp, awaits the async invoke of the ask-worker, and only then returns the deferred acknowledgement (returning before the invoke resolves risks the frozen Lambda environment dropping the in-flight call)
 
-#### Scenario: Cooldown consumed by a failed answer
-- **WHEN** a request is accepted (cooldown claimed) but the answer never lands (invoke, worker, or model failure)
-- **THEN** the cooldown remains consumed for the window — this is intentional so a failing dependency cannot be used to bypass the rate limit; the failure surfaces as a visible error message (see honest-degradation), and the user waits out the window
+#### Scenario: Cooldown consumed when the answer fails after dispatch
+- **WHEN** a request is accepted (cooldown claimed), the ask-worker IS dispatched, but the answer never lands (worker crash, model error, timeout)
+- **THEN** the cooldown remains consumed for the window — this is intentional so a failing downstream dependency cannot be used to bypass the rate limit; the failure surfaces as a visible error message (see honest-degradation), and the user waits out the window
+
+#### Scenario: Cooldown released when dispatch itself fails
+- **WHEN** the cooldown was claimed but the worker invoke fails before dispatch (so no model/search work runs and nothing is spent)
+- **THEN** the handler best-effort releases the claim so the user is not penalized for an infrastructure hiccup they did not cause; releasing here opens no bypass, because a repeatedly-failing invoke runs no worker and spends nothing
 
 #### Scenario: Cooldown store unreachable
 - **WHEN** the cooldown store cannot be read or written

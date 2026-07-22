@@ -72,12 +72,13 @@ data "aws_iam_policy_document" "discord_bot" {
     resources = [aws_lambda_function.ask_worker.arn]
   }
 
-  # The entry Lambda OWNS the cooldown claim (conditional PutItem before deferring).
-  # PutItem alone is enough — ReturnValuesOnConditionCheckFailure returns the existing
-  # row on rejection, so no separate GetItem/read permission is needed.
+  # The entry Lambda OWNS the cooldown: a conditional PutItem to CLAIM before deferring
+  # (ReturnValuesOnConditionCheckFailure returns the existing row on rejection, so no
+  # read permission is needed), and DeleteItem to RELEASE the claim if the worker
+  # invoke never dispatched (so an infra hiccup doesn't burn the user's window).
   statement {
     sid       = "ClaimAskCooldown"
-    actions   = ["dynamodb:PutItem"]
+    actions   = ["dynamodb:PutItem", "dynamodb:DeleteItem"]
     resources = [aws_dynamodb_table.ask_cooldown.arn]
   }
 

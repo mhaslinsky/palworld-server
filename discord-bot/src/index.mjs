@@ -17,7 +17,7 @@ import { createPublicKey, verify as verifySignature } from "node:crypto";
 import { EC2Client, StartInstancesCommand, DescribeInstancesCommand } from "@aws-sdk/client-ec2";
 import { LambdaClient, InvokeCommand } from "@aws-sdk/client-lambda";
 import { SSMClient, GetParameterCommand } from "@aws-sdk/client-ssm";
-import { DynamoDBClient, PutItemCommand, ConditionalCheckFailedException } from "@aws-sdk/client-dynamodb";
+import { DynamoDBClient, PutItemCommand, DeleteItemCommand, ConditionalCheckFailedException } from "@aws-sdk/client-dynamodb";
 
 const DISCORD_PUBLIC_KEY = process.env.DISCORD_PUBLIC_KEY;
 const DISCORD_APP_ID = process.env.DISCORD_APP_ID;
@@ -233,6 +233,18 @@ async function claimCooldown(userId) {
   }
 }
 
+// Release a just-made cooldown claim. Called ONLY when dispatch failed before the
+// worker ran (so nothing was spent and there is no retry-spam to cap) — a user must
+// not eat the full window for our own infra hiccup. Best-effort: a failed release
+// just means they wait out the window, which is the pre-fix behaviour.
+async function releaseCooldown(userId) {
+  try {
+    await ddb.send(new DeleteItemCommand({ TableName: COOLDOWN_TABLE, Key: { user_id: { S: userId } } }));
+  } catch (error) {
+    console.error("cooldown release failed", error?.name ?? error);
+  }
+}
+
 // The /ask HTTP path: validate + gate + claim cooldown, then hand off to the
 // ask-worker. We AWAIT the async invoke before returning the deferred ACK — returning
 // first can let the frozen Lambda environment drop the in-flight invoke. If the invoke
@@ -260,6 +272,8 @@ async function handleAsk(interaction, userId) {
     );
   } catch (error) {
     console.error("ask-worker invoke failed", error?.name ?? error);
+    // Dispatch failed => nothing ran => release the claim so the user isn't penalized.
+    await releaseCooldown(userId);
     return httpResponse(200, ephemeral("❌ Couldn't start answering just now — try again in a moment."));
   }
 

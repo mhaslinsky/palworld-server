@@ -31,15 +31,20 @@ process.env.ASK_COOLDOWN_SECONDS = "60";
 process.env.ASK_MAX_QUESTION_CHARS = "300";
 
 // --- controllable SDK behaviour ---------------------------------------------------
-let invokes = []; // FunctionNames the handler asked Lambda to invoke
+let invokes = [];
+let ddbOps = [];
 let cooldownMode = "ok"; // "ok" | "blocked" | "error"
+let lambdaThrows = false;
 
 LambdaClient.prototype.send = async (command) => {
+  if (lambdaThrows) throw new Error("Lambda throttled");
   invokes.push(command.input.FunctionName);
   return {};
 };
 
-DynamoDBClient.prototype.send = async () => {
+DynamoDBClient.prototype.send = async (command) => {
+  ddbOps.push(command.constructor.name);
+  if (command.constructor.name === "DeleteItemCommand") return {}; // release always "succeeds"
   if (cooldownMode === "ok") return {};
   if (cooldownMode === "blocked") {
     const error = new ConditionalCheckFailedException({ message: "cooldown", $metadata: {} });
@@ -88,10 +93,16 @@ function bodyOf(result) {
   return JSON.parse(result.body);
 }
 
+function resetState() {
+  invokes = [];
+  ddbOps = [];
+  cooldownMode = "ok";
+  lambdaThrows = false;
+}
+
 console.log("--- RED: the signature guard must reject a forgery ---");
 {
-  invokes = [];
-  cooldownMode = "ok";
+  resetState();
   const result = await handler(signedEvent(askInteraction("where is quartz?"), { tamper: true }));
   check("forged signature -> 401", result.statusCode === 401, `got ${result.statusCode}`);
   check("forged signature -> no invoke", invokes.length === 0, `invokes=${invokes.length}`);
@@ -143,10 +154,18 @@ console.log("\n--- RED: an over-long question is rejected before any spend ---")
 
 console.log("\n--- GREEN: an empty question prompts rather than invoking ---");
 {
-  invokes = [];
-  cooldownMode = "ok";
+  resetState();
   const result = await handler(signedEvent(askInteraction(undefined)));
   check("empty -> ephemeral prompt, no invoke", bodyOf(result).type === 4 && invokes.length === 0, `invokes=${invokes.length}`);
+}
+
+console.log("\n--- RED: a dispatch failure RELEASES the cooldown (no penalty for our hiccup) ---");
+{
+  resetState();
+  lambdaThrows = true; // cooldown claim (PutItem) succeeds, then the worker invoke fails
+  const result = await handler(signedEvent(askInteraction("dispatch will fail")));
+  check("dispatch fail -> ephemeral error", bodyOf(result).type === 4);
+  check("dispatch fail -> claim then release (PutItem, DeleteItem)", ddbOps.join(",") === "PutItemCommand,DeleteItemCommand", ddbOps.join(","));
 }
 
 console.log(`\n${failures === 0 ? "ALL PASS" : failures + " FAILURE(S)"}`);

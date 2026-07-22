@@ -85,12 +85,18 @@ async function parallelKey() {
   try {
     const result = await ssm.send(new GetParameterCommand({ Name: PARALLEL_KEY_PARAM, WithDecryption: true }));
     const value = result.Parameter?.Value;
+    // Cache the resolved key — or null when the param is unset/"None" — so SSM is read
+    // once per warm container. Only this definitive path caches; the catch below does
+    // NOT, so a transient error is retried next call rather than remembered.
     cachedParallelKey = value && value !== "None" ? value : null;
+    return cachedParallelKey;
   } catch (error) {
-    console.error("parallel key read failed", error?.name ?? error);
-    cachedParallelKey = null;
+    // A transient SSM/KMS error must NOT poison the cache for the life of the warm
+    // container (Lambda reuses it). Leave it unset so the next /ask retries the read;
+    // this one call degrades to "no search".
+    console.error("parallel key read failed (not cached, will retry)", error?.name ?? error);
+    return null;
   }
-  return cachedParallelKey;
 }
 
 // Returns a plain string to hand back to the model. NEVER throws: a failed search
