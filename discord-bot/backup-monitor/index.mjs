@@ -1,7 +1,7 @@
 // Off-box observer for the rolling world backups.
 //
 // The backup job runs on the game box itself, so every way it can die -- dead
-// systemd timer, expired IAM, full disk, REST save failing, the box being replaced
+// scheduled task, expired IAM, full disk, REST save failing, the box being replaced
 // -- is silent from the outside. Nobody learns backups stopped until they are
 // needed. That is exactly how ~4.5h of the group's progress was lost on
 // 2026-07-18: the only surviving copy was one pulled off by hand that morning.
@@ -11,7 +11,7 @@
 // correct behaviour, not faults. Alarming on either would train everyone to ignore
 // the alarm -- which is how the real one gets missed.
 //
-// It also watches palworld-idle.timer, via the roster parameter that watcher
+// It also watches the PalworldIdle task, via the roster parameter that watcher
 // rewrites every cycle. The watcher fails OPEN (any error counts as "players
 // present"), so a dead one never stops the box and never complains -- a stale
 // roster is the only evidence it leaves. See commit history for 2026-07-19.
@@ -180,7 +180,7 @@ async function checkBackups(upMinutes) {
       return {status: "BOOTING", ageMinutes, key: newest.Key, upMinutes};
     }
     return {status: "STALE", ageMinutes, key: newest.Key,
-      alert: `🚨 **World backups have stopped** — newest is \`${newest.Key}\`, ${ageMinutes} min old (threshold ${STALE_MINUTES} min) while the server is running. Check \`palworld-backup.timer\` on the box.`};
+      alert: `🚨 **World backups have stopped** — newest is \`${newest.Key}\`, ${ageMinutes} min old (threshold ${STALE_MINUTES} min) while the server is running. Check the \`PalworldBackup\` scheduled task on the box (\`Get-ScheduledTaskInfo -TaskName PalworldBackup\`).`};
   }
 
   return {status: "OK", ageMinutes, key: newest.Key, size: newest.Size};
@@ -219,7 +219,7 @@ async function checkWatcher(launchTime) {
     // stop when empty in either case. Naming only the timer would send whoever
     // responds at the wrong component during a live incident.
     return {status: "WATCHER_DEAD", rosterAgeMinutes: ageMinutes, upMinutes,
-      alert: `🚨 **Idle-shutdown is not publishing** — \`${ROSTER_PARAM}\` has not updated in ${ageMinutes} min (threshold ${ROSTER_STALE_MINUTES} min) while the server is up. The box will NOT stop when empty and is billing continuously. Either \`palworld-idle.timer\` is dead (check \`systemctl is-enabled\`, not just \`is-active\`) or the game's REST API is hung (check \`palworld.service\`).`};
+      alert: `🚨 **Idle-shutdown is not publishing** — \`${ROSTER_PARAM}\` has not updated in ${ageMinutes} min (threshold ${ROSTER_STALE_MINUTES} min) while the server is up. The box will NOT stop when empty and is billing continuously. Either the \`PalworldIdle\` scheduled task is dead (check \`Get-ScheduledTaskInfo -TaskName PalworldIdle\`) or the game's REST API is hung (check the \`PalServer-Win64-Shipping\` process).`};
   }
 
   return {status: "OK", rosterAgeMinutes: ageMinutes};
