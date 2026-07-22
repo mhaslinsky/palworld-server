@@ -22,6 +22,12 @@ locals {
   # its own parameter until cutover, when it inherits the real one along with the
   # Lambda and presence-daemon instance ids (M3).
   windows_roster_param_name = "/${var.project_name}/roster_windows"
+
+  # The live game instance the control plane (EIP, Discord bot, backup monitor,
+  # presence) targets. try() falls back to the Linux box so enable_windows_migration =
+  # false (the rollback lever) still PLANS instead of erroring on an out-of-range [0]
+  # index — server_windows is count-gated, aws_instance.server is not.
+  active_game_instance_id = try(aws_instance.server_windows[0].id, aws_instance.server.id)
 }
 
 resource "aws_ssm_parameter" "roster_windows" {
