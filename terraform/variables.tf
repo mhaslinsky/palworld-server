@@ -166,3 +166,71 @@ variable "discord_bot_token" {
   default     = ""
   sensitive   = true
 }
+
+# --- /ask Palworld Q&A bot ---
+variable "parallel_api_key" {
+  description = "Parallel AI Search API key for the /ask web-search tool. Seeded into SSM SecureString; rotate there, not here. Empty leaves a placeholder and disables search (the model answers from its own knowledge)."
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "parallel_search_url" {
+  description = "Parallel AI Search API endpoint. Confirmed against live Parallel docs + SDK source (see the change's tasks.md 1.2)."
+  type        = string
+  default     = "https://api.parallel.ai/v1/search"
+}
+
+variable "bedrock_model_id" {
+  description = "Bedrock model id the ask-worker invokes. Claude Haiku 4.5 is reached via a cross-region inference profile in most regions (e.g. us.anthropic.claude-haiku-4-5-*), NOT the bare foundation-model id — set the EXACT id verified in tasks.md 1.1."
+  type        = string
+  default     = "us.anthropic.claude-haiku-4-5-20251001-v1:0"
+}
+
+variable "bedrock_inference_regions" {
+  description = "Regions the Haiku 4.5 cross-region inference profile can route to. The ask-worker IAM must allow bedrock:InvokeModel on the foundation-model ARN in each, or InvokeModel returns AccessDenied. These are the us. profile's members, confirmed via get-inference-profile (tasks.md 1.1)."
+  type        = list(string)
+  default     = ["us-east-1", "us-east-2", "us-west-2"]
+}
+
+variable "ask_cooldown_seconds" {
+  description = "Per-user cooldown between accepted /ask questions."
+  type        = number
+  default     = 60
+}
+
+variable "ask_max_question_chars" {
+  description = "Reject an /ask question longer than this (caps input-token burn before the model runs)."
+  type        = number
+  default     = 300
+}
+
+variable "ask_max_tokens" {
+  description = "Max output tokens for an /ask answer."
+  type        = number
+  default     = 700
+}
+
+variable "ask_max_tool_turns" {
+  description = "Max model turns in the /ask tool-use loop before a final no-tool answer is forced."
+  type        = number
+  default     = 3
+}
+
+variable "ask_max_searches" {
+  description = "Max parallel_search calls per /ask question."
+  type        = number
+  default     = 2
+}
+
+variable "ask_max_result_bytes" {
+  description = "Cap on search-result bytes fed back to the model (re-billed every subsequent turn)."
+  type        = number
+  default     = 6000
+}
+
+variable "ask_parallel_timeout_ms" {
+  description = "Client-side timeout on the Parallel search fetch, so a hung search can't burn the whole Lambda timeout."
+  type        = number
+  default     = 8000
+}

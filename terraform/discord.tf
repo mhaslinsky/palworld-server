@@ -65,6 +65,22 @@ data "aws_iam_policy_document" "discord_bot" {
     resources = [aws_lambda_function.discord_bot.arn]
   }
 
+  # /ask hands the slow work to the dedicated ask-worker (Bedrock + web search).
+  statement {
+    sid       = "InvokeAskWorker"
+    actions   = ["lambda:InvokeFunction"]
+    resources = [aws_lambda_function.ask_worker.arn]
+  }
+
+  # The entry Lambda OWNS the cooldown claim (conditional PutItem before deferring).
+  # PutItem alone is enough — ReturnValuesOnConditionCheckFailure returns the existing
+  # row on rejection, so no separate GetItem/read permission is needed.
+  statement {
+    sid       = "ClaimAskCooldown"
+    actions   = ["dynamodb:PutItem"]
+    resources = [aws_dynamodb_table.ask_cooldown.arn]
+  }
+
   # Read-only: the instance owns this value, the bot only reports it.
   statement {
     sid     = "ReadRosterWindows"
@@ -114,6 +130,12 @@ resource "aws_lambda_function" "discord_bot" {
       SERVER_ADDRESS     = "${aws_eip.server.public_ip}:8211"
       ALLOWED_USER_IDS   = join(",", var.discord_allowed_user_ids)
       ROSTER_PARAM       = local.windows_roster_param_name
+
+      # /ask routing + cooldown gate
+      ASK_WORKER_FUNCTION_NAME = aws_lambda_function.ask_worker.function_name
+      COOLDOWN_TABLE           = aws_dynamodb_table.ask_cooldown.name
+      ASK_COOLDOWN_SECONDS     = tostring(var.ask_cooldown_seconds)
+      ASK_MAX_QUESTION_CHARS   = tostring(var.ask_max_question_chars)
     }
   }
 
