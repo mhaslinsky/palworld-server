@@ -4,7 +4,7 @@ Terraform for a self-hosted **Palworld 1.0** dedicated server on AWS, for a 5-10
 player friend group. On-demand and cheap: the server **auto-stops when empty** and
 is meant to be started on request, so you pay for compute only while people play.
 
-- **Account:** `aidb-personal` profile → `414700437904` (personal, **not** any CreditGenie account)
+- **Account:** `aidb-personal` profile → `414700437904`
 - **Region:** `us-east-1`
 - **Game instance:** `t3.xlarge` (4 vCPU / 16 GB — Pocketpair's recommended spec), ~$0.166/hr **only while running**
 - **Baseline when both game boxes are stopped:** roughly **$22-23/mo**, and worth understanding
