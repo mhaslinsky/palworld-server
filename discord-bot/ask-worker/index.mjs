@@ -36,11 +36,15 @@ const MAX_TOOL_TURNS = intEnv("ASK_MAX_TOOL_TURNS", 3);
 const MAX_SEARCHES = intEnv("ASK_MAX_SEARCHES", 2);
 const MAX_RESULT_BYTES = intEnv("ASK_MAX_RESULT_BYTES", 6000);
 const PARALLEL_TIMEOUT_MS = intEnv("ASK_PARALLEL_TIMEOUT_MS", 8000);
+// Slice of the Lambda budget held back so the deadline handler can still reach
+// Discord after abandoning the answer. Must exceed one PATCH round-trip.
+const TIMEOUT_RESERVE_MS = intEnv("ASK_TIMEOUT_RESERVE_MS", 5000);
 
 // Discord hard-caps a message at 2000 chars.
 const DISCORD_MAX_MESSAGE = 2000;
 const CANNED_NO_ANSWER = "🤔 I couldn't work that one out — try rephrasing.";
 const CANNED_ERROR = "❌ Something went wrong answering that — try again in a bit.";
+const CANNED_TIMEOUT = "⏱️ That one took too long — try asking something simpler.";
 
 const SYSTEM_PROMPT = [
   "You are a concise Q&A helper for players of the game Palworld, living in a Discord server.",
@@ -248,7 +252,9 @@ async function editDeferredMessage(interactionToken, content) {
   }
 }
 
-export async function handler(event) {
+class AskTimeout extends Error {}
+
+export async function handler(event, context) {
   const { question, interactionToken } = event ?? {};
   // Never log the raw event: interactionToken is a 15-minute bearer credential.
   if (!interactionToken) {
@@ -256,16 +262,33 @@ export async function handler(event) {
     return;
   }
 
+  // A Lambda timeout terminates the process WITHOUT running catch/finally, so a slow
+  // answer would strand the user on a permanent "thinking…" (retries are off by
+  // design). Abandon the answer while enough of the budget remains to still PATCH
+  // Discord ourselves. Every path below converges on exactly one edit.
+  const budgetMs =
+    typeof context?.getRemainingTimeInMillis === "function" ? context.getRemainingTimeInMillis() : 60_000;
+  let timer;
+  const deadline = new Promise((_resolve, reject) => {
+    timer = setTimeout(() => reject(new AskTimeout()), Math.max(1_000, budgetMs - TIMEOUT_RESERVE_MS));
+  });
+
+  let content;
   try {
-    const answer = await answerQuestion(String(question ?? "").trim());
-    await editDeferredMessage(interactionToken, clampForDiscord(answer));
+    const answer = await Promise.race([answerQuestion(String(question ?? "").trim()), deadline]);
+    content = clampForDiscord(answer);
   } catch (error) {
-    console.error("ask-worker failed", error?.name ?? error);
-    try {
-      await editDeferredMessage(interactionToken, CANNED_ERROR);
-    } catch (editError) {
-      console.error("failed to edit error message", editError?.name ?? editError);
-    }
+    const timedOut = error instanceof AskTimeout;
+    console.error("ask-worker failed", timedOut ? "answer deadline exceeded" : (error?.name ?? error));
+    content = timedOut ? CANNED_TIMEOUT : CANNED_ERROR;
+  } finally {
+    clearTimeout(timer); // else the pending timer holds the event loop open
+  }
+
+  try {
+    await editDeferredMessage(interactionToken, content);
+  } catch (editError) {
+    console.error("failed to edit deferred message", editError?.name ?? editError);
   }
   // Deliberately no throw here, EVER, after we've edited: a Lambda async retry would
   // re-run the whole paid loop. maximum_retry_attempts=0 is the belt; this is the braces.

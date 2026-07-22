@@ -234,3 +234,9 @@ variable "ask_parallel_timeout_ms" {
   type        = number
   default     = 8000
 }
+
+variable "ask_timeout_reserve_ms" {
+  description = "Milliseconds of the ask-worker's Lambda budget held back so it can still edit the Discord message after abandoning a slow answer. A Lambda timeout kills the process without running catch blocks, so without this reserve a slow model leaves the user on a permanent 'thinking...'. Must exceed one Discord PATCH round-trip."
+  type        = number
+  default     = 5000
+}

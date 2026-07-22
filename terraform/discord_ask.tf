@@ -146,6 +146,7 @@ resource "aws_lambda_function" "ask_worker" {
       ASK_MAX_SEARCHES        = tostring(var.ask_max_searches)
       ASK_MAX_RESULT_BYTES    = tostring(var.ask_max_result_bytes)
       ASK_PARALLEL_TIMEOUT_MS = tostring(var.ask_parallel_timeout_ms)
+      ASK_TIMEOUT_RESERVE_MS  = tostring(var.ask_timeout_reserve_ms)
     }
   }
 

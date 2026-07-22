@@ -30,7 +30,10 @@ let edits = []; // { content, body } captured from the Discord PATCH
 
 const encode = (object) => ({ body: new TextEncoder().encode(JSON.stringify(object)) });
 
+let bedrockHangs = false;
+
 BedrockRuntimeClient.prototype.send = async () => {
+  if (bedrockHangs) return new Promise(() => {}); // never settles — simulates a slow model
   if (bedrockError) throw new Error("Bedrock unavailable");
   const next = bedrockReplies.shift();
   if (!next) throw new Error("test error: ran out of scripted Bedrock replies");
@@ -74,9 +77,10 @@ function check(name, condition, detail = "") {
   if (condition) console.log(`PASS  ${name}`);
   else { console.log(`FAIL  ${name}  ${detail}`); failures++; }
 }
-function reset({ replies, error = false, parallel = "ok" }) {
+function reset({ replies, error = false, parallel = "ok", hangs = false }) {
   bedrockReplies = replies;
   bedrockError = error;
+  bedrockHangs = hangs;
   parallelMode = parallel;
   searchCalls = 0;
   edits = [];
@@ -141,6 +145,27 @@ console.log("\n--- RED: a Bedrock failure edits a visible error and does NOT thr
   }
   check("handler did not throw", threw === false);
   check("a visible error was edited in", edits.length === 1 && edits[0].content.includes("❌"));
+}
+
+console.log("\n--- RED: a Lambda TIMEOUT still edits the message (no permanent 'thinking…') ---");
+{
+  // The model never responds. Without the deadline watchdog the runtime would kill
+  // the process with no edit at all — the exact failure four review seats flagged.
+  reset({ replies: [], hangs: true });
+  const handler = await freshHandler();
+  // Lambda-style context: 5.6s left, so the watchdog fires ~600ms in (reserve 5000).
+  const context = { getRemainingTimeInMillis: () => 5_600 };
+  let threw = false;
+  const started = Date.now();
+  try {
+    await handler({ question: "hang forever", interactionToken: "tok" }, context);
+  } catch {
+    threw = true;
+  }
+  const elapsed = Date.now() - started;
+  check("handler did not throw on timeout", threw === false);
+  check("abandoned BEFORE the runtime would kill it", elapsed < 5_000, `elapsed=${elapsed}ms`);
+  check("a timeout message was edited in", edits.length === 1 && edits[0].content.includes("⏱️"), JSON.stringify(edits[0]?.content));
 }
 
 console.log("\n--- GREEN: a missing interaction token is a no-op, not a crash ---");

@@ -63,9 +63,13 @@ The async invocation of the ask-worker SHALL be treated as at-least-once, not ex
 - **WHEN** the entry handler has returned a deferred acknowledgement but the async invoke of the ask-worker fails
 - **THEN** the entry handler catches that failure and edits the deferred message with a visible error via the interaction token (the entry handler owns this failure path; it needs only the app id and token, no worker)
 
-#### Scenario: Worker crashes or times out before answering
-- **WHEN** the ask-worker crashes before its own error handling runs, or exceeds its timeout
-- **THEN** the outcome is still surfaced to the user rather than left silent (top-level catch-all in the worker; worker timeout sized to leave margin before Discord's 15-minute edit window closes)
+#### Scenario: Answer exceeds the Lambda time budget
+- **WHEN** producing the answer would run past the ask-worker's Lambda timeout
+- **THEN** the worker abandons the answer while a configurable reserve of the budget remains and edits the deferred message with a visible timeout notice — a Lambda timeout terminates the process without running catch/finally, so relying on a top-level catch alone would leave a permanent "thinking…"
+
+#### Scenario: Worker dies abruptly (residual, not covered)
+- **WHEN** the process is killed outright (out-of-memory, runtime fault) rather than reaching its own deadline
+- **THEN** no edit is possible from inside the worker and the message is left deferred — this is an accepted residual, NOT a satisfied guarantee; closing it would require a Lambda on-failure destination. The spec states this explicitly rather than implying the catch-all covers every terminal case.
 
 ### Requirement: Cheap-model answering with an optional search tool
 The ask-worker SHALL answer questions using Amazon Bedrock Claude Haiku 4.5, exposing exactly one tool — `parallel_search`, backed by the Parallel AI fast Search API — that the model MAY call when a question needs current or non-obvious information. The worker SHALL bound cost and latency with tight, explicit limits: a maximum question length, a maximum number of model turns (default ≤3), a maximum number of `parallel_search` calls per question (default ≤2), a cap on the byte size of search results fed back into the model (they are re-billed on every subsequent turn), a bounded output length, and a client-side timeout (AbortController) on the Parallel `fetch` so a hung search cannot burn the whole Lambda timeout. The system prompt SHALL scope the model to Palworld Q&A, instruct it to prefer a single search, and treat search-result text as untrusted data (never as instructions).
