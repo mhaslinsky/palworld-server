@@ -1,0 +1,27 @@
+openspec/changes/discord-ask-command/.openspec.yaml
+  s_8057cff4bb14d1::t_8d648bd3a0a2f4 1-2
+openspec/changes/discord-ask-command/design.md
+  s_8057cff4bb14d1::t_13f43462e7828f 1-76
+openspec/changes/discord-ask-command/proposal.md
+  s_8057cff4bb14d1::t_c6c0dec42d579b 1-31
+openspec/changes/discord-ask-command/specs/discord-qa-bot/spec.md
+  s_8057cff4bb14d1::t_2ba9d3ea27a5c1 1-104
+openspec/changes/discord-ask-command/tasks.md
+  s_8057cff4bb14d1::t_580d57c4fe9df0 1-52
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "6608e5685efd7c41781e5571dbb93ee411abfe0b",
+  "prompts": {},
+  "sessions": {
+    "s_8057cff4bb14d1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "91d838dc-dd8b-4705-b5d2-673f84d34ba5",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    }
+  }
+}
