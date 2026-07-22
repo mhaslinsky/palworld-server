@@ -38,6 +38,24 @@ if (-not (Test-Path $exe)) {
   exit 1
 }
 
+# Load the REAL world, not a fresh empty one. Palworld picks the world by the
+# DedicatedServerName GUID in GameUserSettings.ini, which lives on C: (NOT the D:
+# SaveGames junction) - so a rebuilt box generates a new GUID and serves an EMPTY world
+# while the real save sits untouched on D:. Restore the staged copy (carrying the world
+# GUID) from the persistent volume before every launch. Done here, not in user_data,
+# because user_data has a hard 16 KB limit and this runs before the server every boot.
+$gusStage = "D:\PalServer\GameUserSettings.ini"
+$cfgDir = "C:\PalServer\Pal\Saved\Config\WindowsServer"
+if (Test-Path $gusStage) {
+  New-Item -ItemType Directory -Force -Path $cfgDir | Out-Null
+  Copy-Item $gusStage (Join-Path $cfgDir "GameUserSettings.ini") -Force
+} else {
+  # Loud: without the GUID the server silently serves an empty world (real save intact
+  # on D:, just not selected). Distinct EventId so a rebuild-into-empty is diagnosable.
+  Write-EventLog -LogName Application -Source "Palworld" -EventId 109 -EntryType Warning `
+    -Message "no staged GameUserSettings.ini at $gusStage; server may serve an EMPTY world (fresh GUID)" -ErrorAction SilentlyContinue
+}
+
 Start-Process -FilePath $exe `
   -ArgumentList "Pal", "-port=$($conf.GamePort)", "-players=$($conf.MaxPlayers)", "-log" `
   -WorkingDirectory "C:\PalServer" -WindowStyle Hidden
