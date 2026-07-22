@@ -29,3 +29,25 @@ Non-goals: no game-server integration (the bot never touches the Palworld box or
 - **Dependencies**: `@aws-sdk/client-bedrock-runtime` and `@aws-sdk/client-dynamodb` — both already present in the `nodejs22.x` runtime, so still zero `npm install`. Parallel Search is a plain HTTPS call via `fetch`.
 - **External**: requires Bedrock model access for Claude Haiku 4.5 enabled in the account/region, and a Parallel AI API key. Adds outbound egress from the ask-worker to `api.parallel.ai`.
 - **Cost**: pay-per-use only — Bedrock per-token + Parallel per-search + trivial DynamoDB on-demand; ~$0 when idle. No persistent inference endpoint (SageMaker was explicitly rejected for this reason).
+
+## Follow-ups (deferred — not built in this change)
+
+1. **Extended thinking on `/ask`.** Haiku 4.5 is an older-generation model for this API:
+   it does NOT accept `adaptive` thinking or the `effort` dial (4.6+ only), so enabling
+   reasoning means the explicit form `thinking: {type: "enabled", budget_tokens: N}`,
+   where `N >= 1024` **and** `N < max_tokens`. Blocking detail: `ask_max_tokens` is
+   currently **700**, below the 1024 floor — so this is not a one-line flag. It requires
+   raising `max_tokens` to ~3000+ (budget 1024–2048 plus room for the answer), which
+   raises per-question cost (thinking tokens bill as output) and latency against the
+   worker's 60s Lambda budget.
+   **Deferred because** the current question shape is lookup-style ("where is quartz",
+   "best mining Pal") where `parallel_search` does the work and reasoning depth adds
+   little. **Revisit when** `/ask` is wanted for genuinely multi-step questions (base
+   layout planning, comparing breeding paths). The timeout watchdog already covers the
+   added latency risk.
+
+2. **Lambda on-failure destination.** Closes the documented residual in the
+   `discord-qa-bot` spec: an abrupt process kill (OOM / runtime fault) leaves the
+   deferred message un-edited, because no in-process handler can run. The timeout case
+   is already covered by the watchdog; this would cover the rest via an SNS/Lambda
+   destination that PATCHes using the interaction token from the failed event.
