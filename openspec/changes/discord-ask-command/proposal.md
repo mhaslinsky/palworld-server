@@ -1,0 +1,31 @@
+## Why
+
+The friends on the server constantly ask Palworld lookup questions ("where do I get X ingot", "what does this Pal's passive do", "best base Pal for mining") and end up alt-tabbing to a wiki mid-session. A cheap Discord Q&A bot that can answer those — searching the live web only when it needs to — turns that into a one-line `/ask` in the same channel they already use to start the server. It is a small quality-of-life add, explicitly scoped to be *very* cheap to run.
+
+## What Changes
+
+- Add a new `/ask <question>` Discord slash command handled by the **existing** `discord-bot` Lambda, reusing its verify → allowlist → defer → async-worker pattern.
+- Add a dedicated **ask-worker Lambda** (async-invoked by the entry handler) that runs a short LLM tool-use loop against **Amazon Bedrock (Claude Haiku 4.5)** and edits the deferred Discord reply with the answer.
+- Give the model **one tool**: `parallel_search`, backed by the **Parallel AI fast Search API**, so it fetches current web results only when a question needs them (not on every call).
+- Add a **per-user cooldown** (DynamoDB, TTL-based) enforced on the fast HTTP path before deferring, so a user cannot spam the model.
+- Keep `/ask` **allowlist-gated** by the existing `ALLOWED_USER_IDS` — same audience as `/palworld-start`.
+- Store the Parallel API key as an **SSM SecureString**; grant Bedrock/DynamoDB/SSM access via new least-privilege IAM.
+- Register the new command with Discord (one-time `applications/commands` upsert).
+
+Non-goals: no game-server integration (the bot never touches the Palworld box or its REST API), no conversation memory across invocations, no LiteLLM-style multi-model complexity router (single cheap model is sufficient at this scale — revisit only if answer quality demands it).
+
+## Capabilities
+
+### New Capabilities
+- `discord-qa-bot`: An allowlist-gated, cooldown-limited Discord `/ask` command that answers Palworld questions with a cheap Bedrock LLM which may call a Parallel AI web-search tool, delivered through the existing Discord interactions endpoint.
+
+### Modified Capabilities
+<!-- None. openspec/specs/ is empty; the existing /palworld-start and /palworld-status commands have no spec file, and their behavior is unchanged. -->
+
+## Impact
+
+- **Code**: `discord-bot/src/index.mjs` (route `/ask`, cooldown check, invoke ask-worker); new `discord-bot/ask-worker/index.mjs` (Bedrock loop + `parallel_search` tool); command-registration script/doc.
+- **Infra (Terraform)**: new `discord_ask.tf` (ask-worker Lambda, DynamoDB cooldown table, IAM, log group); edits to `discord.tf` (env vars for the entry handler: ask-worker name, cooldown table, cooldown seconds; IAM to invoke ask-worker + DynamoDB read/write); new `aws_ssm_parameter` for the Parallel API key (SecureString, `ignore_changes = [value]`).
+- **Dependencies**: `@aws-sdk/client-bedrock-runtime` and `@aws-sdk/client-dynamodb` — both already present in the `nodejs22.x` runtime, so still zero `npm install`. Parallel Search is a plain HTTPS call via `fetch`.
+- **External**: requires Bedrock model access for Claude Haiku 4.5 enabled in the account/region, and a Parallel AI API key. Adds outbound egress from the ask-worker to `api.parallel.ai`.
+- **Cost**: pay-per-use only — Bedrock per-token + Parallel per-search + trivial DynamoDB on-demand; ~$0 when idle. No persistent inference endpoint (SageMaker was explicitly rejected for this reason).
