@@ -1,0 +1,22 @@
+discord-bot/ask-worker/index.mjs
+  s_8057cff4bb14d1::t_8d85207d41e877 218
+  s_8057cff4bb14d1::t_d0f8e6584ffe3a 219-224
+  s_8057cff4bb14d1::t_f2c7bff9c532a8 194
+  s_8057cff4bb14d1::t_4a18ba7bbb6759 192-193
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "a1d65304c4922755ff1ba5f2684a5169964a4d21",
+  "prompts": {},
+  "sessions": {
+    "s_8057cff4bb14d1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "91d838dc-dd8b-4705-b5d2-673f84d34ba5",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    }
+  }
+}
