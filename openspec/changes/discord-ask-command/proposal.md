@@ -51,3 +51,20 @@ Non-goals: no game-server integration (the bot never touches the Palworld box or
    deferred message un-edited, because no in-process handler can run. The timeout case
    is already covered by the watchdog; this would cover the rest via an SNS/Lambda
    destination that PATCHes using the interaction token from the failed event.
+
+3. **S3 knowledge corpus / bot memory — CONSIDERED AND DECLINED (2026-07-22).**
+   Idea: an S3 bucket of markdown the bot reads (server-specific facts web search cannot
+   know — the UE4SS mod, decay-off, raised base cap, house rules) and possibly writes.
+   Grok and Codex were consulted independently and **agreed** on: no model write path
+   (prompt text is not a security boundary — the model reads untrusted search results, so
+   a write tool turns one poisoned result into durable poisoned state); no Q&A answer cache
+   (it freezes wrongness and fights the search-first prompt); and no embeddings/vector
+   store/manifest. They **split** on the read path — Grok: inject into the system prompt
+   (fail-closed; a tool the model may skip is wrong for must-know facts). Codex: a bounded
+   read tool (below Haiku's 4096-token cache floor an inlined corpus bills on every turn).
+   **Declined anyway**, on a ground neither weighed: the owner will not maintain the file.
+   An unmaintained corpus decays into confidently-wrong server facts stated with the same
+   authority as searched ones — worse than having none. **Revisit only** if someone commits
+   to ownership, or if a safe write path removes the maintenance burden (Codex's minimum:
+   owner-only `/remember` writing verbatim to `corpus/pending/`, worker cannot read
+   `pending/`, writer cannot write `trusted/`, S3 versioning + read-back verification).
