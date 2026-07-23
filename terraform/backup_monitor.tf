@@ -109,7 +109,14 @@ resource "aws_lambda_function" "backup_monitor" {
       INSTANCE_ID   = local.active_game_instance_id
       BACKUP_BUCKET = aws_s3_bucket.backups.id
       BACKUP_PREFIX = "world/windows/"
-      STALE_MINUTES = "45" # the job runs every 30 min; 45 tolerates one missed run
+      # The job runs every 30 min, so a SINGLE miss leaves the newest healthy object
+      # up to ~60 min old before the next run recovers it (30 min gap + up to a full
+      # cycle before the replacement lands). 45 fired on every such single transient
+      # -- a degraded force-save or one skipped run -- and trained the channel to
+      # panic over nothing. 75 sits above one miss (~60) and below two-in-a-row (~90),
+      # so only a SUSTAINED failure alerts. Stateless by design: an age threshold is
+      # how "two consecutive misses" is expressed without persisting a counter.
+      STALE_MINUTES = "75"
       MIN_BYTES     = "1000000"
       WEBHOOK_PARAM = aws_ssm_parameter.discord_webhook_url.name
 
