@@ -44,7 +44,10 @@ function minutesSetting(raw, fallback) {
   return parsed;
 }
 
-const STALE_MINUTES = minutesSetting(process.env.STALE_MINUTES, 45);
+// Fallback matches terraform/backup_monitor.tf: 75 min tolerates a single missed or
+// degraded 30-min run (newest healthy object ages to ~60) and only alerts on two in a
+// row (~90). A missing env var must not silently reintroduce the noisy 45.
+const STALE_MINUTES = minutesSetting(process.env.STALE_MINUTES, 75);
 const MIN_BYTES = minutesSetting(process.env.MIN_BYTES, 1_000_000);
 const WEBHOOK_PARAM = process.env.WEBHOOK_PARAM;
 const ROSTER_PARAM = process.env.ROSTER_PARAM;
