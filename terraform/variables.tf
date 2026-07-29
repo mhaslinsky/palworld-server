@@ -182,15 +182,38 @@ variable "parallel_search_url" {
 }
 
 variable "bedrock_model_id" {
-  description = "Bedrock model id the ask-worker invokes. Claude Haiku 4.5 is reached via a cross-region inference profile in most regions (e.g. us.anthropic.claude-haiku-4-5-*), NOT the bare foundation-model id — set the EXACT id verified in tasks.md 1.1."
+  description = "Bedrock model id the ask-worker invokes. Reached via a cross-region inference profile (us.anthropic.*), NOT the bare foundation-model id. Verify any change with `aws bedrock get-inference-profile --inference-profile-identifier <id>` before setting it - a guessed id fails at runtime, not at plan time. Sonnet 5 confirmed ACTIVE and routing to the same three regions as the previous Haiku 4.5 profile on 2026-07-29."
   type        = string
-  default     = "us.anthropic.claude-haiku-4-5-20251001-v1:0"
+  default     = "us.anthropic.claude-sonnet-5"
 }
 
 variable "bedrock_inference_regions" {
-  description = "Regions the Haiku 4.5 cross-region inference profile can route to. The ask-worker IAM must allow bedrock:InvokeModel on the foundation-model ARN in each, or InvokeModel returns AccessDenied. These are the us. profile's members, confirmed via get-inference-profile (tasks.md 1.1)."
+  description = "Regions the cross-region inference profile can route to. The ask-worker IAM must allow bedrock:InvokeModel on the foundation-model ARN in each, or InvokeModel returns AccessDenied. Confirmed via get-inference-profile for Sonnet 5 (2026-07-29) - the same three the Haiku 4.5 profile used, so the IAM local needed no change."
   type        = list(string)
   default     = ["us-east-1", "us-east-2", "us-west-2"]
+}
+
+variable "ask_effort" {
+  description = "Reasoning effort for the ask-worker, passed as output_config.effort. Sonnet 5 accepts low/medium/high/xhigh/max and defaults to high; medium is the deliberate step down for a Discord Q&A bot where latency is user-facing and the questions are not hard. Raise it if answers get shallow, do not raise it to make her chattier - effort does not reliably control response length."
+  type        = string
+  default     = "medium"
+
+  validation {
+    condition     = contains(["low", "medium", "high", "xhigh", "max"], var.ask_effort)
+    error_message = "ask_effort must be one of: low, medium, high, xhigh, max."
+  }
+}
+
+variable "ask_memory_turns" {
+  description = "How many prior question/answer pairs Sloot sees. Deliberately small: memory replays a poisoned search result for as long as it is retained, so the window is the blast radius. Zero disables memory entirely."
+  type        = number
+  default     = 3
+}
+
+variable "ask_memory_ttl_seconds" {
+  description = "How long a conversation is remembered. Short by design - this is conversational continuity for follow-up questions, not a knowledge store, and a short TTL bounds how long a bad turn can echo."
+  type        = number
+  default     = 1800
 }
 
 variable "ask_cooldown_seconds" {
@@ -206,9 +229,9 @@ variable "ask_max_question_chars" {
 }
 
 variable "ask_max_tokens" {
-  description = "Max output tokens for an /ask answer."
+  description = "Max output tokens per model call. This caps THINKING PLUS the answer, not the answer alone: Sonnet 5 runs adaptive thinking by default, so the 700 that comfortably fit a Haiku answer would now be spent reasoning and truncate her mid-sentence. Raised to 4000 to leave thinking room; the answer itself is still bounded by Discord's 2000-character message limit, which the worker clamps to separately."
   type        = number
-  default     = 700
+  default     = 4000
 }
 
 variable "ask_max_tool_turns" {
