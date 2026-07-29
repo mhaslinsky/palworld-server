@@ -1,0 +1,23 @@
+docs/client-mods.md
+  s_a7a102621705fd::t_1c605168415993 61-62,67,73,82,85,88
+discord-bot/register-commands.mjs
+  s_a7a102621705fd::t_1c605168415993 43-45
+discord-bot/README.md
+  s_a7a102621705fd::t_1c605168415993 65,74,76,85
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "643f07f8e614496972c0af6f0193b01ca21b6e02",
+  "prompts": {},
+  "sessions": {
+    "s_a7a102621705fd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ffa155c8-b0e1-40f1-a156-d58aae0b1c78",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    }
+  }
+}
