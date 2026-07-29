@@ -25,9 +25,15 @@
 # then runs the wrong subset. Verified against S3's own ETag rather than a baked-in
 # hash, so a script edit never has to touch user_data.
 #
-# Exit codes: 0 = every script synced and verified, 1 = at least one did not. A script
-# that could not be verified is REMOVED rather than left in place, because a corrupt
-# watcher means no idle-shutdown (the box bills around the clock) and no watchdog.
+# Exit codes, kept distinct on purpose so "I could not check" never renders as "I
+# checked and it is fine":
+#   0 = every script present AND hash-verified against S3
+#   1 = at least one script failed to download or FAILED its checksum
+#   2 = every script present, but at least one could not be verified (S3 gave no
+#       usable ETag). In place and probably fine, but not checked.
+# A script that fails its checksum is REMOVED rather than left in place, because half a
+# PowerShell script usually still parses, and a corrupt watcher means no idle-shutdown
+# (the box bills around the clock) and no watchdog.
 #
 # Pure ASCII (output goes to the SSM console, not Discord), but carries a UTF-8 BOM
 # like its siblings so a future non-ASCII edit cannot silently break PS 5.1.
@@ -50,6 +56,7 @@ if (-not (Test-Path $awsExe)) {
 $scriptNames = @("palworld-launch.ps1", "palworld-idle.ps1", "backup-to-s3.ps1")
 
 $failed = @()
+$unverified = @()
 foreach ($scriptName in $scriptNames) {
   $dest = "C:\PalServer\scripts\$scriptName"
   $key = "scripts/windows/$scriptName"
@@ -74,10 +81,15 @@ foreach ($scriptName in $scriptNames) {
   $etag = if ($etag) { $etag.Trim('"').ToLower() } else { $null }
   $actual = (Get-FileHash $dest -Algorithm MD5).Hash.ToLower()
 
+  # Tracked, not just logged. Falling through to "all hash-verified" after a warning
+  # would report unverified files as verified, which is the exact failure this script
+  # was written to stop - arriving inside the guard itself.
   if (-not $etag) {
-    Write-Output "WARNING $scriptName - could not read ETag, integrity unverified (left in place)"
+    Write-Output "WARNING $scriptName - could not read ETag, integrity UNVERIFIED (left in place)"
+    $unverified += $scriptName
   } elseif ($etag -like "*-*") {
-    Write-Output "NOTE $scriptName - multipart ETag, integrity unverified (left in place)"
+    Write-Output "NOTE $scriptName - multipart ETag, integrity UNVERIFIED (left in place)"
+    $unverified += $scriptName
   } elseif ($actual -ne $etag) {
     Write-Output "FAILED $scriptName - checksum mismatch (S3 $etag, local $actual). REMOVING rather than running a corrupt script."
     Remove-Item $dest -Force -ErrorAction SilentlyContinue
@@ -95,12 +107,17 @@ foreach ($scriptName in $scriptNames) {
   }
 }
 
+Write-Output ""
 if ($failed.Count -gt 0) {
-  Write-Output ""
   Write-Output "RESULT: FAILED for $($failed -join ', '). The box may be running without its watchdog or idle-shutdown - fix before relying on either."
   exit 1
 }
-
-Write-Output ""
+if ($unverified.Count -gt 0) {
+  # Downloaded, in place, probably fine - but NOT checked, and that is a different
+  # claim from "verified". A distinct exit code so a caller can tell the two apart
+  # instead of reading a warning line nobody looks at.
+  Write-Output "RESULT: $($scriptNames.Count) scripts present, but $($unverified.Count) UNVERIFIED ($($unverified -join ', ')) - S3 did not give a usable ETag. The files are in place and probably fine; they have NOT been integrity-checked. Re-run to confirm."
+  exit 2
+}
 Write-Output "RESULT: all $($scriptNames.Count) scripts present and hash-verified against S3."
 exit 0
