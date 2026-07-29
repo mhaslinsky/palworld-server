@@ -1,0 +1,22 @@
+discord-bot/tests/palworld-update.test.mjs
+  s_a7a102621705fd::t_d5bb8224c7f0b5 61
+  s_a7a102621705fd::t_fd0c615ff4490e 1-60,62-207
+discord-bot/package.json
+  s_a7a102621705fd::t_4586e2ea44c487 4,6
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "18eddd14c1c338504d1d5e645181b7e1711bad6e",
+  "prompts": {},
+  "sessions": {
+    "s_a7a102621705fd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ffa155c8-b0e1-40f1-a156-d58aae0b1c78",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    }
+  }
+}
