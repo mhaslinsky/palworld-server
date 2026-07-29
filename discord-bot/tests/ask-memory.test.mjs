@@ -13,7 +13,7 @@ import { BedrockRuntimeClient } from "@aws-sdk/client-bedrock-runtime";
 import { SSMClient } from "@aws-sdk/client-ssm";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 
-process.env.MODEL_ID = "us.anthropic.claude-sonnet-5";
+process.env.MODEL_ID = "us.anthropic.claude-sonnet-4-6";
 process.env.DISCORD_APP_ID = "app-test";
 process.env.PARALLEL_KEY_PARAM = "/palworld-server/parallel_api_key";
 process.env.MEMORY_TABLE = "palworld-server-ask-memory";
