@@ -75,7 +75,37 @@ in-place `user_data` update is a player-facing restart: announce it, force-save,
 confirm `Level.sav`'s mtime advanced first. Prefer keeping runtime-tunable values OUT
 of `user_data` entirely (SSM, like the Discord webhook and roster already are).
 
-### 6. Backups: check, don't assume
+### 6. Putting a script in S3 is NOT deploying it
+
+The boot-fetch loop in `windows_user_data.ps1.tftpl` runs from `user_data`, and
+**`user_data` runs on FIRST BOOT ONLY**. A stop/start does not re-run it. So editing
+`scripts/palworld-idle.ps1` or `scripts/palworld-launch.ps1` and running `terraform
+apply` updates the S3 object and changes **nothing on the running box**, forever.
+
+This fails silently in the worst way: the apply succeeds, the S3 object shows today's
+timestamp, `terraform plan` is clean, and the box goes on running whatever it fetched
+the day it was built. Observed 2026-07-29 - the on-box `palworld-launch.ps1` was
+**eleven days older** than the S3 copy, across several stop/starts, and nothing
+anywhere reported a problem. A watchdog fix sat in S3 looking shipped.
+
+After changing either script, deliver it and **verify on the box**:
+
+```powershell
+# over SSM Run Command, no RDP
+$aws = "C:\Program Files\Amazon\AWSCLIV2\aws.exe"
+$b = (Get-Content C:\PalServer\idle.conf.json -Raw | ConvertFrom-Json).BackupBucket
+& $aws s3 cp "s3://$b/scripts/windows/sync-scripts.ps1" C:\PalServer\scripts\sync-scripts.ps1 --only-show-errors
+& powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\PalServer\scripts\sync-scripts.ps1
+```
+
+`sync-scripts.ps1` hash-checks each file against S3's ETag, says `UPDATED` vs
+`unchanged` per script, and exits non-zero if any failed. Do not report a script change
+as deployed on the strength of a green `terraform apply`.
+
+Not affected: `update-server.ps1` and `seed-ue4ss-stage.ps1` are pulled fresh from S3
+by whoever runs them, so they are always current.
+
+### 7. Backups: check, don't assume
 
 - Rolling backups land in `s3://palworld-server-backups-<account>/world/linux/` every
   30 min, written by `scripts/backup-to-s3.sh` on a systemd timer.
@@ -86,7 +116,7 @@ of `user_data` entirely (SSM, like the Discord webhook and roster already are).
 - `scripts/restore-drill.ps1` proves a backup actually restores. Run it after changing
   anything in the backup path, and before cutover.
 
-### 7. Verify on the box, not by exit code
+### 8. Verify on the box, not by exit code
 
 This codebase has produced several failures that reported success:
 

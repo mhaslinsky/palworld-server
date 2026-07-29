@@ -8,7 +8,7 @@
 # broken mod (the server boots vanilla while looking fine) - the same class of failure
 # as restoring an empty world. So it verifies the SAME files update-server.ps1 checks
 # after a restage, then verifies the object landed in S3 rather than trusting the sync
-# exit code (AGENTS.md rule 7).
+# exit code (AGENTS.md rule 8).
 #
 # sync is an OVERLAY (no --delete): it uploads new/changed files but never purges S3.
 # If you REMOVE a mod locally, delete it from s3://<bucket>/ue4ss-stage/ by hand too.

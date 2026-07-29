@@ -89,6 +89,13 @@ function Get-WebhookUrl {
 }
 
 function Send-Notify([string]$content) {
+  # Echo to stdout as well as Discord. docs/client-mods.md tells you to run this by
+  # hand over SSM Run Command, and every progress and result line goes to the webhook -
+  # so by hand the command returned Success with COMPLETELY EMPTY output and you had to
+  # take the update on faith. Observed 2026-07-29 on the v1.0.1 -> v1.0.2 update.
+  # Printed BEFORE the webhook attempt, so a run with no webhook configured still says
+  # what happened rather than going dark twice over.
+  Write-Output $content
   $url = Get-WebhookUrl
   if (-not $url) { return }
   try {
