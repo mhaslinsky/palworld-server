@@ -57,6 +57,39 @@ resource "aws_dynamodb_table" "ask_cooldown" {
   tags = { Name = "${var.project_name}-ask-cooldown" }
 }
 
+# Conversational memory: the last few question/answer pairs per user, so a follow-up
+# question ("what about the other one?") has something to refer back to.
+#
+# Deliberately NOT the knowledge corpus that was considered and declined in
+# openspec/changes/discord-ask-command/proposal.md. That was rejected because nobody
+# would maintain it and a stale corpus states wrong server facts with the same
+# confidence as searched ones. This stores what was SAID, not what is TRUE, so it
+# cannot decay into confidently-wrong facts, and the TTL expires it without anyone
+# tending it.
+#
+# Its own table rather than a second key in ask_cooldown: the cooldown table is
+# written by the ENTRY lambda under a conditional-write claim, and the worker
+# deliberately has no access to it ("No DynamoDB: the worker never reads or writes
+# the cooldown table"). Reusing it would hand the worker write access to the
+# rate-limit claim to save one resource.
+resource "aws_dynamodb_table" "ask_memory" {
+  name         = "${var.project_name}-ask-memory"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "user_id"
+
+  attribute {
+    name = "user_id"
+    type = "S"
+  }
+
+  ttl {
+    attribute_name = "ttl"
+    enabled        = true
+  }
+
+  tags = { Name = "${var.project_name}-ask-memory" }
+}
+
 # --- Worker function ------------------------------------------------------------
 data "archive_file" "ask_worker" {
   type        = "zip"
@@ -88,12 +121,21 @@ resource "aws_iam_role_policy_attachment" "ask_worker_logs" {
 # profile AND the underlying regional foundation-model ARNs — Haiku 4.5 is invoked
 # through the profile, but Bedrock authorizes against the regional model ARNs too, so
 # BOTH are required or InvokeModel returns AccessDenied), and read the Parallel key.
-# No DynamoDB: the worker never reads or writes the cooldown table.
+# DynamoDB: the memory table ONLY. The worker still never reads or writes the cooldown
+# table - that claim belongs to the entry lambda.
 data "aws_iam_policy_document" "ask_worker" {
   statement {
-    sid       = "InvokeHaiku"
+    sid       = "InvokeAskModel"
     actions   = ["bedrock:InvokeModel"]
     resources = local.bedrock_model_arns
+  }
+
+  # Conversational memory only. Scoped to the memory table, and deliberately NOT to
+  # ask_cooldown - the worker still has no way to touch the rate-limit claim.
+  statement {
+    sid       = "ReadWriteAskMemory"
+    actions   = ["dynamodb:GetItem", "dynamodb:PutItem", "dynamodb:DeleteItem"]
+    resources = [aws_dynamodb_table.ask_memory.arn]
   }
 
   statement {
@@ -147,6 +189,10 @@ resource "aws_lambda_function" "ask_worker" {
       ASK_MAX_RESULT_BYTES    = tostring(var.ask_max_result_bytes)
       ASK_PARALLEL_TIMEOUT_MS = tostring(var.ask_parallel_timeout_ms)
       ASK_TIMEOUT_RESERVE_MS  = tostring(var.ask_timeout_reserve_ms)
+      ASK_EFFORT              = var.ask_effort
+      MEMORY_TABLE            = aws_dynamodb_table.ask_memory.name
+      ASK_MEMORY_TURNS        = tostring(var.ask_memory_turns)
+      ASK_MEMORY_TTL_SECONDS  = tostring(var.ask_memory_ttl_seconds)
     }
   }
 

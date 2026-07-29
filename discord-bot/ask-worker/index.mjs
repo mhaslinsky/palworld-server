@@ -20,6 +20,7 @@
 
 import { BedrockRuntimeClient, InvokeModelCommand } from "@aws-sdk/client-bedrock-runtime";
 import { SSMClient, GetParameterCommand } from "@aws-sdk/client-ssm";
+import { DynamoDBClient, GetItemCommand, PutItemCommand } from "@aws-sdk/client-dynamodb";
 
 const MODEL_ID = process.env.MODEL_ID;
 const DISCORD_APP_ID = process.env.DISCORD_APP_ID;
@@ -31,7 +32,14 @@ const intEnv = (name, fallback) => {
   const parsed = Number.parseInt(process.env[name] ?? "", 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 };
-const MAX_OUTPUT_TOKENS = intEnv("ASK_MAX_TOKENS", 700);
+const MAX_OUTPUT_TOKENS = intEnv("ASK_MAX_TOKENS", 4000);
+// Sonnet 5 accepts low/medium/high/xhigh/max and defaults to high. Not validated
+// here: an unknown value is rejected by Bedrock loudly, which is better than
+// silently substituting a default the operator did not ask for.
+const EFFORT = process.env.ASK_EFFORT ?? "medium";
+const MEMORY_TABLE = process.env.MEMORY_TABLE;
+const MEMORY_TURNS = intEnv("ASK_MEMORY_TURNS", 3);
+const MEMORY_TTL_SECONDS = intEnv("ASK_MEMORY_TTL_SECONDS", 1800);
 const MAX_TOOL_TURNS = intEnv("ASK_MAX_TOOL_TURNS", 3);
 const MAX_SEARCHES = intEnv("ASK_MAX_SEARCHES", 2);
 const MAX_RESULT_BYTES = intEnv("ASK_MAX_RESULT_BYTES", 6000);
@@ -59,8 +67,13 @@ const SYSTEM_PROMPT = [
   "HARD RULE — the persona NEVER costs the user information: always give the complete, correct",
   "answer, never refuse, never withhold a detail as part of the act, and never let staying in",
   "character crowd out being useful. If the two ever conflict, drop the act and just answer.",
-  "Answer briefly and practically — a sentence or a short list, not an essay. If a question is",
-  "not about Palworld, say so briefly (in character).",
+  "Answer briefly and practically - a sentence or a short list, not an essay.",
+  "SCOPE: you are a Palworld helper first, but you are also just in the server, so answer",
+  "whatever gets asked. Off-topic questions get a real answer, not a deflection - tease the",
+  "asker for it if you like, then actually help. Steer back to Palworld only when it is",
+  "genuinely relevant, never as a way to dodge. The search tool is for Palworld specifics; for",
+  "general questions answer from what you know and say when you are unsure rather than",
+  "guessing confidently.",
   "IMPORTANT: your Palworld knowledge is frozen at training time and the game is patched often,",
   "so it may be silently out of date. Use the parallel_search tool whenever the answer depends on",
   "specifics that can change between patches — item or resource locations, Pal stats and passives,",
@@ -87,6 +100,7 @@ const SEARCH_TOOL = {
 };
 
 const bedrock = new BedrockRuntimeClient({});
+const ddb = new DynamoDBClient({});
 const ssm = new SSMClient({});
 
 // ---- Parallel AI fast Search API -------------------------------------------------
@@ -181,6 +195,19 @@ async function invokeModel(messages, { withTools }) {
     max_tokens: MAX_OUTPUT_TOKENS,
     system: SYSTEM_PROMPT,
     messages,
+    // effort nests under output_config; it is NOT a top-level field. Sonnet 5 defaults
+    // to "high", which is more deliberation than a Palworld lookup needs when someone
+    // is waiting in Discord for the reply.
+    //
+    // Deliberately no `thinking` field: Sonnet 5 runs adaptive thinking when it is
+    // omitted, which is what we want here. Note that means max_tokens now covers
+    // thinking AND the answer together - see ask_max_tokens in variables.tf.
+    //
+    // Tool use composes with both. The one Bedrock-specific trap is that a FORCED
+    // tool_choice ({type:"tool"} or {type:"any"}) requires thinking disabled on
+    // Bedrock; we never force it - search stays optional by design - so it does not
+    // apply. If anyone adds a forced tool_choice here, that changes.
+    output_config: { effort: EFFORT },
     ...(withTools ? { tools: [SEARCH_TOOL] } : {}),
   };
   const response = await bedrock.send(
@@ -203,9 +230,73 @@ function textFromContent(content) {
     .trim();
 }
 
+// --- Conversational memory ------------------------------------------------------
+// The last few turns per user, so "what about the other one?" has a referent.
+//
+// What is stored is the whole security design. ONLY the user's question and Sloot's
+// final answer text - never raw search results, never tool_use/tool_result blocks.
+// The model reads untrusted search output, so replaying a turn replays whatever a
+// poisoned result talked it into; keeping tool output out of the store means an
+// injection lasts one turn instead of the whole TTL. The small turn count and short
+// TTL bound what is left.
+//
+// Every failure here degrades to "no memory" rather than failing the answer: a
+// forgotten conversation is a worse reply, a thrown error is no reply at all.
+async function loadMemory(userId) {
+  if (!MEMORY_TABLE || MEMORY_TURNS <= 0 || !userId) return [];
+  try {
+    const stored = await ddb.send(
+      new GetItemCommand({ TableName: MEMORY_TABLE, Key: { user_id: { S: userId } } }),
+    );
+    const raw = stored.Item?.turns?.S;
+    if (!raw) return [];
+    const turns = JSON.parse(raw);
+    if (!Array.isArray(turns)) return [];
+    // Re-validate on the way out. This row is written by us, but treating it as
+    // trusted just because we wrote it is how a corrupt or hand-edited row becomes a
+    // malformed Bedrock request.
+    return turns
+      .filter((turn) => turn && typeof turn.question === "string" && typeof turn.answer === "string")
+      .slice(-MEMORY_TURNS)
+      .flatMap((turn) => [
+        { role: "user", content: turn.question },
+        { role: "assistant", content: turn.answer },
+      ]);
+  } catch (error) {
+    console.warn("memory load failed, answering without history", error?.name ?? error);
+    return [];
+  }
+}
+
+async function saveMemory(userId, question, answer) {
+  if (!MEMORY_TABLE || MEMORY_TURNS <= 0 || !userId || !answer) return;
+  try {
+    const priorPairs = await loadMemory(userId);
+    const turns = [];
+    for (let index = 0; index + 1 < priorPairs.length; index += 2) {
+      turns.push({ question: priorPairs[index].content, answer: priorPairs[index + 1].content });
+    }
+    turns.push({ question, answer });
+    await ddb.send(
+      new PutItemCommand({
+        TableName: MEMORY_TABLE,
+        Item: {
+          user_id: { S: userId },
+          turns: { S: JSON.stringify(turns.slice(-MEMORY_TURNS)) },
+          ttl: { N: String(Math.floor(Date.now() / 1000) + MEMORY_TTL_SECONDS) },
+        },
+      }),
+    );
+  } catch (error) {
+    // Losing the write costs continuity on the NEXT question; the answer for this one
+    // is already good and is not worth failing over it.
+    console.warn("memory save failed", error?.name ?? error);
+  }
+}
+
 // Run the bounded tool-use loop and return the final answer text.
-async function answerQuestion(question) {
-  const messages = [{ role: "user", content: question }];
+async function answerQuestion(question, history = []) {
+  const messages = [...history, { role: "user", content: question }];
   let searchesUsed = 0;
 
   for (let turn = 0; turn < MAX_TOOL_TURNS; turn++) {
@@ -271,7 +362,7 @@ async function editDeferredMessage(interactionToken, content) {
 class AskTimeout extends Error {}
 
 export async function handler(event, context) {
-  const { question, interactionToken } = event ?? {};
+  const { question, interactionToken, userId } = event ?? {};
   // Never log the raw event: interactionToken is a 15-minute bearer credential.
   if (!interactionToken) {
     console.error("ask-worker invoked without an interaction token");
@@ -289,16 +380,31 @@ export async function handler(event, context) {
     timer = setTimeout(() => reject(new AskTimeout()), Math.max(1_000, budgetMs - TIMEOUT_RESERVE_MS));
   });
 
+  const trimmedQuestion = String(question ?? "").trim();
   let content;
+  let answered;
   try {
-    const answer = await Promise.race([answerQuestion(String(question ?? "").trim()), deadline]);
+    // Memory load is inside the deadline race on purpose: a slow DynamoDB read must
+    // eat the answer budget, not sit outside it and push the whole turn past the
+    // Lambda timeout, which is the one failure that strands the user on "thinking...".
+    const answer = await Promise.race([
+      loadMemory(userId).then((history) => answerQuestion(trimmedQuestion, history)),
+      deadline,
+    ]);
     content = clampForDiscord(answer);
+    answered = answer;
   } catch (error) {
     const timedOut = error instanceof AskTimeout;
     console.error("ask-worker failed", timedOut ? "answer deadline exceeded" : (error?.name ?? error));
     content = timedOut ? CANNED_TIMEOUT : CANNED_ERROR;
   } finally {
     clearTimeout(timer); // else the pending timer holds the event loop open
+  }
+
+  // Only remember a real answer. Storing a canned timeout or error would teach the
+  // next turn that Sloot says "something went wrong" when asked about quartz.
+  if (answered && answered !== CANNED_NO_ANSWER) {
+    await saveMemory(userId, trimmedQuestion, answered);
   }
 
   try {

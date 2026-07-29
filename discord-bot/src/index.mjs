@@ -357,7 +357,9 @@ async function handleAsk(interaction, userId) {
       new InvokeCommand({
         FunctionName: ASK_WORKER_FUNCTION_NAME,
         InvocationType: "Event",
-        Payload: Buffer.from(JSON.stringify({ question: question.trim(), interactionToken: interaction.token })),
+        // userId rides along so the worker can key its conversational memory. It is the
+        // allowlist-checked caller id, not anything the interaction payload claims.
+        Payload: Buffer.from(JSON.stringify({ question: question.trim(), interactionToken: interaction.token, userId })),
       }),
     );
   } catch (error) {
