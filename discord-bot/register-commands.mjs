@@ -40,9 +40,9 @@ const commands = [
         type: STRING_OPTION,
         required: false,
         choices: [
-          { name: "keep — re-stage the current UE4SS build", value: "keep" },
-          { name: "vanilla — disable mods, guarantee joinable", value: "vanilla" },
-          { name: "restage — pull a matching build from S3 first", value: "restage" },
+          { name: "keep - re-stage the current UE4SS build", value: "keep" },
+          { name: "vanilla - disable mods, guarantee joinable", value: "vanilla" },
+          { name: "restage - pull a matching build from S3 first", value: "restage" },
         ],
       },
     ],

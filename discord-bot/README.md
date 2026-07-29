@@ -62,7 +62,7 @@ cd discord-bot && npm install && npm test   # backup-monitor + ask-entry + ask-w
 
 ---
 
-## `/palworld-update` — pull the latest Steam build on demand
+## `/palworld-update` - pull the latest Steam build on demand
 
 Steam patches Palworld often, and a client that auto-updates can no longer join a
 server still on the old build. This command updates the **Windows** game box to the
@@ -71,9 +71,9 @@ current Steam build without a Terraform apply or an instance rebuild.
 Flow: the entry Lambda defers, then the worker calls **`ssm:SendCommand`
 (AWS-RunPowerShellScript)** on the game instance. That command pulls
 `scripts/windows/update-server.ps1` fresh from S3 and runs it. The script does the
-whole risky dance on the box — force-save + prove it hit disk, a pre-update backup,
+whole risky dance on the box - force-save + prove it hit disk, a pre-update backup,
 **disable the `PalworldIdle` watchdog** (so it can't relaunch mid-update and fight a
-locked binary), graceful `/shutdown`, `steamcmd +app_update` (twice — the first pass
+locked binary), graceful `/shutdown`, `steamcmd +app_update` (twice - the first pass
 often only self-updates SteamCMD), then a `try/finally` that **re-arms the watchdog no
 matter what** and relaunches. It posts `🔧` start and `✅ v<version>` / `⚠️` result to
 the same Discord webhook the up/down notices use.
@@ -82,7 +82,7 @@ the same Discord webhook the up/down notices use.
   the *same* build (boot never runs SteamCMD by design). If stopped, the bot tells the
   user to `/palworld-start` first.
 - **IAM**: `ssm:SendCommand` scoped to this one instance ARN + the AWS-managed
-  `AWS-RunPowerShellScript` document — not a general remote-exec grant.
+  `AWS-RunPowerShellScript` document - not a general remote-exec grant.
 - **`mods` option** (this is a modded server): `keep` (default) re-stages the current
   UE4SS build from D:; `vanilla` disables UE4SS so the box is joinable regardless of mod
   compatibility (building goes vanilla); `restage` `aws s3 sync`s a matching build from
