@@ -16,13 +16,20 @@
 import { createPublicKey, verify as verifySignature } from "node:crypto";
 import { EC2Client, StartInstancesCommand, DescribeInstancesCommand } from "@aws-sdk/client-ec2";
 import { LambdaClient, InvokeCommand } from "@aws-sdk/client-lambda";
-import { SSMClient, GetParameterCommand } from "@aws-sdk/client-ssm";
+import { SSMClient, GetParameterCommand, SendCommandCommand } from "@aws-sdk/client-ssm";
 import { DynamoDBClient, PutItemCommand, DeleteItemCommand, ConditionalCheckFailedException } from "@aws-sdk/client-dynamodb";
 
 const DISCORD_PUBLIC_KEY = process.env.DISCORD_PUBLIC_KEY;
 const DISCORD_APP_ID = process.env.DISCORD_APP_ID;
 const INSTANCE_ID = process.env.INSTANCE_ID;
 const SERVER_ADDRESS = process.env.SERVER_ADDRESS;
+// /palworld-update: bucket holding scripts/windows/update-server.ps1. AWS_REGION is
+// set by the Lambda runtime; both feed the SSM RunPowerShellScript payload below.
+const BACKUP_BUCKET = process.env.BACKUP_BUCKET;
+const UPDATE_SCRIPT_KEY = "scripts/windows/update-server.ps1";
+// Mirrors update-server.ps1's ValidateSet. The interpolation into the SSM command is
+// only safe because the mods value is constrained to this set before it's used.
+const UPDATE_MODES = new Set(["keep", "vanilla", "restage"]);
 const ALLOWED_USER_IDS = new Set(
   (process.env.ALLOWED_USER_IDS ?? "").split(",").map((entry) => entry.trim()).filter(Boolean),
 );
@@ -112,6 +119,36 @@ async function instanceState() {
   return described.Reservations?.[0]?.Instances?.[0]?.State?.Name ?? "unknown";
 }
 
+// Kick off the on-box updater via SSM RunPowerShellScript. The bootstrap here is
+// deliberately tiny — pull update-server.ps1 fresh from S3, then run it — so the real
+// logic (save, backup, watchdog, steamcmd, verify) lives in one BOM'd .ps1 in the
+// repo, not smeared into this string. The script runs inline for the SSM command's
+// duration (a few minutes) and reports its own progress/result to Discord's webhook,
+// so we do NOT wait on it: SendCommand returns as soon as the box accepts the command.
+async function sendUpdateCommand(mods) {
+  // mods is validated against UPDATE_MODES before we get here, so it is safe to
+  // interpolate into the -Mods argument below.
+  const awsExe = String.raw`C:\Program Files\Amazon\AWSCLIV2\aws.exe`;
+  const dest = String.raw`C:\PalServer\scripts\update-server.ps1`;
+  const s3uri = `s3://${BACKUP_BUCKET}/${UPDATE_SCRIPT_KEY}`;
+  const commands = [
+    "$ErrorActionPreference = 'Stop'",
+    `$aws = '${awsExe}'`,
+    "if (-not (Test-Path $aws)) { $aws = (Get-Command aws -ErrorAction SilentlyContinue).Source }",
+    `& $aws s3 cp '${s3uri}' '${dest}' --region ${process.env.AWS_REGION} --only-show-errors`,
+    `& powershell.exe -NoProfile -ExecutionPolicy Bypass -File '${dest}' -Mods ${mods}`,
+  ];
+  await ssm.send(
+    new SendCommandCommand({
+      InstanceIds: [INSTANCE_ID],
+      DocumentName: "AWS-RunPowerShellScript",
+      Comment: "palworld-update via Discord",
+      TimeoutSeconds: 120, // delivery timeout only; the script's own runtime is separate
+      Parameters: { commands },
+    }),
+  );
+}
+
 // The roster is pushed here by the instance; the REST API it comes from is bound to
 // localhost and unreachable from Lambda by design. A stale or unreadable roster
 // degrades the reply rather than failing it.
@@ -151,7 +188,7 @@ async function editDeferredMessage(interactionToken, content) {
   }
 }
 
-async function runWorker({ command, interactionToken }) {
+async function runWorker({ command, interactionToken, mods }) {
   try {
     const state = await instanceState();
 
@@ -164,6 +201,39 @@ async function runWorker({ command, interactionToken }) {
         detail = `⚪ **${state}** — run \`/palworld-start\` to bring it up.`;
       }
       await editDeferredMessage(interactionToken, detail);
+      return;
+    }
+
+    if (command === "palworld-update") {
+      // SSM can't reach a stopped box, and a fresh start comes up on the SAME build
+      // anyway (boot never runs steamcmd) — so there's nothing to update until it's up.
+      if (state !== "running") {
+        await editDeferredMessage(
+          interactionToken,
+          `⚪ Server is **${state}** — run \`/palworld-start\` first, then \`/palworld-update\` once it's up.`,
+        );
+        return;
+      }
+      const mode = UPDATE_MODES.has(mods) ? mods : "keep";
+      try {
+        await sendUpdateCommand(mode);
+      } catch (error) {
+        console.error("update SendCommand failed", error);
+        await editDeferredMessage(interactionToken, "❌ Couldn't kick off the update (SSM SendCommand failed). Check the logs.");
+        return;
+      }
+      const modeNote =
+        mode === "vanilla"
+          ? " Mods will be **disabled** (vanilla) so it's joinable regardless of mod compatibility."
+          : mode === "restage"
+            ? " Pulling a matching UE4SS build from S3 onto the D: stage first."
+            : "";
+      await editDeferredMessage(
+        interactionToken,
+        "🔧 Updating **Palworld** to the latest Steam build. Players will drop for a few minutes — " +
+          "I'll post here when it's back with the new version." +
+          modeNote,
+      );
       return;
     }
 
@@ -319,16 +389,20 @@ export async function handler(event) {
     return await handleAsk(interaction, userId);
   }
 
-  if (command !== "palworld-start" && command !== "palworld-status") {
+  if (command !== "palworld-start" && command !== "palworld-status" && command !== "palworld-update") {
     return httpResponse(200, ephemeral(`Unknown command \`${command}\`.`));
   }
+
+  // /palworld-update carries a mods mode; the other commands ignore it. Validated in
+  // the worker, defaulted there too — this just forwards the raw choice.
+  const mods = command === "palworld-update" ? optionValue(interaction, "mods") : undefined;
 
   // Hand the slow work to ourselves so the ACK below is never late.
   await lambda.send(
     new InvokeCommand({
       FunctionName: process.env.AWS_LAMBDA_FUNCTION_NAME,
       InvocationType: "Event",
-      Payload: Buffer.from(JSON.stringify({ __worker: true, command, interactionToken: interaction.token })),
+      Payload: Buffer.from(JSON.stringify({ __worker: true, command, interactionToken: interaction.token, mods })),
     }),
   );
 

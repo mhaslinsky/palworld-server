@@ -75,6 +75,32 @@ resource "aws_s3_object" "windows_backup_script" {
   content_type = "text/plain"
 }
 
+# The on-demand game updater. Deliberately NOT in the boot-fetch list in
+# windows_user_data.ps1.tftpl: adding it there changes the user_data hash and
+# stop/starts the live box on the next apply (rule #5). It ships here only, and the
+# /palworld-update Lambda pulls it fresh from S3 via SSM each run. So an update
+# without this file present just needs a re-apply of this object, not a rebuild.
+resource "aws_s3_object" "windows_update_script" {
+  count        = local.windows_enabled
+  bucket       = aws_s3_bucket.backups.id
+  key          = "scripts/windows/update-server.ps1"
+  source       = "${path.module}/../scripts/update-server.ps1"
+  etag         = filemd5("${path.module}/../scripts/update-server.ps1")
+  content_type = "text/plain"
+}
+
+# Publishes the box's current UE4SS stage up to s3://<bucket>/ue4ss-stage/ so a
+# subsequent `mods:restage` has a baseline. Run on demand via SSM, not at boot, so it
+# is not in the fetch list either (no user_data hash change).
+resource "aws_s3_object" "windows_seed_script" {
+  count        = local.windows_enabled
+  bucket       = aws_s3_bucket.backups.id
+  key          = "scripts/windows/seed-ue4ss-stage.ps1"
+  source       = "${path.module}/../scripts/seed-ue4ss-stage.ps1"
+  etag         = filemd5("${path.module}/../scripts/seed-ue4ss-stage.ps1")
+  content_type = "text/plain"
+}
+
 # The instance may read its own bootstrap scripts, and write backups under its OWN
 # prefix. Deliberately narrow: it cannot read or delete the world backups, and it
 # cannot write into world/linux/* (the shared instance role would otherwise let a
@@ -87,6 +113,19 @@ data "aws_iam_policy_document" "instance_scripts" {
     actions = ["s3:GetObject"]
     resources = [
       "${aws_s3_bucket.backups.arn}/scripts/windows/*",
+    ]
+  }
+
+  # /palworld-update mods:restage syncs a matching UE4SS build from here onto the D:
+  # durable stage (read). seed-ue4ss-stage.ps1 pushes the box's current stage the other
+  # way (write). Both scoped to this one prefix; ListBucket is already granted
+  # bucket-wide by instance_backups. Junk written here can only affect a future restage,
+  # never the world backups.
+  statement {
+    sid     = "ReadWriteUe4ssStage"
+    actions = ["s3:GetObject", "s3:PutObject"]
+    resources = [
+      "${aws_s3_bucket.backups.arn}/ue4ss-stage/*",
     ]
   }
 
