@@ -89,6 +89,20 @@ resource "aws_s3_object" "windows_update_script" {
   content_type = "text/plain"
 }
 
+# Re-delivers the boot scripts to a RUNNING box. Needed because user_data runs on FIRST
+# BOOT ONLY, so the boot-fetch list never re-runs and an edit to palworld-idle.ps1 or
+# palworld-launch.ps1 reaches S3 and stops there. Run on demand via SSM; deliberately
+# not in the fetch list itself (no user_data hash change, and at boot the fetch loop has
+# already done this job).
+resource "aws_s3_object" "windows_sync_script" {
+  count        = local.windows_enabled
+  bucket       = aws_s3_bucket.backups.id
+  key          = "scripts/windows/sync-scripts.ps1"
+  source       = "${path.module}/../scripts/sync-scripts.ps1"
+  etag         = filemd5("${path.module}/../scripts/sync-scripts.ps1")
+  content_type = "text/plain"
+}
+
 # Publishes the box's current UE4SS stage up to s3://<bucket>/ue4ss-stage/ so a
 # subsequent `mods:restage` has a baseline. Run on demand via SSM, not at boot, so it
 # is not in the fetch list either (no user_data hash change).
