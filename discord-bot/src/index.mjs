@@ -120,7 +120,7 @@ async function instanceState() {
 }
 
 // Kick off the on-box updater via SSM RunPowerShellScript. The bootstrap here is
-// deliberately tiny — pull update-server.ps1 fresh from S3, then run it — so the real
+// deliberately tiny - pull update-server.ps1 fresh from S3, then run it - so the real
 // logic (save, backup, watchdog, steamcmd, verify) lives in one BOM'd .ps1 in the
 // repo, not smeared into this string. The script runs inline for the SSM command's
 // duration (a few minutes) and reports its own progress/result to Discord's webhook,
@@ -131,12 +131,22 @@ async function sendUpdateCommand(mods) {
   const awsExe = String.raw`C:\Program Files\Amazon\AWSCLIV2\aws.exe`;
   const dest = String.raw`C:\PalServer\scripts\update-server.ps1`;
   const s3uri = `s3://${BACKUP_BUCKET}/${UPDATE_SCRIPT_KEY}`;
+  // $ErrorActionPreference = 'Stop' does NOT cover the s3 cp below: in PowerShell 5.1
+  // it makes cmdlet errors terminating, but a native executable's non-zero exit is not
+  // an error at all, so without the explicit check the next line runs regardless. That
+  // fails two ways, both silent: a stale update-server.ps1 left from an earlier run
+  // executes instead of the fresh one (defeating the whole point of pulling it per-run),
+  // or nothing runs and no webhook ever fires while the user has been told it started.
+  // The boot path does the equivalent check against S3's ETag; see
+  // windows_user_data.ps1.tftpl.
   const commands = [
     "$ErrorActionPreference = 'Stop'",
     `$aws = '${awsExe}'`,
     "if (-not (Test-Path $aws)) { $aws = (Get-Command aws -ErrorAction SilentlyContinue).Source }",
     `& $aws s3 cp '${s3uri}' '${dest}' --region ${process.env.AWS_REGION} --only-show-errors`,
+    `if ($LASTEXITCODE -ne 0 -or -not (Test-Path '${dest}')) { Write-Output 'FAILED: could not fetch update-server.ps1 from S3 - refusing to run a stale copy'; exit 1 }`,
     `& powershell.exe -NoProfile -ExecutionPolicy Bypass -File '${dest}' -Mods ${mods}`,
+    "if ($LASTEXITCODE -ne 0) { Write-Output \"update-server.ps1 exited $LASTEXITCODE\"; exit $LASTEXITCODE }",
   ];
   await ssm.send(
     new SendCommandCommand({
@@ -206,11 +216,11 @@ async function runWorker({ command, interactionToken, mods }) {
 
     if (command === "palworld-update") {
       // SSM can't reach a stopped box, and a fresh start comes up on the SAME build
-      // anyway (boot never runs steamcmd) — so there's nothing to update until it's up.
+      // anyway (boot never runs steamcmd) - so there's nothing to update until it's up.
       if (state !== "running") {
         await editDeferredMessage(
           interactionToken,
-          `⚪ Server is **${state}** — run \`/palworld-start\` first, then \`/palworld-update\` once it's up.`,
+          `⚪ Server is **${state}** - run \`/palworld-start\` first, then \`/palworld-update\` once it's up.`,
         );
         return;
       }
@@ -228,11 +238,21 @@ async function runWorker({ command, interactionToken, mods }) {
           : mode === "restage"
             ? " Pulling a matching UE4SS build from S3 onto the D: stage first."
             : "";
+      // Name who is about to be kicked. AGENTS.md live-service etiquette asks to check
+      // the roster before a restart, and the person running this is the one who should
+      // see it: the on-box script gives players 60s in-game, but only this reply tells
+      // the operator that four people were mid-session when they typed it.
+      const roster = await readRoster();
+      const whoNote = roster?.count ? ` **${roster.count} online right now**${roster.names ? ` (${roster.names})` : ""}; they get a 60s in-game warning.` : "";
+      // NOT "I'll post here": progress and the result come from the on-box script, which
+      // posts to the status webhook, not to this interaction. Saying otherwise leaves a
+      // permanent "Updating..." that looks identical to an update still running.
       await editDeferredMessage(
         interactionToken,
-        "🔧 Updating **Palworld** to the latest Steam build. Players will drop for a few minutes — " +
-          "I'll post here when it's back with the new version." +
-          modeNote,
+        "🔧 Updating **Palworld** to the latest Steam build." +
+          whoNote +
+          modeNote +
+          " The result (with the new version) posts to the server status channel, not here.",
       );
       return;
     }
@@ -394,7 +414,7 @@ export async function handler(event) {
   }
 
   // /palworld-update carries a mods mode; the other commands ignore it. Validated in
-  // the worker, defaulted there too — this just forwards the raw choice.
+  // the worker, defaulted there too - this just forwards the raw choice.
   const mods = command === "palworld-update" ? optionValue(interaction, "mods") : undefined;
 
   // Hand the slow work to ourselves so the ACK below is never late.
