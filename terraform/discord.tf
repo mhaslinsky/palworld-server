@@ -90,6 +90,20 @@ data "aws_iam_policy_document" "discord_bot" {
     # main-roster ARN too so a Linux rollback (windows disabled) still reads.
     resources = [aws_ssm_parameter.roster.arn, try(aws_ssm_parameter.roster_windows[0].arn, aws_ssm_parameter.roster.arn)]
   }
+
+  # /palworld-update runs the on-box updater via SSM RunPowerShellScript. SendCommand
+  # authorizes on BOTH the target instance AND the document, so both ARNs are needed;
+  # scoped to this one instance and this one AWS-managed document keeps it from being
+  # a general remote-exec grant. The document is AWS-owned, hence the empty account
+  # field in its ARN.
+  statement {
+    sid     = "TriggerServerUpdate"
+    actions = ["ssm:SendCommand"]
+    resources = [
+      "arn:aws:ec2:${var.aws_region}:${data.aws_caller_identity.current.account_id}:instance/${local.active_game_instance_id}",
+      "arn:aws:ssm:${var.aws_region}::document/AWS-RunPowerShellScript",
+    ]
+  }
 }
 
 resource "aws_iam_role_policy" "discord_bot" {
@@ -131,6 +145,10 @@ resource "aws_lambda_function" "discord_bot" {
       SERVER_ADDRESS     = "${aws_eip.server.public_ip}:8211"
       ALLOWED_USER_IDS   = join(",", var.discord_allowed_user_ids)
       ROSTER_PARAM       = local.windows_roster_param_name
+
+      # /palworld-update: the bucket holding scripts/windows/update-server.ps1, which
+      # the SSM command pulls onto the box before running it.
+      BACKUP_BUCKET = aws_s3_bucket.backups.id
 
       # /ask routing + cooldown gate
       ASK_WORKER_FUNCTION_NAME = aws_lambda_function.ask_worker.function_name

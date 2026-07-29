@@ -57,3 +57,43 @@ Tracked here so we know what's set. These live on the server / in Terraform:
 **Maintenance note:** after any major Palworld patch, UE4SS and the mods likely need updated
 builds — expect building to break until the versions are re-matched (the server deliberately
 does not auto-update). Keep this file's versions current when we bump anything.
+
+**Updating a modded server.** `/palworld-update` (Discord) - or `scripts/update-server.ps1`
+on the box - takes a **`mods`** mode. All three update the base game via SteamCMD first:
+
+| `mods` | What it does | When |
+|--------|--------------|------|
+| `keep` (default) | Re-overlays the UE4SS build **currently on D:**, verifies the mod files. | The staged build already matches the new game version. |
+| `vanilla` | **Disables UE4SS** (removes the `dwmapi.dll` loader) so the box is joinable regardless of mod compatibility. Building goes vanilla. | A patch dropped and matching mod builds aren't ready - restore playability now. |
+| `restage` | `aws s3 sync`s a matching build from `s3://<backups-bucket>/ue4ss-stage/` onto the D: durable stage **first**, then overlays it. | You've prepared a matching build and want it live without RDP. |
+
+The recommended patch-day flow:
+
+1. Get the UE4SS **experimental** build + mod 1898 build matching the *new* game version
+   (GitHub / Nexus - both need a human; Nexus needs a login, which is why the server never
+   fetches them at boot).
+2. Upload that tree to **`s3://<backups-bucket>/ue4ss-stage/Win64/…`** (mirrors the on-box
+   layout: `ue4ss-stage/Win64/dwmapi.dll`, `ue4ss-stage/Win64/ue4ss/…`, etc.).
+3. Run **`/palworld-update mods:restage`**. It syncs S3 → D:, overlays D: → the game, verifies,
+   relaunches, and reports whether relaxed building survived.
+
+If matching builds aren't out yet, run **`/palworld-update mods:vanilla`** to restore joinability
+now (building disabled), then `mods:restage` later once they are. Running plain `/palworld-update`
+(`keep`) with an **incompatible** staged UE4SS will **crash-loop** the server - the report calls
+that out; recover with `mods:vanilla`. Bump the versions in the table above whenever you restage.
+
+**One-time setup - seed the S3 baseline.** `mods:restage` pulls from `s3://<bucket>/ue4ss-stage/`,
+which starts empty. Publish the box's current proven-good stage once with
+`scripts/seed-ue4ss-stage.ps1` (it refuses to publish an incomplete stage). Run it over SSM Run
+Command (`AWS-RunPowerShellScript`, no RDP) - paste:
+
+```powershell
+$aws = "C:\Program Files\Amazon\AWSCLIV2\aws.exe"
+$b = (Get-Content C:\PalServer\idle.conf.json -Raw | ConvertFrom-Json).BackupBucket
+& $aws s3 cp "s3://$b/scripts/windows/seed-ue4ss-stage.ps1" C:\PalServer\scripts\seed-ue4ss-stage.ps1 --only-show-errors
+& powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\PalServer\scripts\seed-ue4ss-stage.ps1
+```
+
+Thereafter, to publish a **new** matching build: update `D:\PalServer\ue4ss-stage\Win64` on the box
+(or upload it straight to `s3://<bucket>/ue4ss-stage/Win64/…`), then `/palworld-update mods:restage`.
+Re-running the seed script republishes whatever is currently on D:.

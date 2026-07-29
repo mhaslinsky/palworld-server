@@ -30,6 +30,24 @@ const commands = [
   { name: "palworld-start", description: "Start the Palworld server", type: 1 },
   { name: "palworld-status", description: "Check if the Palworld server is up and who's online", type: 1 },
   {
+    name: "palworld-update",
+    description: "Update the server to the latest Steam build (drops players briefly)",
+    type: 1,
+    options: [
+      {
+        name: "mods",
+        description: "UE4SS handling: keep (default), vanilla (disable mods), or restage (pull matching build from S3)",
+        type: STRING_OPTION,
+        required: false,
+        choices: [
+          { name: "keep - re-stage the current UE4SS build", value: "keep" },
+          { name: "vanilla - disable mods, guarantee joinable", value: "vanilla" },
+          { name: "restage - pull a matching build from S3 first", value: "restage" },
+        ],
+      },
+    ],
+  },
+  {
     name: "ask",
     description: "Ask a Palworld question (items, Pals, recipes, mechanics)",
     type: 1,

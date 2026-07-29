@@ -30,6 +30,21 @@ $announcedUp = Join-Path $stateDir "announced_up"
 $now = [int][double]::Parse((Get-Date -UFormat %s))
 $restBase = "http://127.0.0.1:$($conf.RestPort)/v1/api"
 
+# Stand down while an update is running. update-server.ps1 disables this task before it
+# stops the server, but that only stops FUTURE triggers: a cycle already in flight keeps
+# going, sees an absent process, and either relaunches the server into a running SteamCMD
+# or powers the box off mid-update. Both produce a half-patched install. The lock is held
+# open for the whole update, and the 30-min ceiling matches the updater's own staleness
+# rule so a crashed update cannot mute the watchdog forever.
+$updateLock = Join-Path $stateDir "update.lock"
+if (Test-Path $updateLock) {
+  $lockAge = (Get-Date) - (Get-Item $updateLock).LastWriteTime
+  if ($lockAge.TotalMinutes -lt 30) {
+    Write-Output "update in progress (lock is $([math]::Round($lockAge.TotalMinutes, 1)) min old) - standing down this cycle"
+    exit 0
+  }
+}
+
 # Watchdog. The launcher's only other trigger is -AtStartup, so without this a
 # crashed PalServer would stay dead until the next reboot. (An earlier version of
 # this file CLAIMED the idle task did this and did not - a comment describing
