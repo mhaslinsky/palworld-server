@@ -27,6 +27,39 @@ if ($recordedBoot.Trim() -ne $bootTime.ToString("o")) {
   Set-Content -Path $bootStamp -Value $bootTime.ToString("o")
 }
 
+# Self-heal a watchdog that was left disabled. update-server.ps1 disables PalworldIdle
+# for the duration of an update and re-arms it in a finally{}, but a finally does not run
+# if the process is killed outright (host reboot mid-update, SSM agent kill, execution
+# timeout) - and a disabled scheduled task SURVIVES the reboot. The result is a box with
+# no crash-restart and no idle-shutdown, billing hourly, with nothing anywhere saying so.
+# This runs -AtStartup, which is precisely the path a killed update comes back through.
+#
+# Skipped while an update genuinely holds the lock, so this cannot undo a deliberate
+# disable; the 30-min ceiling matches the updater's own staleness rule.
+$updateLock = Join-Path $stateDir "update.lock"
+$updateLive = $false
+if (Test-Path $updateLock) {
+  $updateLive = ((Get-Date) - (Get-Item $updateLock).LastWriteTime).TotalMinutes -lt 30
+}
+if (-not $updateLive) {
+  $idleTask = Get-ScheduledTask -TaskName "PalworldIdle" -ErrorAction SilentlyContinue
+  if ($idleTask -and $idleTask.State -eq 'Disabled') {
+    Enable-ScheduledTask -TaskName "PalworldIdle" -ErrorAction SilentlyContinue | Out-Null
+    $nowState = (Get-ScheduledTask -TaskName "PalworldIdle" -ErrorAction SilentlyContinue).State
+    # Say which way it went. "Tried to re-arm the watchdog" is not the same claim as
+    # "the watchdog is armed", and only the second one is worth anything here.
+    if ($nowState -eq 'Disabled') {
+      Write-EventLog -LogName Application -Source "Palworld" -EventId 106 -EntryType Error `
+        -Message "PalworldIdle was disabled at startup and could NOT be re-enabled - no watchdog, no idle shutdown" -ErrorAction SilentlyContinue
+      Write-Output "ERROR: PalworldIdle stuck disabled - no watchdog, no idle shutdown"
+    } else {
+      Write-EventLog -LogName Application -Source "Palworld" -EventId 106 -EntryType Warning `
+        -Message "PalworldIdle was found disabled at startup (likely a killed update) and has been re-enabled" -ErrorAction SilentlyContinue
+      Write-Output "re-armed PalworldIdle (was disabled, likely a killed update)"
+    }
+  }
+}
+
 if (Get-Process -Name "PalServer-Win64-Shipping" -ErrorAction SilentlyContinue) {
   exit 0
 }
