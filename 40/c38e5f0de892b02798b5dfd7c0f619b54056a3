@@ -1,0 +1,22 @@
+scripts/sync-scripts.ps1
+  s_159f51dae8c75b::t_0cda1dba81e659 28-36
+  s_159f51dae8c75b::t_c2eb5fc61e6489 110,115-121
+  s_159f51dae8c75b::t_d7f3127ebb2620 59
+  s_159f51dae8c75b::t_57ae1b9ee4756f 84-86,88-89,91-92
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "40c38e5f0de892b02798b5dfd7c0f619b54056a3",
+  "prompts": {},
+  "sessions": {
+    "s_159f51dae8c75b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1c3c47ae-96fa-414d-8982-2d3f31d53c0e",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    }
+  }
+}
