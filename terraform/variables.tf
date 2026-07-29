@@ -182,9 +182,9 @@ variable "parallel_search_url" {
 }
 
 variable "bedrock_model_id" {
-  description = "Bedrock model id the ask-worker invokes. Reached via a cross-region inference profile (us.anthropic.*), NOT the bare foundation-model id. Verify any change with `aws bedrock get-inference-profile --inference-profile-identifier <id>` before setting it - a guessed id fails at runtime, not at plan time. Sonnet 5 confirmed ACTIVE and routing to the same three regions as the previous Haiku 4.5 profile on 2026-07-29."
+  description = "Bedrock model id the ask-worker invokes. Reached via a cross-region inference profile (us.anthropic.*), NOT the bare foundation-model id. VERIFY WITH A REAL invoke-model CALL before changing this, not with get-inference-profile: profiles are listed as ACTIVE regardless of whether the account is entitled to the model. Sonnet 5 listed ACTIVE here and returned `not available for this account` on the first real call, taking /ask down (2026-07-29). Sonnet 4.6 is invoke-verified on this account, including effort + tools in one body."
   type        = string
-  default     = "us.anthropic.claude-sonnet-5"
+  default     = "us.anthropic.claude-sonnet-4-6"
 }
 
 variable "bedrock_inference_regions" {
@@ -194,7 +194,7 @@ variable "bedrock_inference_regions" {
 }
 
 variable "ask_effort" {
-  description = "Reasoning effort for the ask-worker, passed as output_config.effort. Sonnet 5 accepts low/medium/high/xhigh/max and defaults to high; medium is the deliberate step down for a Discord Q&A bot where latency is user-facing and the questions are not hard. Raise it if answers get shallow, do not raise it to make her chattier - effort does not reliably control response length."
+  description = "Reasoning effort for the ask-worker, passed as output_config.effort. Sonnet 4.6 accepts low/medium/high/max (no xhigh, which arrived with 4.7) and defaults to high; medium is the deliberate step down for a Discord Q&A bot where latency is user-facing and the questions are not hard. Raise it if answers get shallow, do not raise it to make her chattier - effort does not reliably control response length."
   type        = string
   default     = "medium"
 
@@ -229,7 +229,7 @@ variable "ask_max_question_chars" {
 }
 
 variable "ask_max_tokens" {
-  description = "Max output tokens per model call. This caps THINKING PLUS the answer, not the answer alone: Sonnet 5 runs adaptive thinking by default, so the 700 that comfortably fit a Haiku answer would now be spent reasoning and truncate her mid-sentence. Raised to 4000 to leave thinking room; the answer itself is still bounded by Discord's 2000-character message limit, which the worker clamps to separately."
+  description = "Max output tokens per model call. Held at 4000 rather than the original 700 so that enabling adaptive thinking later does not silently truncate her: on models where thinking is on, max_tokens caps thinking PLUS the answer. The worker currently sends no thinking field, which on Sonnet 4.6 means thinking is OFF, so today this is pure headroom. The answer is bounded separately by Discord's 2000-character clamp."
   type        = number
   default     = 4000
 }

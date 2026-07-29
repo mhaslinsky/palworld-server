@@ -195,13 +195,15 @@ async function invokeModel(messages, { withTools }) {
     max_tokens: MAX_OUTPUT_TOKENS,
     system: SYSTEM_PROMPT,
     messages,
-    // effort nests under output_config; it is NOT a top-level field. Sonnet 5 defaults
+    // effort nests under output_config; it is NOT a top-level field. Sonnet 4.6 defaults
     // to "high", which is more deliberation than a Palworld lookup needs when someone
     // is waiting in Discord for the reply.
     //
-    // Deliberately no `thinking` field: Sonnet 5 runs adaptive thinking when it is
-    // omitted, which is what we want here. Note that means max_tokens now covers
-    // thinking AND the answer together - see ask_max_tokens in variables.tf.
+    // No `thinking` field. Read that carefully, because the semantics are model-specific
+    // and got this wrong once: on Sonnet 4.6 omitting it means thinking is OFF, while on
+    // Sonnet 5 omitting it means ADAPTIVE thinking is on. If the model id here ever moves
+    // to a 5-series model, max_tokens starts covering thinking AND the answer together,
+    // and a budget sized for the answer alone will truncate mid-sentence.
     //
     // Tool use composes with both. The one Bedrock-specific trap is that a FORCED
     // tool_choice ({type:"tool"} or {type:"any"}) requires thinking disabled on
