@@ -1,0 +1,38 @@
+discord-bot/tests/ask-memory.test.mjs
+  s_159f51dae8c75b::t_46da78c09f8039 1-34,39-196
+  s_159f51dae8c75b::t_7f0ff05cb36155 35-38
+discord-bot/package.json
+  s_159f51dae8c75b::t_25e2373c9e1b57 6
+discord-bot/src/index.mjs
+  s_159f51dae8c75b::t_4d479668b7b3c2 360-362
+discord-bot/ask-worker/index.mjs
+  s_159f51dae8c75b::t_50cd91adcaa6d5 198-210
+  s_159f51dae8c75b::t_c0da648448de19 23,35-42,103
+  s_159f51dae8c75b::t_2d1bbfa9d98c20 233-296,298-299,408
+  s_159f51dae8c75b::t_4d479668b7b3c2 365,383,385,387-393,395,404-407
+  s_159f51dae8c75b::t_45a2d3d2d4be99 70-76
+  s_159f51dae8c75b::t_83c60f8069a1a7 409
+terraform/variables.tf
+  s_159f51dae8c75b::t_7b81418214ab8e 232,234
+  s_159f51dae8c75b::t_93e99e54a06ff4 185,187,191,196-217
+  s_159f51dae8c75b::t_2f76d19605c6f9 218
+terraform/discord_ask.tf
+  s_159f51dae8c75b::t_4b7edd0dc62988 60-92
+  s_159f51dae8c75b::t_e005e98348061e 124-125,128,133-140,192-195
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "c3e8c9dd4b9fae001ad9f04300637196cb6a7445",
+  "prompts": {},
+  "sessions": {
+    "s_159f51dae8c75b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1c3c47ae-96fa-414d-8982-2d3f31d53c0e",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    }
+  }
+}
