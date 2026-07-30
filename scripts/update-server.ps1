@@ -112,6 +112,57 @@ function Get-LatestLevelSav {
     Sort-Object LastWriteTimeUtc | Select-Object -Last 1
 }
 
+# --- Runtime proof that the building mod actually WORKS ------------------------
+# The file checks in step 5b prove the overlay COPIED. They cannot prove the mod does
+# anything, and on 2026-07-30 that gap bit: every file was present and correct against
+# game v1.0.2.100933, so the report said "Relaxed-building mod loaded" while the mod
+# was printing
+#     [BuildingRestrictionDisabler]: Version pattern not found :(
+# on every attempt. 1898 finds the code it patches by AOB signature scan, and a game
+# patch moves those bytes - so the mod loads, registers, and silently no-ops. Building
+# was vanilla for a day with a green report on the board.
+#
+# So: after the server is back up, read what the mod SAID about itself. Note the log tag
+# is 'BuildingRestrictionDisabler' (singular Restriction) while the folder is
+# 'BuildingRestrictionsDisabler' - the regex tolerates both rather than matching neither.
+#
+# Returns 'ok' | 'failed' | 'unknown'. 'unknown' is deliberately NOT 'ok': a missing or
+# unreadable log means the check did not run, and reporting that as a pass is the same
+# defect this function exists to close (AGENTS.md rule 8).
+#
+# $logPath is a parameter only so this can be exercised against a fixture log without
+# editing a copy of it - the guard is worth nothing until it has been made to go red.
+function Test-ModRuntimeStatus([datetime]$sinceUtc, [string]$logPath) {
+  $log = if ($logPath) { $logPath } else { "C:\PalServer\Pal\Binaries\Win64\ue4ss\UE4SS.log" }
+  if (-not (Test-Path $log)) { return 'unknown' }
+  try {
+    # UE4SS stamps every line [yyyy-MM-dd HH:mm:ss.fffffff] and logs in UTC (it prints
+    # "Timezone: Etc/UTC" at startup). Filtering by timestamp means a log that is
+    # APPENDED across launches cannot let the previous boot's lines decide this run.
+    $lines = Get-Content $log -ErrorAction Stop | Where-Object {
+      if ($_ -match '^\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})') {
+        try { [datetime]::ParseExact($Matches[1], 'yyyy-MM-dd HH:mm:ss', $null) -ge $sinceUtc }
+        catch { $false }
+      } else { $false }
+    }
+  } catch { return 'unknown' }
+  if (-not $lines) { return 'unknown' }
+
+  $modTag = 'BuildingRestrictions?Disabler'
+  # A failure line is decisive on its own - the mod itself is saying it could not hook.
+  $failed = $lines | Where-Object {
+    ($_ -match $modTag -and $_ -match 'pattern not found|failed|error') -or
+    ($_ -match "Failed to start .*$modTag")
+  }
+  if ($failed) { return 'failed' }
+  # No failure line only counts once we have seen the mod actually start this run.
+  # Without this, a log that rolled or a startup that never reached the mod would read
+  # as a clean pass.
+  $started = $lines | Where-Object { $_ -match "Starting .*mod '$modTag'" }
+  if ($started) { return 'ok' }
+  return 'unknown'
+}
+
 # --- Concurrency guard: exactly one update at a time --------------------------
 # A double /palworld-update (or a hand-run overlapping the bot) would launch two
 # SteamCMDs into the same dir. The acquire is an ATOMIC CreateNew, not Test-Path then
@@ -158,7 +209,9 @@ $lockHandle.Write($stamp, 0, $stamp.Length)
 $lockHandle.Flush()
 
 $watchdogDisabled = $false
-$modOk = $null       # $null = not checked; $true/$false = verified after re-stage
+$modOk = $null       # $null = not checked; $true/$false = FILES verified after re-stage
+$modRuntime = $null  # 'ok'/'failed'/'unknown' - what the mod said about itself once up
+$relaunchAtUtc = $null # marks which UE4SS.log lines belong to THIS run's relaunch
 $oldVersion = $null  # the build we were on BEFORE this run; step 6 compares against it
 $steamFailed = $false
 try {
@@ -355,6 +408,9 @@ finally {
       Send-Notify "❌ **$label**: FAILED to re-arm the ``PalworldIdle`` watchdog (state: ``$reArmed``). There is now no auto-restart and no idle shutdown - re-enable it by hand."
     }
   }
+  # Stamped BEFORE the launch so no startup line can be missed, and rounded down to the
+  # second because UE4SS.log timestamps parse at second precision.
+  $relaunchAtUtc = (Get-Date).ToUniversalTime().AddSeconds(-1)
   Start-ScheduledTask -TaskName "PalworldLaunch" -ErrorAction SilentlyContinue
 }
 
@@ -370,10 +426,35 @@ while ((Get-Date) -lt $deadline) {
 }
 
 if ($version) {
+  # The files passed, so now ask the MOD whether it actually hooked. This runs only on
+  # the keep/restage path (vanilla has no mod to check) and only when the file checks
+  # already passed, because a failed overlay has stripped the loader and there is
+  # nothing loaded to report on. The mod prints its verdict during startup, but /info
+  # can answer first, so poll rather than reading once and trusting a race.
+  if ($Mods -ne 'vanilla' -and $modOk -and $relaunchAtUtc) {
+    $modDeadline = (Get-Date).AddSeconds(60)
+    do {
+      $modRuntime = Test-ModRuntimeStatus $relaunchAtUtc
+      if ($modRuntime -ne 'unknown') { break }
+      Start-Sleep -Seconds 5
+    } while ((Get-Date) -lt $modDeadline)
+  }
+
   if ($Mods -eq 'vanilla') {
     $modNote = "Running **vanilla** (UE4SS disabled) - the box is joinable but illegal builds are rejected. Re-enable relaxed building with ``/palworld-update mods:restage`` once a matching UE4SS + mod 1898 build is on S3."
+  } elseif ($modOk -and $modRuntime -eq 'failed') {
+    # The loader is deliberately LEFT IN PLACE here, unlike the file-check failure below.
+    # A mod that cannot find its pattern no-ops; it does not crash the server (observed
+    # 2026-07-30: the box ran fine for a day this way), so there is nothing to rescue by
+    # stripping it - and stripping a DLL the live process holds open would fail anyway.
+    # The defect this closes is the false green, so the fix is an honest report.
+    $modNote = "⚠️ the building mod LOADED but is NOT working: it logged ``Version pattern not found`` against this build, so it cannot hook and **building is effectively VANILLA**. The 1898 build needs to be re-matched to the new game version - stage it and run ``/palworld-update mods:restage``."
+  } elseif ($modOk -and $modRuntime -eq 'ok') {
+    $modNote = "Relaxed-building mod loaded ✅ and verified working against this build - players need the matching client-side UE4SS + mod 1898."
   } elseif ($modOk) {
-    $modNote = "Relaxed-building mod loaded ✅ - players need the matching client-side UE4SS + mod 1898 for the new build."
+    # 'unknown': the files are right and nothing said it failed, but nothing confirmed it
+    # worked either. Saying that plainly is the point - silence is not an all-clear.
+    $modNote = "❔ the building mod's files verified, but its runtime status could NOT be read from ``UE4SS.log`` (no matching lines after relaunch). Do not assume relaxed building works - check by placing an illegal build."
   } else {
     # The loader was stripped above, so this claim is now true rather than hopeful.
     $modNote = "⚠️ the building mod did NOT verify, so UE4SS was disabled to keep the box joinable. Building is VANILLA (illegal builds rejected) until a matching UE4SS + mod 1898 build is staged (``/palworld-update mods:restage``) or D: is updated and this is re-run."
