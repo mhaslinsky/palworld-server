@@ -137,8 +137,12 @@ function Test-ModRuntimeStatus([datetime]$sinceUtc, [string]$logPath) {
   if (-not (Test-Path $log)) { return 'unknown' }
   try {
     # UE4SS stamps every line [yyyy-MM-dd HH:mm:ss.fffffff] and logs in UTC (it prints
-    # "Timezone: Etc/UTC" at startup). Filtering by timestamp means a log that is
-    # APPENDED across launches cannot let the previous boot's lines decide this run.
+    # "Timezone: Etc/UTC" at startup). UE4SS TRUNCATES this log on every launch, so in
+    # practice the file already holds only the current run - verified 2026-07-30, where
+    # lines from 16:12 were gone from the whole file by 16:35. The timestamp filter is
+    # therefore defense in depth, not the load-bearing part: it costs nothing and means
+    # this check does not silently start reading a previous boot's verdict if UE4SS ever
+    # switches to appending.
     $lines = Get-Content $log -ErrorAction Stop | Where-Object {
       if ($_ -match '^\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})') {
         try { [datetime]::ParseExact($Matches[1], 'yyyy-MM-dd HH:mm:ss', $null) -ge $sinceUtc }
@@ -149,17 +153,42 @@ function Test-ModRuntimeStatus([datetime]$sinceUtc, [string]$logPath) {
   if (-not $lines) { return 'unknown' }
 
   $modTag = 'BuildingRestrictions?Disabler'
-  # A failure line is decisive on its own - the mod itself is saying it could not hook.
-  $failed = $lines | Where-Object {
-    ($_ -match $modTag -and $_ -match 'pattern not found|failed|error') -or
-    ($_ -match "Failed to start .*$modTag")
+
+  # Judge the OUTCOME, not the presence of an alarming line. The mod retries its version
+  # scan, so "Version pattern not found :(" is normal cold-boot noise: on 2026-07-30 a
+  # healthy start printed it 13 times before succeeding. A draft of this check treated
+  # any occurrence as decisive and reported a working server as broken - which is the
+  # cry-wolf failure that gets a guard switched off, and is not an improvement on the
+  # false green it replaced.
+  #
+  # The three states are distinguished by what the mod ENDS UP saying:
+  #   failed : "Incompatible game client version ... !"  (it gives up - terminal), or the
+  #            scan retried and never once succeeded (v1.75 on game 1.0.2.100933: 13+
+  #            "not found", zero "found")
+  #   ok     : "Found all AOBs for restriction <...>" - it located and hooked real
+  #            restrictions. Stronger than "Disabling restrictions", which the mod prints
+  #            early, BEFORE the scan that can still fail.
+  #   unknown: none of the above appeared in this window
+
+  # Terminal refusal outranks everything: the mod has stopped trying.
+  $incompatible = $lines | Where-Object { $_ -match $modTag -and $_ -match 'incompatible' }
+  if ($incompatible) { return 'failed' }
+
+  # Proof of work. 1.78 legitimately fails ONE of ~22 restrictions ("Not connected to
+  # structure") on a build it otherwise supports, so this deliberately does not demand a
+  # clean sweep - "Could not find all AOBs" for a single restriction is not a mod that
+  # failed to load.
+  $hooked = $lines | Where-Object { $_ -match 'Found all AOBs for restriction' }
+  if ($hooked) { return 'ok' }
+
+  # Retried and got nowhere. Reached only when no AOB was ever hooked above.
+  $scanFailed = $lines | Where-Object { $_ -match $modTag -and $_ -match 'pattern not found' }
+  if ($scanFailed) { return 'failed' }
+
+  $otherFailure = $lines | Where-Object {
+    ($_ -match $modTag -and $_ -match 'unsupported|fatal') -or ($_ -match "Failed to start .*$modTag")
   }
-  if ($failed) { return 'failed' }
-  # No failure line only counts once we have seen the mod actually start this run.
-  # Without this, a log that rolled or a startup that never reached the mod would read
-  # as a clean pass.
-  $started = $lines | Where-Object { $_ -match "Starting .*mod '$modTag'" }
-  if ($started) { return 'ok' }
+  if ($otherFailure) { return 'failed' }
   return 'unknown'
 }
 
@@ -350,8 +379,16 @@ try {
       if (-not $remoteStage) {
         Send-Notify "⚠️ **$label**: ``s3://$($conf.BackupBucket)/ue4ss-stage/`` has no published stage (no ``Win64/dwmapi.dll``), so ``restage`` has nothing to pull. Seed it with ``seed-ue4ss-stage.ps1`` first. Continuing with the build already on D:, which is what ``keep`` would have done."
       } else {
+        # --exact-timestamps is LOAD-BEARING, not a tuning flag. Syncing S3 -> local, the
+        # AWS CLI ignores same-sized objects unless the LOCAL copy is newer, so a rebuilt
+        # DLL that happens to land on the same byte count is silently skipped no matter
+        # how much newer S3 is. That is not a corner case for this stage: mod 1898 v1.78
+        # is exactly the same size as v1.75 (1270272 bytes), and on 2026-07-30 the restage
+        # transferred NOTHING, exited 0, overlaid the year-old DLL, and reported the mod
+        # loaded. --exact-timestamps compares the timestamp instead, so a same-size rebuild
+        # transfers.
         & $awsExe s3 sync "s3://$($conf.BackupBucket)/ue4ss-stage/" "$stageRoot" `
-          --region $conf.AwsRegion --only-show-errors
+          --region $conf.AwsRegion --exact-timestamps --only-show-errors
         if ($LASTEXITCODE -ne 0) {
           Send-Notify "⚠️ **$label**: restage sync from ``s3://$($conf.BackupBucket)/ue4ss-stage/`` failed (aws exit $LASTEXITCODE). Falling back to the build already on D:."
         }
@@ -424,6 +461,12 @@ while ((Get-Date) -lt $deadline) {
   } catch { }
   Start-Sleep -Seconds 5
 }
+
+# /info already returns the version WITH its leading "v" (e.g. "v1.0.2.101103"), so the
+# "v$version" in the messages below rendered as "vv1.0.2.101103" on every report. Trim it
+# once here rather than touching four strings.
+if ($version) { $version = $version -replace '^v', '' }
+if ($oldVersion) { $oldVersion = $oldVersion -replace '^v', '' }
 
 if ($version) {
   # The files passed, so now ask the MOD whether it actually hooked. This runs only on
