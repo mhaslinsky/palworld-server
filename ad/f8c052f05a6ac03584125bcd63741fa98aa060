@@ -1,0 +1,22 @@
+scripts/update-server.ps1
+  s_7be3791103599d::t_590654422921d3 140-145
+  s_7be3791103599d::t_ab1b7083a13da3 156-189,191
+  s_7be3791103599d::t_25691d33f0f7c7 382-389,391
+  s_7be3791103599d::t_a521ff220f2480 465-470
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.17",
+  "base_commit_sha": "adf8c052f05a6ac03584125bcd63741fa98aa060",
+  "prompts": {},
+  "sessions": {
+    "s_7be3791103599d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2a0a3e26-d39b-4f7f-8713-829b8b95ced0",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    }
+  }
+}
