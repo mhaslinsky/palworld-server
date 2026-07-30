@@ -1,34 +1,35 @@
-# Palworld Server — Client Mod Guide
+# Palworld Server: Client Mod Guide
 
 What you (a player) need to install on **your own PC** to build freely on our Windows server.
-Everything here is **client-side** — you install it in your Palworld game, not on the server.
+Everything here is **client-side**: you install it in your Palworld game, not on the server.
 
 > **Why:** relaxed building is enforced on **both** the server and each player's client. The
 > server already has the mods; you need the matching ones locally or your builds get rejected.
 
-## Step 1 — Install UE4SS (required first, it loads the mods)
+## Step 1: Install UE4SS (required first, it loads the mods)
 
 Use the **Palworld experimental** build, matched to the current game version
-(**`v1.0.1.100619`** as of 2026-07-21). A mismatched UE4SS will crash the game.
+(**`v1.0.2.101103`** as of 2026-07-30). A mismatched UE4SS will crash the game.
 
-- Download: https://github.com/UE4SS-RE/RE-UE4SS/releases (experimental) — we run
-  `UE4SS_v3.0.1-1012` on the server.
+- Download: https://github.com/UE4SS-RE/RE-UE4SS/releases (experimental). We run
+  `UE4SS_v3.0.1-1012` on the server, unchanged across the 1.0.1 to 1.0.2 patch and
+  verified loading against `v1.0.2.101103`.
 - Extract `dwmapi.dll` + the `ue4ss` folder into your game's Win64 folder:
   `...\steam\steamapps\common\Palworld\Pal\Binaries\Win64\`
 
-## Step 2 — Install the mods (drop each folder into `ue4ss\Mods\`)
+## Step 2: Install the mods (drop each folder into `ue4ss\Mods\`)
 
 Target folder: `...\Palworld\Pal\Binaries\Win64\ue4ss\Mods\`
 
 | Mod | Nexus | Version | Required? | Notes |
 |-----|-------|---------|-----------|-------|
-| **Building Restrictions Disabler** | [1898](https://www.nexusmods.com/palworld/mods/1898) | 1.75 (DLL, client+server) | **Required to build freely** | Folder `BuildingRestrictionsDisabler\` (has `enabled.txt` + `dlls\main.dll`). Must be on both sides — server already has it. |
+| **Building Restrictions Disabler** | [1898](https://www.nexusmods.com/palworld/mods/1898) | 1.78 BETA (DLL, client+server) | **Required to build freely** | Folder `BuildingRestrictionsDisabler\` (has `enabled.txt` + `dlls\main.dll`). Must be on both sides (the server already has it). 1.75 does NOT work on 1.0.2: it loads and then reports `Incompatible game client version`. |
 | **FSS – Full Sphere Summon** | [3620](https://www.nexusmods.com/palworld/mods/3620) | 0.7.0 (UE4SS Lua) | Optional | Folder `FullSphereSummon\` (has `enabled.txt` + `Scripts\main.lua`). Client-only; restores throw-to-summon. |
 
 After copying, confirm the paths exist with **no extra nested folder**, e.g.
 `...\ue4ss\Mods\BuildingRestrictionsDisabler\dlls\main.dll`.
 
-## Step 3 — Verify in-game
+## Step 3: Verify in-game
 
 Join the server and try an illegal build (overlap / on a slope / no foundation).
 - **It places and sticks** → working.
@@ -38,7 +39,7 @@ Join the server and try an illegal build (overlap / on a slope / no foundation).
 ## Don't run two building mods at once
 
 If you previously had the old pak mods (`LessRestrictiveSettings_P`, `NoCollision*_P`) in
-`Pal\Content\Paks\~mods\`, **remove them** — they conflict with 1898 and the result is that
+`Pal\Content\Paks\~mods\`, **remove them**: they conflict with 1898 and the result is that
 *neither* works. Use only mod 1898 for building.
 
 ---
@@ -47,15 +48,15 @@ If you previously had the old pak mods (`LessRestrictiveSettings_P`, `NoCollisio
 
 Tracked here so we know what's set. These live on the server / in Terraform:
 
-- **UE4SS + Building Restrictions Disabler (1898)** — installed on the Windows dedicated server.
-- **Base structure decay: OFF** — `BuildObjectDeteriorationDamageRate=0.000000` in
+- **UE4SS + Building Restrictions Disabler (1898)**: installed on the Windows dedicated server.
+- **Base structure decay: OFF.** `BuildObjectDeteriorationDamageRate=0.000000` in
   `PalWorldSettings.ini`. Structures don't deteriorate.
 - Existing world settings carried over: `BaseCampWorkerMaxNum=50`, `BaseCampMaxNumInGuild=10`,
   `PalSpawnNumRate=2.0`, `DeathPenalty=Item`, `PalEggDefaultHatchingTime=0.03`, global palbox
   import/export on.
 
 **Maintenance note:** after any major Palworld patch, UE4SS and the mods likely need updated
-builds — expect building to break until the versions are re-matched (the server deliberately
+builds. Expect building to break until the versions are re-matched (the server deliberately
 does not auto-update). Keep this file's versions current when we bump anything.
 
 **Updating a modded server.** `/palworld-update` (Discord) - or `scripts/update-server.ps1`
@@ -97,3 +98,29 @@ $b = (Get-Content C:\PalServer\idle.conf.json -Raw | ConvertFrom-Json).BackupBuc
 Thereafter, to publish a **new** matching build: update `D:\PalServer\ue4ss-stage\Win64` on the box
 (or upload it straight to `s3://<bucket>/ue4ss-stage/Win64/…`), then `/palworld-update mods:restage`.
 Re-running the seed script republishes whatever is currently on D:.
+
+**A restage can transfer NOTHING and still report success.** Syncing S3 to local, the AWS CLI
+ignores same-sized objects unless the *local* copy is newer, and a rebuilt DLL very often lands
+on the same byte count: mod 1898 v1.78 is exactly the same size as v1.75 (1270272 bytes). On
+2026-07-30 the restage therefore transferred nothing, exited 0, overlaid the old DLL, and
+reported the mod loaded. `update-server.ps1` now passes `--exact-timestamps` for this. If you
+ever sync the stage by hand, pass it too, and confirm by hash rather than by exit code:
+
+```powershell
+(Get-FileHash 'D:\PalServer\ue4ss-stage\Win64\ue4ss\Mods\BuildingRestrictionsDisabler\dlls\main.dll' -Algorithm SHA256).Hash
+```
+
+**Reading the mod's own verdict.** File presence proves the overlay copied, not that the mod
+works. After a relaunch, `Win64\ue4ss\UE4SS.log` (truncated on each launch) tells you which of three
+things happened:
+
+| What the log says | Meaning |
+|---|---|
+| `Found all AOBs for restriction <...>` | Working. It hooked real restrictions. |
+| `Incompatible game client version ... !` | Terminal. The mod build does not support this game build. |
+| `Version pattern not found :(` repeatedly, with **no** later `Version pattern found` | The scan never succeeded. Building is vanilla. |
+
+A handful of `Version pattern not found` lines followed by success is **normal cold-boot retry
+noise**, not a fault: a healthy 1.78 start printed it 13 times before hooking. Likewise
+`Could not find all AOBs for restriction <Disable "Not connected to structure">` is expected on
+1.78 and only means that one restriction stays enforced.
