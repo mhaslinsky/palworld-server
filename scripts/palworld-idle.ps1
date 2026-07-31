@@ -109,6 +109,29 @@ function Send-Notify([string]$content) {
   } catch { }
 }
 
+# --- Reap duplicate servers ---------------------------------------------------
+# Belt to the launch mutex's braces. If two servers are live anyway, the box is minutes
+# from the commit exhaustion that killed it on 2026-07-31 (PIDs 4856 + 4864), so this
+# cannot wait for a human to notice.
+#
+# Keep the OLDEST and kill the rest: the first process holds the loaded world and every
+# connected player, while a younger duplicate lost the race for UDP 8211 and has nobody
+# on it. Killing the wrong one would drop the session this is trying to protect.
+$servers = @(Get-Process -Name "PalServer-Win64-Shipping" -ErrorAction SilentlyContinue |
+  Sort-Object StartTime)
+if ($servers.Count -gt 1) {
+  $keep = $servers[0]
+  foreach ($dup in $servers[1..($servers.Count - 1)]) {
+    Write-EventLog -LogName Application -Source "Palworld" -EventId 107 -EntryType Error `
+      -Message "duplicate PalServer pid $($dup.Id) (started $($dup.StartTime)) killed; keeping pid $($keep.Id) (started $($keep.StartTime))" -ErrorAction SilentlyContinue
+    Write-Output "ERROR: killed duplicate PalServer pid $($dup.Id), kept $($keep.Id)"
+    Stop-Process -Id $dup.Id -Force -ErrorAction SilentlyContinue
+  }
+  # Loud on purpose. A duplicate means the launch lock failed, and a silently-reaped
+  # duplicate would leave that fault invisible until the next time it wins the race.
+  Send-Notify (":warning: **$($conf.ServerLabel)**: found $($servers.Count) server processes running and killed $($servers.Count - 1). The world is intact; the launch lock needs looking at.")
+}
+
 # --- Poll --------------------------------------------------------------------
 $players = $null
 try {
