@@ -60,35 +60,125 @@ if (-not $updateLive) {
   }
 }
 
-if (Get-Process -Name "PalServer-Win64-Shipping" -ErrorAction SilentlyContinue) {
-  exit 0
+# Returns an exit code, and writes NOTHING to the success stream. A PowerShell function's
+# return value is its ENTIRE output stream, so one stray Write-Output here makes the
+# caller's $exitCode an Object[], and `exit` on a non-integer silently becomes 0. Measured
+# on the box 2026-07-31: the contaminated form exited 0, the clean form exited 1 - i.e. a
+# failed launch would have reported success to the very watchdog meant to catch it.
+# Diagnostics go to the event log; the CALLER prints the human-readable line.
+#
+# Event IDs in use across this repo: 101-110 are taken (107 by windows_user_data.ps1.tftpl,
+# 110 by backup-to-s3.ps1, 106 shared). New IDs here start at 111. Check before reusing -
+# a collision makes the one signal you grep during an outage ambiguous.
+function Start-ServerIfAbsent {
+  if (Get-Process -Name "PalServer-Win64-Shipping" -ErrorAction SilentlyContinue) {
+    return 0
+  }
+
+  $exe = "C:\PalServer\Pal\Binaries\Win64\PalServer-Win64-Shipping.exe"
+  if (-not (Test-Path $exe)) {
+    Write-EventLog -LogName Application -Source "Palworld" -EventId 101 -EntryType Error `
+      -Message "PalServer shipping exe missing at $exe" -ErrorAction SilentlyContinue
+    return 1
+  }
+
+  # Load the REAL world, not a fresh empty one. Palworld picks the world by the
+  # DedicatedServerName GUID in GameUserSettings.ini, which lives on C: (NOT the D:
+  # SaveGames junction) - so a rebuilt box generates a new GUID and serves an EMPTY world
+  # while the real save sits untouched on D:. Restore the staged copy (carrying the world
+  # GUID) from the persistent volume before every launch. Done here, not in user_data,
+  # because user_data has a hard 16 KB limit and this runs before the server every boot.
+  $gusStage = "D:\PalServer\GameUserSettings.ini"
+  $cfgDir = "C:\PalServer\Pal\Saved\Config\WindowsServer"
+  if (Test-Path $gusStage) {
+    New-Item -ItemType Directory -Force -Path $cfgDir | Out-Null
+    Copy-Item $gusStage (Join-Path $cfgDir "GameUserSettings.ini") -Force
+  } else {
+    # Loud: without the GUID the server silently serves an empty world (real save intact
+    # on D:, just not selected). Distinct EventId so a rebuild-into-empty is diagnosable.
+    Write-EventLog -LogName Application -Source "Palworld" -EventId 109 -EntryType Warning `
+      -Message "no staged GameUserSettings.ini at $gusStage; server may serve an EMPTY world (fresh GUID)" -ErrorAction SilentlyContinue
+  }
+
+  $started = Start-Process -FilePath $exe `
+    -ArgumentList "Pal", "-port=$($conf.GamePort)", "-players=$($conf.MaxPlayers)", "-log" `
+    -WorkingDirectory "C:\PalServer" -WindowStyle Hidden -PassThru
+  if (-not $started) {
+    Write-EventLog -LogName Application -Source "Palworld" -EventId 112 -EntryType Error `
+      -Message "Start-Process returned no process object for $exe" -ErrorAction SilentlyContinue
+    return 1
+  }
+
+  # Do not release the lock until the process is VISIBLE to Get-Process. Releasing on
+  # the strength of Start-Process returning would let the next racer through while the
+  # guard above still sees nothing, which is the whole bug wearing a lock. Track the PID
+  # we actually started (-PassThru) rather than any process of that name, so the wait is
+  # tied to THIS attempt and an instant death is distinguishable from a slow appearance.
+  for ($waited = 0; $waited -lt 20; $waited++) {
+    if ($started.HasExited) {
+      Write-EventLog -LogName Application -Source "Palworld" -EventId 112 -EntryType Error `
+        -Message "PalServer pid $($started.Id) exited within 10s of launch (exit code $($started.ExitCode))" -ErrorAction SilentlyContinue
+      return 1
+    }
+    if (Get-Process -Name "PalServer-Win64-Shipping" -ErrorAction SilentlyContinue) { return 0 }
+    Start-Sleep -Milliseconds 500
+  }
+  # 10s and still not visible under the name the guard checks. Kill the half-start BEFORE
+  # releasing the lock: leaving it alive is how the next launcher adds a second server on
+  # top of a hung one, which is the exact condition this file exists to prevent.
+  Write-EventLog -LogName Application -Source "Palworld" -EventId 112 -EntryType Error `
+    -Message "launched $exe but no PalServer-Win64-Shipping process appeared within 10s; killing pid $($started.Id)" -ErrorAction SilentlyContinue
+  Stop-Process -Id $started.Id -Force -ErrorAction SilentlyContinue
+  return 1
 }
 
-$exe = "C:\PalServer\Pal\Binaries\Win64\PalServer-Win64-Shipping.exe"
-if (-not (Test-Path $exe)) {
-  Write-EventLog -LogName Application -Source "Palworld" -EventId 101 -EntryType Error `
-    -Message "PalServer shipping exe missing at $exe" -ErrorAction SilentlyContinue
-  exit 1
+# Two separate things start the server: this script's -AtStartup task, and the watchdog in
+# palworld-idle.ps1, which shells out to this same file every 2 min. The Get-Process guard
+# is a check-then-start with nothing holding the halves together, so both can see an absent
+# server at the same instant and both start one. That is what happened on 2026-07-31: PIDs
+# 4856 and 4864, eight apart, ran side by side until commit (RAM + pagefile) was exhausted
+# and the server died under five players. MultipleInstances=IgnoreNew on the tasks does not
+# help - it stops a task overlapping ITSELF, not two different tasks racing each other.
+#
+# Global\ because the racers are separate processes; a session-local mutex would not see
+# across them, which is the failure mode that looks exactly like having no lock at all.
+$launchMutex = New-Object System.Threading.Mutex($false, "Global\PalworldLaunch")
+$holdsMutex = $false
+$exitCode = 0
+try {
+  try {
+    $holdsMutex = $launchMutex.WaitOne(30000)
+  } catch [System.Threading.AbandonedMutexException] {
+    # A previous holder died between acquiring and releasing (killed update, host reset).
+    # The mutex is ours now; the Get-Process check decides whether a start is still needed.
+    $holdsMutex = $true
+  }
+  if ($holdsMutex) {
+    $exitCode = Start-ServerIfAbsent
+    if ($exitCode -ne 0) {
+      Write-Output "ERROR: could not start the server - see the Application log, source Palworld"
+    }
+  } else {
+    # A 30s wait means the holder is STUCK, not merely busy: a healthy start is bounded by
+    # the 10s visibility poll above. Reporting 0 on that assumption is the silent-success
+    # bug - the watchdog would read "fine" every 2 min while the server stayed down. So
+    # check the end state we are claiming, and only claim it if it is true.
+    if (Get-Process -Name "PalServer-Win64-Shipping" -ErrorAction SilentlyContinue) {
+      Write-Output "another launcher holds the start lock; the server is running"
+    } else {
+      Write-EventLog -LogName Application -Source "Palworld" -EventId 113 -EntryType Error `
+        -Message "timed out after 30s waiting for the start lock and no server is running - the lock holder is stuck" -ErrorAction SilentlyContinue
+      Write-Output "ERROR: waited 30s for the start lock and the server is still down"
+      $exitCode = 1
+    }
+  }
+} finally {
+  # Dispose even if ReleaseMutex throws (wrong owner, bad state); otherwise the handle
+  # leaks and the throw escapes with the mutex still open.
+  try {
+    if ($holdsMutex) { $launchMutex.ReleaseMutex() }
+  } finally {
+    $launchMutex.Dispose()
+  }
 }
-
-# Load the REAL world, not a fresh empty one. Palworld picks the world by the
-# DedicatedServerName GUID in GameUserSettings.ini, which lives on C: (NOT the D:
-# SaveGames junction) - so a rebuilt box generates a new GUID and serves an EMPTY world
-# while the real save sits untouched on D:. Restore the staged copy (carrying the world
-# GUID) from the persistent volume before every launch. Done here, not in user_data,
-# because user_data has a hard 16 KB limit and this runs before the server every boot.
-$gusStage = "D:\PalServer\GameUserSettings.ini"
-$cfgDir = "C:\PalServer\Pal\Saved\Config\WindowsServer"
-if (Test-Path $gusStage) {
-  New-Item -ItemType Directory -Force -Path $cfgDir | Out-Null
-  Copy-Item $gusStage (Join-Path $cfgDir "GameUserSettings.ini") -Force
-} else {
-  # Loud: without the GUID the server silently serves an empty world (real save intact
-  # on D:, just not selected). Distinct EventId so a rebuild-into-empty is diagnosable.
-  Write-EventLog -LogName Application -Source "Palworld" -EventId 109 -EntryType Warning `
-    -Message "no staged GameUserSettings.ini at $gusStage; server may serve an EMPTY world (fresh GUID)" -ErrorAction SilentlyContinue
-}
-
-Start-Process -FilePath $exe `
-  -ArgumentList "Pal", "-port=$($conf.GamePort)", "-players=$($conf.MaxPlayers)", "-log" `
-  -WorkingDirectory "C:\PalServer" -WindowStyle Hidden
+exit $exitCode
