@@ -60,6 +60,16 @@ if (-not $updateLive) {
   }
 }
 
+# Returns an exit code, and writes NOTHING to the success stream. A PowerShell function's
+# return value is its ENTIRE output stream, so one stray Write-Output here makes the
+# caller's $exitCode an Object[], and `exit` on a non-integer silently becomes 0. Measured
+# on the box 2026-07-31: the contaminated form exited 0, the clean form exited 1 - i.e. a
+# failed launch would have reported success to the very watchdog meant to catch it.
+# Diagnostics go to the event log; the CALLER prints the human-readable line.
+#
+# Event IDs in use across this repo: 101-110 are taken (107 by windows_user_data.ps1.tftpl,
+# 110 by backup-to-s3.ps1, 106 shared). New IDs here start at 111. Check before reusing -
+# a collision makes the one signal you grep during an outage ambiguous.
 function Start-ServerIfAbsent {
   if (Get-Process -Name "PalServer-Win64-Shipping" -ErrorAction SilentlyContinue) {
     return 0
@@ -90,23 +100,35 @@ function Start-ServerIfAbsent {
       -Message "no staged GameUserSettings.ini at $gusStage; server may serve an EMPTY world (fresh GUID)" -ErrorAction SilentlyContinue
   }
 
-  Start-Process -FilePath $exe `
+  $started = Start-Process -FilePath $exe `
     -ArgumentList "Pal", "-port=$($conf.GamePort)", "-players=$($conf.MaxPlayers)", "-log" `
-    -WorkingDirectory "C:\PalServer" -WindowStyle Hidden
+    -WorkingDirectory "C:\PalServer" -WindowStyle Hidden -PassThru
+  if (-not $started) {
+    Write-EventLog -LogName Application -Source "Palworld" -EventId 112 -EntryType Error `
+      -Message "Start-Process returned no process object for $exe" -ErrorAction SilentlyContinue
+    return 1
+  }
 
   # Do not release the lock until the process is VISIBLE to Get-Process. Releasing on
   # the strength of Start-Process returning would let the next racer through while the
-  # guard above still sees nothing, which is the whole bug wearing a lock.
+  # guard above still sees nothing, which is the whole bug wearing a lock. Track the PID
+  # we actually started (-PassThru) rather than any process of that name, so the wait is
+  # tied to THIS attempt and an instant death is distinguishable from a slow appearance.
   for ($waited = 0; $waited -lt 20; $waited++) {
+    if ($started.HasExited) {
+      Write-EventLog -LogName Application -Source "Palworld" -EventId 112 -EntryType Error `
+        -Message "PalServer pid $($started.Id) exited within 10s of launch (exit code $($started.ExitCode))" -ErrorAction SilentlyContinue
+      return 1
+    }
     if (Get-Process -Name "PalServer-Win64-Shipping" -ErrorAction SilentlyContinue) { return 0 }
     Start-Sleep -Milliseconds 500
   }
-  # 10s and still nothing: either the exe died on startup or it never launched. Either
-  # way, saying nothing here would report a successful launch of a server that is not
-  # there, and the next watchdog cycle would silently try again forever.
-  Write-EventLog -LogName Application -Source "Palworld" -EventId 110 -EntryType Error `
-    -Message "launched $exe but no PalServer-Win64-Shipping process appeared within 10s" -ErrorAction SilentlyContinue
-  Write-Output "ERROR: server process did not appear within 10s of launch"
+  # 10s and still not visible under the name the guard checks. Kill the half-start BEFORE
+  # releasing the lock: leaving it alive is how the next launcher adds a second server on
+  # top of a hung one, which is the exact condition this file exists to prevent.
+  Write-EventLog -LogName Application -Source "Palworld" -EventId 112 -EntryType Error `
+    -Message "launched $exe but no PalServer-Win64-Shipping process appeared within 10s; killing pid $($started.Id)" -ErrorAction SilentlyContinue
+  Stop-Process -Id $started.Id -Force -ErrorAction SilentlyContinue
   return 1
 }
 
@@ -133,13 +155,30 @@ try {
   }
   if ($holdsMutex) {
     $exitCode = Start-ServerIfAbsent
+    if ($exitCode -ne 0) {
+      Write-Output "ERROR: could not start the server - see the Application log, source Palworld"
+    }
   } else {
-    # Not an error: the holder is starting the server right now, which is the end state
-    # this invocation wanted. Exiting non-zero would make the watchdog cry wolf.
-    Write-Output "another launcher holds the start lock; leaving the start to it"
+    # A 30s wait means the holder is STUCK, not merely busy: a healthy start is bounded by
+    # the 10s visibility poll above. Reporting 0 on that assumption is the silent-success
+    # bug - the watchdog would read "fine" every 2 min while the server stayed down. So
+    # check the end state we are claiming, and only claim it if it is true.
+    if (Get-Process -Name "PalServer-Win64-Shipping" -ErrorAction SilentlyContinue) {
+      Write-Output "another launcher holds the start lock; the server is running"
+    } else {
+      Write-EventLog -LogName Application -Source "Palworld" -EventId 113 -EntryType Error `
+        -Message "timed out after 30s waiting for the start lock and no server is running - the lock holder is stuck" -ErrorAction SilentlyContinue
+      Write-Output "ERROR: waited 30s for the start lock and the server is still down"
+      $exitCode = 1
+    }
   }
 } finally {
-  if ($holdsMutex) { $launchMutex.ReleaseMutex() }
-  $launchMutex.Dispose()
+  # Dispose even if ReleaseMutex throws (wrong owner, bad state); otherwise the handle
+  # leaks and the throw escapes with the mutex still open.
+  try {
+    if ($holdsMutex) { $launchMutex.ReleaseMutex() }
+  } finally {
+    $launchMutex.Dispose()
+  }
 }
 exit $exitCode

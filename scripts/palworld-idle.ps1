@@ -120,16 +120,52 @@ function Send-Notify([string]$content) {
 $servers = @(Get-Process -Name "PalServer-Win64-Shipping" -ErrorAction SilentlyContinue |
   Sort-Object StartTime)
 if ($servers.Count -gt 1) {
-  $keep = $servers[0]
-  foreach ($dup in $servers[1..($servers.Count - 1)]) {
-    Write-EventLog -LogName Application -Source "Palworld" -EventId 107 -EntryType Error `
-      -Message "duplicate PalServer pid $($dup.Id) (started $($dup.StartTime)) killed; keeping pid $($keep.Id) (started $($keep.StartTime))" -ErrorAction SilentlyContinue
-    Write-Output "ERROR: killed duplicate PalServer pid $($dup.Id), kept $($keep.Id)"
-    Stop-Process -Id $dup.Id -Force -ErrorAction SilentlyContinue
+  # Keep the process that OWNS THE GAME PORT, not the oldest one. Duplicates are created in
+  # the same instant (the 2026-07-31 incident's PIDs were eight apart), and which one wins
+  # bind() is decided by init speed, not by StartTime. So "oldest" can name the process that
+  # LOST the port and is holding nobody, and force-killing the other would drop the live
+  # session this is supposed to protect. StartTime is only the fallback for when the port
+  # lookup finds no owner among them.
+  $portOwner = $null
+  try {
+    $portOwner = Get-NetUDPEndpoint -LocalPort $conf.GamePort -ErrorAction Stop |
+      Select-Object -First 1 -ExpandProperty OwningProcess
+  } catch { }
+  $keep = $servers | Where-Object { $_.Id -eq $portOwner } | Select-Object -First 1
+  $keptBecause = "owns UDP $($conf.GamePort)"
+  if (-not $keep) {
+    $keep = $servers[0]
+    $keptBecause = "oldest - no port owner found among the duplicates"
   }
+
+  $killed = @()
+  $survived = @()
+  foreach ($dup in ($servers | Where-Object { $_.Id -ne $keep.Id })) {
+    Write-EventLog -LogName Application -Source "Palworld" -EventId 111 -EntryType Error `
+      -Message "duplicate PalServer pid $($dup.Id) (started $($dup.StartTime)); keeping pid $($keep.Id) ($keptBecause)" -ErrorAction SilentlyContinue
+    Stop-Process -Id $dup.Id -Force -ErrorAction SilentlyContinue
+    Start-Sleep -Milliseconds 500
+    # Say "killed" only after LOOKING. -ErrorAction SilentlyContinue swallows an access
+    # denial, and a reaper that reports a kill it did not perform leaves the box heading
+    # for the same commit exhaustion with a green cycle behind it.
+    if (Get-Process -Id $dup.Id -ErrorAction SilentlyContinue) { $survived += $dup.Id }
+    else { $killed += $dup.Id }
+  }
+
+  if ($survived.Count -gt 0) {
+    Write-EventLog -LogName Application -Source "Palworld" -EventId 114 -EntryType Error `
+      -Message "FAILED to kill duplicate PalServer pid(s) $($survived -join ', '); $($survived.Count + 1) servers still running" -ErrorAction SilentlyContinue
+    Write-Output "ERROR: duplicate PalServer pid(s) $($survived -join ', ') survived the kill"
+    Send-Notify (":rotating_light: **$($conf.ServerLabel)**: $($servers.Count) server processes are running and I could NOT kill $($survived.Count) of them (pid $($survived -join ', ')). This is the condition that exhausted memory on 2026-07-31. Needs a human.")
+    # Non-zero so the failure shows in the task's LastTaskResult too, and stop here rather
+    # than running idle-shutdown logic against a box whose process list is not what we think.
+    exit 1
+  }
+
   # Loud on purpose. A duplicate means the launch lock failed, and a silently-reaped
   # duplicate would leave that fault invisible until the next time it wins the race.
-  Send-Notify (":warning: **$($conf.ServerLabel)**: found $($servers.Count) server processes running and killed $($servers.Count - 1). The world is intact; the launch lock needs looking at.")
+  Write-Output "killed duplicate PalServer pid(s) $($killed -join ', '); kept $($keep.Id) ($keptBecause)"
+  Send-Notify (":warning: **$($conf.ServerLabel)**: found $($servers.Count) server processes and killed $($killed.Count). Kept pid $($keep.Id) ($keptBecause). The launch lock needs looking at.")
 }
 
 # --- Poll --------------------------------------------------------------------
