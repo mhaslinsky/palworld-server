@@ -36,16 +36,19 @@ if (-not $bucket) { Write-Output "REFUSING: no BackupBucket in idle.conf.json"; 
 # --- Verify the stage is COMPLETE before publishing it as the baseline -----------
 $modDir = "$win64\ue4ss\Mods\BuildingRestrictionsDisabler"
 $modsTxt = "$win64\ue4ss\Mods\mods.txt"
+$maxStackDir = "$win64\ue4ss\Mods\MaxStackCount"
 $enableLine = (Test-Path $modsTxt) -and `
   (Select-String -Path $modsTxt -Pattern 'BuildingRestrictionsDisabler\s*:\s*1' -Quiet)
 $ok = (Test-Path "$win64\dwmapi.dll") -and `
       (Test-Path "$win64\ue4ss\UE4SS.dll") -and `
       (Test-Path "$modDir\dlls\main.dll") -and `
       (Test-Path "$modDir\enabled.txt") -and `
-      $enableLine
+      $enableLine -and `
+      (Test-Path "$maxStackDir\enabled.txt") -and `
+      (Test-Path "$maxStackDir\Scripts\main.lua")
 if (-not $ok) {
   Write-Output "REFUSING: '$win64' is missing load-bearing UE4SS/mod files - not publishing a broken baseline."
-  Write-Output "  need: Win64\dwmapi.dll, Win64\ue4ss\UE4SS.dll, ...\BuildingRestrictionsDisabler\dlls\main.dll + enabled.txt, and 'BuildingRestrictionsDisabler : 1' in mods.txt"
+  Write-Output "  need: Win64\dwmapi.dll, Win64\ue4ss\UE4SS.dll, ...\BuildingRestrictionsDisabler\dlls\main.dll + enabled.txt, 'BuildingRestrictionsDisabler : 1' in mods.txt, and ...\MaxStackCount\enabled.txt + Scripts\main.lua"
   exit 1
 }
 

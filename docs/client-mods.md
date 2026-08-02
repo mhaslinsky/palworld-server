@@ -25,6 +25,7 @@ Target folder: `...\Palworld\Pal\Binaries\Win64\ue4ss\Mods\`
 |-----|-------|---------|-----------|-------|
 | **Building Restrictions Disabler** | [1898](https://www.nexusmods.com/palworld/mods/1898) | 1.78 BETA (DLL, client+server) | **Required to build freely** | Folder `BuildingRestrictionsDisabler\` (has `enabled.txt` + `dlls\main.dll`). Must be on both sides (the server already has it). 1.75 does NOT work on 1.0.2: it loads and then reports `Incompatible game client version`. |
 | **FSS – Full Sphere Summon** | [3620](https://www.nexusmods.com/palworld/mods/3620) | 0.7.0 (UE4SS Lua) | Optional | Folder `FullSphereSummon\` (has `enabled.txt` + `Scripts\main.lua`). Client-only; restores throw-to-summon. |
+| **Max Stack Count** | [376](https://www.nexusmods.com/palworld/mods/376) | 1.3 (UE4SS Lua) | Recommended | Folder `MaxStackCount\` (has `enabled.txt` + `Scripts\main.lua`). Raises item stack caps from 9999 to 999,999,999. The server already has it and the server-side rewrite is confirmed firing; install it locally so the raised cap displays and stacks correctly on your client. |
 
 After copying, confirm the paths exist with **no extra nested folder**, e.g.
 `...\ue4ss\Mods\BuildingRestrictionsDisabler\dlls\main.dll`.
@@ -49,6 +50,14 @@ If you previously had the old pak mods (`LessRestrictiveSettings_P`, `NoCollisio
 Tracked here so we know what's set. These live on the server / in Terraform:
 
 - **UE4SS + Building Restrictions Disabler (1898)**: installed on the Windows dedicated server.
+- **MaxStackCount** ([376](https://www.nexusmods.com/palworld/mods/376), 1.3, UE4SS Lua): installed
+  on the Windows dedicated server. Raises item stack caps from 9999 to 999,999,999. Enabled purely
+  via `enabled.txt` (same override mechanism as Building Restrictions Disabler), not listed in
+  `mods.txt`. The server-side rewrite is confirmed firing in `UE4SS.log`
+  (`[Max Stack Count] set from 9999 to 999999999 [palServerRegisterHook]`) on `v1.0.2.101103`.
+  It carries a client hook too, so players who want the raised cap to display and stack correctly
+  should install it client-side as well (listed under Step 2). Whether a fully vanilla client is
+  hard-capped at 9999 in its own UI has not been separately confirmed.
 - **Base structure decay: OFF.** `BuildObjectDeteriorationDamageRate=0.000000` in
   `PalWorldSettings.ini`. Structures don't deteriorate.
 - Existing world settings carried over: `BaseCampWorkerMaxNum=50`, `BaseCampMaxNumInGuild=10`,
