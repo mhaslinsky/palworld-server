@@ -1,0 +1,21 @@
+docs/client-mods.md
+  s_850c24dba1f92f::t_5c4f7b3b6a1977 52-57
+scripts/seed-ue4ss-stage.ps1
+  s_850c24dba1f92f::t_2fdc24b9d3abc5 39,46-48,51
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "d089c0024b480fc6be0b188eb63d6038651a5d3d",
+  "prompts": {},
+  "sessions": {
+    "s_850c24dba1f92f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a89ff892-ff94-420f-87a9-611daa968a38",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    }
+  }
+}
