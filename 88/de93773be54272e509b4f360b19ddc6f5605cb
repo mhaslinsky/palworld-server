@@ -1,0 +1,20 @@
+docs/client-mods.md
+  s_850c24dba1f92f::t_846b90721b8a2a 28
+  s_850c24dba1f92f::t_66a7e8ea007f47 56-60
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "88de93773be54272e509b4f360b19ddc6f5605cb",
+  "prompts": {},
+  "sessions": {
+    "s_850c24dba1f92f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a89ff892-ff94-420f-87a9-611daa968a38",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    }
+  }
+}
