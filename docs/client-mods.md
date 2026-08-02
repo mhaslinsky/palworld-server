@@ -49,6 +49,12 @@ If you previously had the old pak mods (`LessRestrictiveSettings_P`, `NoCollisio
 Tracked here so we know what's set. These live on the server / in Terraform:
 
 - **UE4SS + Building Restrictions Disabler (1898)**: installed on the Windows dedicated server.
+- **MaxStackCount** ([376](https://www.nexusmods.com/palworld/mods/376), 1.3, UE4SS Lua): installed
+  on the Windows dedicated server. Raises item stack caps from 9999 to 999,999,999. Enabled purely
+  via `enabled.txt` (same override mechanism as Building Restrictions Disabler), not listed in
+  `mods.txt`. Tested working on Palworld 1.0.1 + RE-UE4SS; the server runs `v1.0.2.101103`.
+  NOTE: whether players also need this installed client-side for the raised cap to show correctly
+  in their UI is unverified.
 - **Base structure decay: OFF.** `BuildObjectDeteriorationDamageRate=0.000000` in
   `PalWorldSettings.ini`. Structures don't deteriorate.
 - Existing world settings carried over: `BaseCampWorkerMaxNum=50`, `BaseCampMaxNumInGuild=10`,
