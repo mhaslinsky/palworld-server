@@ -13,6 +13,10 @@
 #   (default)  publish  - D: -> S3, after verifying D: is worth publishing
 #   -Restore            - S3 -> D:, for a rebuilt or empty volume
 #
+# Publish exit codes: 0 = published and the baseline matches the stage exactly.
+# 2 = every local pak published and verified, but S3 holds extras the stage no longer
+# has, so a later -Restore would resurrect them. 1 = failed, baseline not trustworthy.
+#
 # Publish REFUSES on an empty stage. A zero-pak baseline in S3 would restore cleanly,
 # exit 0, and leave the server modless while every check passed - a guard that cannot
 # tell "no mods staged" from "the stage is gone" is not a guard.
@@ -134,11 +138,22 @@ if ($Restore) {
       exit 1
     }
 
-    # Validate BEFORE discarding the rollback copy, so a bad swap is still recoverable.
+    # Validate BEFORE discarding the rollback copy, and ROLL BACK on failure. Leaving the
+    # bad stage at the canonical path would be worse than not restoring at all: the
+    # launcher treats it as authoritative and would sweep working mods out of ~mods to
+    # match an incomplete set. Done inside the mutex so no launch can observe the swap.
     $restored = @(Get-ChildItem $stageRoot -Filter *.pak -ErrorAction SilentlyContinue)
     if ($restored.Count -ne $remoteNames.Count) {
-      Write-Output "FAILED: stage holds $($restored.Count) pak(s) after the swap, expected $($remoteNames.Count) - do NOT trust this as a restore."
-      Write-Output ("  the previous stage is preserved at '" + $previous + "'")
+      Write-Output "FAILED: stage holds $($restored.Count) pak(s) after the swap, expected $($remoteNames.Count) - rolling back."
+      $failed = "$stageRoot.failed"
+      if (Test-Path $failed) { Remove-Item $failed -Recurse -Force -ErrorAction SilentlyContinue }
+      Move-Item $stageRoot $failed -Force -ErrorAction SilentlyContinue
+      if (Test-Path $previous) {
+        Move-Item $previous $stageRoot -Force -ErrorAction SilentlyContinue
+        Write-Output ("  rolled back to the previous stage; the bad set is at '" + $failed + "'")
+      } else {
+        Write-Output ("  there was no previous stage to roll back to; the bad set is at '" + $failed + "'")
+      }
       exit 1
     }
     Remove-Item $previous -Recurse -Force -ErrorAction SilentlyContinue
@@ -183,12 +198,24 @@ foreach ($pak in $staged) {
   if (-not $etag) { $stale += ($pak.Name + " (absent from S3)"); continue }
   $etag = $etag.Trim('"')
   if ($etag -like "*-*") {
-    # Multipart upload: the ETag is not a plain MD5, so it cannot be compared this way.
-    # Say so rather than silently treating an uncomparable value as a match.
-    Write-Output ("  NOTE: $($pak.Name) has a multipart ETag ($etag); size-checked only.")
-    $remoteSize = & $awsExe s3api head-object --bucket $bucket --key "paks-stage/$($pak.Name)" `
-      --region $region --query ContentLength --output text 2>$null
-    if ([int64]$remoteSize -ne $pak.Length) { $stale += ($pak.Name + " (size mismatch)") }
+    # Multipart upload: the ETag is a hash OF HASHES, not the file's MD5, so it cannot be
+    # compared directly. A size check is not a substitute - a rebuilt same-size pak is the
+    # exact case this verification exists to catch, so accepting size here would wave
+    # through the one failure it is looking for. Download and hash instead: slower, but
+    # this branch only fires on paks above the multipart threshold, and a recovery
+    # baseline is worth the round trip.
+    Write-Output ("  $($pak.Name): multipart ETag, verifying by download ...")
+    $probe = Join-Path $env:TEMP ("pakverify-" + $pak.Name)
+    Remove-Item $probe -Force -ErrorAction SilentlyContinue
+    & $awsExe s3 cp "s3://$bucket/paks-stage/$($pak.Name)" $probe --region $region --only-show-errors
+    if ($LASTEXITCODE -ne 0 -or -not (Test-Path $probe)) {
+      $stale += ($pak.Name + " (could not download to verify)")
+      continue
+    }
+    $remoteSha = (Get-FileHash $probe -Algorithm SHA256).Hash.ToLower()
+    $localSha = (Get-FileHash $pak.FullName -Algorithm SHA256).Hash.ToLower()
+    Remove-Item $probe -Force -ErrorAction SilentlyContinue
+    if ($remoteSha -ne $localSha) { $stale += ($pak.Name + " (S3 copy differs from local)") }
     continue
   }
   $localMd5 = (Get-FileHash $pak.FullName -Algorithm MD5).Hash.ToLower()
@@ -220,5 +247,16 @@ if ($remoteOnly.Count -gt 0) {
   Write-Output ""
 }
 
-Write-Output "OK: pak stage published to s3://$bucket/paks-stage/ (all $($staged.Count) verified present)."
+if ($remoteOnly.Count -gt 0) {
+  # Exit 2, not 0. Every local pak really did publish, so this is not a failure - but the
+  # BASELINE is divergent, and a caller that only reads the exit code would file that
+  # under "published cleanly" and never see the warning above. Make the two outcomes
+  # structurally distinguishable rather than leaving the difference in a log line.
+  Write-Output "PUBLISHED WITH DIVERGENCE (exit 2): all $($staged.Count) local pak(s) verified in S3, but the baseline holds $($remoteOnly.Count) extra listed above."
+  Write-Output "Recover a lost stage with: seed-paks-stage.ps1 -Restore"
+  exit 2
+}
+
+Write-Output "OK: pak stage published to s3://$bucket/paks-stage/ (all $($staged.Count) verified by content)."
 Write-Output "Recover a lost stage with: seed-paks-stage.ps1 -Restore"
+exit 0
