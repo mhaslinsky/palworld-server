@@ -118,11 +118,36 @@ function Start-ServerIfAbsent {
   $pakStage = "D:\PalServer\paks-stage"
   $pakLive = "C:\PalServer\Pal\Content\Paks\~mods"
   $stagedPaks = Get-ChildItem $pakStage -Filter *.pak -ErrorAction SilentlyContinue
+  # `/palworld-update mods:vanilla` guarantees a JOINABLE box after a patch by stripping
+  # the UE4SS loader. Restoring paks regardless would quietly hollow that lever out: the
+  # one command meant to rescue a crash-looping server would keep re-adding a mod layer
+  # every launch. Absent loader means vanilla, so clear the staged paks back out instead.
+  # Reversible - mods:restage puts the loader back and the next launch restores them.
+  if (-not (Test-Path "C:\PalServer\Pal\Binaries\Win64\dwmapi.dll")) {
+    foreach ($stagedPak in $stagedPaks) {
+      $vanillaTarget = Join-Path $pakLive $stagedPak.Name
+      if (Test-Path $vanillaTarget) {
+        Remove-Item $vanillaTarget -Force -ErrorAction SilentlyContinue
+        Write-EventLog -LogName Application -Source "Palworld" -EventId 115 -EntryType Warning `
+          -Message "UE4SS loader absent (vanilla mode); removed pak mod $($stagedPak.Name) so the server really is unmodded" -ErrorAction SilentlyContinue
+      }
+    }
+    $stagedPaks = $null
+  }
   if ($stagedPaks) {
     New-Item -ItemType Directory -Force -Path $pakLive | Out-Null
     foreach ($stagedPak in $stagedPaks) {
       $target = Join-Path $pakLive $stagedPak.Name
       $stageHash = (Get-FileHash $stagedPak.FullName -Algorithm SHA256).Hash
+      # A hash that could not be computed is NOT a match. Under the Continue error policy
+      # Get-FileHash fails non-terminating and yields $null, and with the live pak also
+      # absent $null -eq $null would skip the copy silently - "I could not check" arriving
+      # as "it already matches", with no copy and no log.
+      if (-not $stageHash) {
+        Write-EventLog -LogName Application -Source "Palworld" -EventId 115 -EntryType Error `
+          -Message "could not hash staged pak $($stagedPak.FullName) - NOT restoring it; server may start without the mod" -ErrorAction SilentlyContinue
+        continue
+      }
       $liveHash = if (Test-Path $target) { (Get-FileHash $target -Algorithm SHA256).Hash } else { $null }
       if ($liveHash -eq $stageHash) { continue }
       Copy-Item $stagedPak.FullName $target -Force -ErrorAction SilentlyContinue
