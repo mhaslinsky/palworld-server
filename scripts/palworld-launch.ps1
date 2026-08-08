@@ -106,9 +106,15 @@ function Start-ServerIfAbsent {
   # up with the pak mods silently absent - the server boots fine and reports healthy, and
   # the only symptom is a mod that quietly stopped existing.
   #
-  # D: is the master; copy only on a hash mismatch, since this runs every 2 min under the
-  # watchdog. An empty or missing stage is NOT an error: a box that legitimately runs no
-  # pak mods must not log a fault every cycle. Failing to restore one that IS staged is.
+  # D: is the master, copied only on a hash mismatch. This runs on the absent-server path
+  # only (the guard at the top of this function returns early when it is up), so there is
+  # no contention with the running server, which holds a mounted pak open and locked -
+  # verified 2026-08-08, a delete of the live pak was refused while the server ran. The
+  # consequence worth knowing: staging a NEW version of a pak takes effect at the next
+  # restart, not immediately.
+  #
+  # An empty or missing stage is NOT an error - a box legitimately running no pak mods
+  # must not log a fault on every launch. Failing to restore one that IS staged is.
   $pakStage = "D:\PalServer\paks-stage"
   $pakLive = "C:\PalServer\Pal\Content\Paks\~mods"
   $stagedPaks = Get-ChildItem $pakStage -Filter *.pak -ErrorAction SilentlyContinue
