@@ -18,11 +18,11 @@
 # tell "no mods staged" from "the stage is gone" is not a guard.
 #
 # PUBLISH is an OVERLAY (no --delete), matching seed-ue4ss-stage.ps1: removing a pak
-# locally leaves the old object in S3, so delete it from s3://<bucket>/paks-stage/ by
-# hand too. That is deliberate and it is the sibling's documented behaviour - --delete is
-# the flag that can erase the last copy of a mod nobody can re-download without a Nexus
-# login, so making these two scripts disagree would be a worse trap than either rule
-# alone. Changing both together is its own deliberate change.
+# locally leaves the old object in S3. --delete is the one flag that can destroy the last
+# copy of a mod that needs a Nexus login to re-download, so this REPORTS the divergence
+# loudly (with the exact `aws s3 rm` lines) instead of acting on it. Silent divergence
+# would be the real bug, since a later -Restore resurrects those paks and the launcher
+# then makes them live; a human deleting them is fine.
 #
 # RESTORE is NOT an overlay: it stages into a scratch dir, verifies it holds every pak S3
 # lists, and only then swaps it in. It has to be exact, because palworld-launch.ps1
@@ -101,18 +101,50 @@ if ($Restore) {
     exit 1
   }
 
-  # Complete and verified: swap it in. Keep the old stage until the new one is in place,
-  # so a failure here cannot leave the box with no stage at all.
+  # Complete and verified: swap it in, holding the SAME mutex palworld-launch.ps1 takes
+  # around its start. Without it the launcher (also the every-2-min watchdog) can land in
+  # the window where the old stage has been moved aside and the new one is not in place
+  # yet, see no stage at all, and start the server without the pak mods. Global\ because
+  # the racers are separate processes.
   $previous = "$stageRoot.previous"
-  if (Test-Path $previous) { Remove-Item $previous -Recurse -Force -ErrorAction SilentlyContinue }
-  if (Test-Path $stageRoot) { Move-Item $stageRoot $previous -Force }
-  Move-Item $scratch $stageRoot -Force
-  Remove-Item $previous -Recurse -Force -ErrorAction SilentlyContinue
+  $swapMutex = New-Object System.Threading.Mutex($false, "Global\PalworldLaunch")
+  $holdsSwap = $false
+  try {
+    try { $holdsSwap = $swapMutex.WaitOne(30000) }
+    catch [System.Threading.AbandonedMutexException] { $holdsSwap = $true }
+    if (-not $holdsSwap) {
+      Write-Output "FAILED: could not take the launch lock in 30s - stage left UNTOUCHED (a launch is in progress)."
+      Remove-Item $scratch -Recurse -Force -ErrorAction SilentlyContinue
+      exit 1
+    }
 
-  $restored = @(Get-ChildItem $stageRoot -Filter *.pak -ErrorAction SilentlyContinue)
-  if ($restored.Count -ne $remoteNames.Count) {
-    Write-Output "FAILED: stage holds $($restored.Count) pak(s) after the swap, expected $($remoteNames.Count) - do NOT trust this as a restore."
-    exit 1
+    if (Test-Path $previous) { Remove-Item $previous -Recurse -Force -ErrorAction SilentlyContinue }
+    if (Test-Path $stageRoot) { Move-Item $stageRoot $previous -Force }
+    try {
+      Move-Item $scratch $stageRoot -Force
+    } catch {
+      # Put the old stage back rather than leaving the canonical path missing. A box with
+      # a stale stage still boots its mods; a box with NO stage silently boots without
+      # them, which is the state this whole script exists to prevent.
+      Write-Output ("FAILED: could not move the verified stage into place: " + $_.Exception.Message)
+      if ((Test-Path $previous) -and -not (Test-Path $stageRoot)) {
+        Move-Item $previous $stageRoot -Force -ErrorAction SilentlyContinue
+        Write-Output "  rolled back to the previous stage"
+      }
+      exit 1
+    }
+
+    # Validate BEFORE discarding the rollback copy, so a bad swap is still recoverable.
+    $restored = @(Get-ChildItem $stageRoot -Filter *.pak -ErrorAction SilentlyContinue)
+    if ($restored.Count -ne $remoteNames.Count) {
+      Write-Output "FAILED: stage holds $($restored.Count) pak(s) after the swap, expected $($remoteNames.Count) - do NOT trust this as a restore."
+      Write-Output ("  the previous stage is preserved at '" + $previous + "'")
+      exit 1
+    }
+    Remove-Item $previous -Recurse -Force -ErrorAction SilentlyContinue
+  } finally {
+    if ($holdsSwap) { $swapMutex.ReleaseMutex() }
+    $swapMutex.Dispose()
   }
   Write-Output "OK: restored $($restored.Count) pak(s) to '$stageRoot':"
   $restored | ForEach-Object {
@@ -138,18 +170,54 @@ $staged | ForEach-Object {
 & $awsExe s3 sync "$stageRoot" "s3://$bucket/paks-stage/" --region $region --only-show-errors
 if ($LASTEXITCODE -ne 0) { Write-Output "FAILED: s3 sync exit $LASTEXITCODE"; exit 1 }
 
-# --- Verify on S3, do not trust the exit code (AGENTS.md rule 8) --------------------
-# Check EVERY pak landed, not just that the prefix is non-empty: a partial sync leaves
-# the older objects sitting there and the listing looks healthy either way.
-$missing = @()
+# --- Verify on S3 by CONTENT, not by key existence (AGENTS.md rule 8) ---------------
+# "The key is there" is the wrong question. Uploading, `s3 sync` compares size and
+# timestamp, so a REBUILT pak that lands on the same byte count can be skipped entirely
+# while the key sits there looking healthy - the same trap that made a restage transfer
+# nothing on 2026-07-30, just pointed the other way. Compare the ETag to the local MD5,
+# which is what sync-scripts.ps1 already does for the bootstrap scripts.
+$stale = @()
 foreach ($pak in $staged) {
-  $remote = & $awsExe s3 ls "s3://$bucket/paks-stage/$($pak.Name)" --region $region 2>$null
-  if (-not $remote) { $missing += $pak.Name }
+  $etag = & $awsExe s3api head-object --bucket $bucket --key "paks-stage/$($pak.Name)" `
+    --region $region --query ETag --output text 2>$null
+  if (-not $etag) { $stale += ($pak.Name + " (absent from S3)"); continue }
+  $etag = $etag.Trim('"')
+  if ($etag -like "*-*") {
+    # Multipart upload: the ETag is not a plain MD5, so it cannot be compared this way.
+    # Say so rather than silently treating an uncomparable value as a match.
+    Write-Output ("  NOTE: $($pak.Name) has a multipart ETag ($etag); size-checked only.")
+    $remoteSize = & $awsExe s3api head-object --bucket $bucket --key "paks-stage/$($pak.Name)" `
+      --region $region --query ContentLength --output text 2>$null
+    if ([int64]$remoteSize -ne $pak.Length) { $stale += ($pak.Name + " (size mismatch)") }
+    continue
+  }
+  $localMd5 = (Get-FileHash $pak.FullName -Algorithm MD5).Hash.ToLower()
+  if ($etag.ToLower() -ne $localMd5) { $stale += ($pak.Name + " (S3 copy differs from local)") }
 }
-if ($missing.Count -gt 0) {
-  Write-Output "FAILED: these paks are NOT visible in S3 after the sync - baseline NOT trustworthy:"
-  $missing | ForEach-Object { Write-Output ("  " + $_) }
+if ($stale.Count -gt 0) {
+  Write-Output "FAILED: S3 does not match the local stage - baseline NOT trustworthy:"
+  $stale | ForEach-Object { Write-Output ("  " + $_) }
+  Write-Output "  Re-run, or upload the offender explicitly with `aws s3 cp`."
   exit 1
+}
+
+# --- Report divergence rather than deleting it --------------------------------------
+# Publish is an overlay, so a pak removed locally still sits in S3 and a later -Restore
+# would resurrect it - and because palworld-launch.ps1 makes the stage authoritative,
+# that resurrected pak would then be pushed live. Deleting automatically is worse: it is
+# the one action that can destroy the last copy of a mod that needs a Nexus login to
+# re-download. So surface it loudly and let a human decide.
+$remoteOnly = @(& $awsExe s3 ls "s3://$bucket/paks-stage/" --region $region 2>$null |
+  ForEach-Object { ($_ -split '\s+', 4)[-1] } |
+  Where-Object { $_ -like "*.pak" -and ($staged.Name -notcontains $_) })
+if ($remoteOnly.Count -gt 0) {
+  Write-Output ""
+  Write-Output "WARNING: S3 holds $($remoteOnly.Count) pak(s) that are NOT in the local stage:"
+  $remoteOnly | ForEach-Object { Write-Output ("  " + $_) }
+  Write-Output "  A later -Restore WOULD bring these back, and the launcher would then make them live."
+  Write-Output "  If they were removed deliberately, delete them from S3 too:"
+  $remoteOnly | ForEach-Object { Write-Output ("    aws s3 rm s3://$bucket/paks-stage/$_") }
+  Write-Output ""
 }
 
 Write-Output "OK: pak stage published to s3://$bucket/paks-stage/ (all $($staged.Count) verified present)."
