@@ -1,0 +1,19 @@
+scripts/palworld-launch.ps1
+  s_7eede8d5ca7a52::t_5c2849d903e357 109-117
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "56048bf28bf0e49c1deaba85ac1123c6f74f7704",
+  "prompts": {},
+  "sessions": {
+    "s_7eede8d5ca7a52": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "45313e4b-24c3-4854-ad1b-03edbd1c2adf",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    }
+  }
+}
