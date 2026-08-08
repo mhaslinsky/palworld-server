@@ -1,0 +1,22 @@
+scripts/seed-paks-stage.ps1
+  s_7eede8d5ca7a52::t_8d3f33e49907d1 173-179,181-195,197-200,204-220
+  s_7eede8d5ca7a52::t_e28063d3a4fe6b 21-25
+  s_7eede8d5ca7a52::t_ef5a1f646ad56e 104-108,110-147
+  s_7eede8d5ca7a52::t_1e0eb4e823b814 221-222
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "f63264b0d149faa64d6ed52f39c27726f6ee02dc",
+  "prompts": {},
+  "sessions": {
+    "s_7eede8d5ca7a52": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "45313e4b-24c3-4854-ad1b-03edbd1c2adf",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    }
+  }
+}
