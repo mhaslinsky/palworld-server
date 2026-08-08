@@ -102,8 +102,16 @@ $b = (Get-Content C:\PalServer\idle.conf.json -Raw | ConvertFrom-Json).BackupBuc
 `unchanged` per script, and exits non-zero if any failed. Do not report a script change
 as deployed on the strength of a green `terraform apply`.
 
-Not affected: `update-server.ps1` and `seed-ue4ss-stage.ps1` are pulled fresh from S3
-by whoever runs them, so they are always current.
+Not affected: `update-server.ps1`, `seed-ue4ss-stage.ps1` and `seed-paks-stage.ps1` are
+pulled fresh from S3 by whoever runs them, so they are always current.
+
+Pak mods (anything in `Pal\Content\Paks\~mods`) are outside the UE4SS stage, which
+overlays `Win64` only. They live on `D:\PalServer\paks-stage`, and `palworld-launch.ps1`
+mirrors that into `~mods` before every launch, treating D: as the master - an unstaged
+pak is swept out. `seed-paks-stage.ps1` publishes that stage to
+`s3://<bucket>/paks-stage/` and restores it with `-Restore`; it refuses to publish an
+empty stage, because an empty baseline restores cleanly and leaves the server with no
+pak mods while every check passes.
 
 ### 7. Backups: check, don't assume
 
