@@ -100,6 +100,40 @@ function Start-ServerIfAbsent {
       -Message "no staged GameUserSettings.ini at $gusStage; server may serve an EMPTY world (fresh GUID)" -ErrorAction SilentlyContinue
   }
 
+  # Restore pak mods from the persistent volume, same reasoning as GameUserSettings.ini
+  # above: C: is rebuilt on every instance replacement, D: is not. A pak in ~mods is NOT
+  # covered by the UE4SS stage (that overlays Win64 only), so without this a rebuild comes
+  # up with the pak mods silently absent - the server boots fine and reports healthy, and
+  # the only symptom is a mod that quietly stopped existing.
+  #
+  # D: is the master; copy only on a hash mismatch, since this runs every 2 min under the
+  # watchdog. An empty or missing stage is NOT an error: a box that legitimately runs no
+  # pak mods must not log a fault every cycle. Failing to restore one that IS staged is.
+  $pakStage = "D:\PalServer\paks-stage"
+  $pakLive = "C:\PalServer\Pal\Content\Paks\~mods"
+  $stagedPaks = Get-ChildItem $pakStage -Filter *.pak -ErrorAction SilentlyContinue
+  if ($stagedPaks) {
+    New-Item -ItemType Directory -Force -Path $pakLive | Out-Null
+    foreach ($stagedPak in $stagedPaks) {
+      $target = Join-Path $pakLive $stagedPak.Name
+      $stageHash = (Get-FileHash $stagedPak.FullName -Algorithm SHA256).Hash
+      $liveHash = if (Test-Path $target) { (Get-FileHash $target -Algorithm SHA256).Hash } else { $null }
+      if ($liveHash -eq $stageHash) { continue }
+      Copy-Item $stagedPak.FullName $target -Force -ErrorAction SilentlyContinue
+      # Verify the copy rather than trusting Copy-Item: a truncated or absent pak leaves
+      # the server perfectly joinable with the mod missing, which is the failure this
+      # whole block exists to prevent and the one nobody would notice.
+      $afterHash = if (Test-Path $target) { (Get-FileHash $target -Algorithm SHA256).Hash } else { $null }
+      if ($afterHash -eq $stageHash) {
+        Write-EventLog -LogName Application -Source "Palworld" -EventId 115 -EntryType Information `
+          -Message "restored pak mod $($stagedPak.Name) from $pakStage" -ErrorAction SilentlyContinue
+      } else {
+        Write-EventLog -LogName Application -Source "Palworld" -EventId 115 -EntryType Error `
+          -Message "FAILED to restore pak mod $($stagedPak.Name) from $pakStage - server will run WITHOUT it" -ErrorAction SilentlyContinue
+      }
+    }
+  }
+
   $started = Start-Process -FilePath $exe `
     -ArgumentList "Pal", "-port=$($conf.GamePort)", "-players=$($conf.MaxPlayers)", "-log" `
     -WorkingDirectory "C:\PalServer" -WindowStyle Hidden -PassThru
