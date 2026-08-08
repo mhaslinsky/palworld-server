@@ -171,9 +171,15 @@ Windows box, using the PAK variant (no UE4SS needed):
   cannot place sky/no-collision builds, and a modded client on a vanilla server cannot
   either. So the server needs the `.pak` **and every player who wants to build needs it
   too** — a vanilla player can still join, see, and interact with modded structures.
-- On the Windows box the `.pak`s live on the persistent `D:` volume
-  (`D:\PalServer\mods`) and are copied into `Pal\Content\Paks\~mods` on every boot.
-  They cannot be re-downloaded automatically: Nexus requires a login.
+- Relaxed building is **not** a pak mod any more: it is UE4SS + mod 1898, restored into
+  `Win64` from `D:\PalServer\ue4ss-stage`. The old building `.pak`s in `D:\PalServer\mods`
+  are decommissioned and deliberately no longer restored, because they conflict with 1898
+  and the result is that *neither* works.
+- Any pak mod that IS wanted lives on the persistent `D:` volume in
+  `D:\PalServer\paks-stage`, and `palworld-launch.ps1` mirrors it into
+  `Pal\Content\Paks\~mods` before every launch. That stage is the master: a pak removed
+  from it is removed live too. Mods cannot be re-downloaded automatically, since Nexus
+  requires a login, which is why the durable copy is the volume rather than the internet.
 
 Expect mods to need updated builds right after any major Palworld patch — which is why
 the Windows bootstrap deliberately does **not** run SteamCMD on every boot.
