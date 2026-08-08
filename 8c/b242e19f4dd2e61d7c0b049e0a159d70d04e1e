@@ -1,0 +1,25 @@
+terraform/windows.tf
+  s_7eede8d5ca7a52::t_4e81c0198fdee1 118-132
+  s_7eede8d5ca7a52::t_2918c5153fc2d0 161-172
+AGENTS.md
+  s_7eede8d5ca7a52::t_f01ca5642231e7 105-114
+scripts/seed-paks-stage.ps1
+  s_7eede8d5ca7a52::t_45bd0bed71d0ff 2-112
+  s_7eede8d5ca7a52::t_b49ed1d3f7e886 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "8cb242e19f4dd2e61d7c0b049e0a159d70d04e1e",
+  "prompts": {},
+  "sessions": {
+    "s_7eede8d5ca7a52": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "45313e4b-24c3-4854-ad1b-03edbd1c2adf",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    }
+  }
+}
