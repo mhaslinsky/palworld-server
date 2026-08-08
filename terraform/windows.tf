@@ -115,6 +115,21 @@ resource "aws_s3_object" "windows_seed_script" {
   content_type = "text/plain"
 }
 
+# The same idea for pak mods, which the UE4SS stage does not cover. palworld-launch.ps1
+# restores them from D:\PalServer\paks-stage before every launch and D: survives an
+# instance replacement, so this is not the rebuild path - it is the off-volume baseline
+# for a LOST volume, where the launcher would otherwise start a modless server silently.
+# On demand via SSM like its sibling, so it is not in the boot fetch list and does not
+# change the user_data hash.
+resource "aws_s3_object" "windows_seed_paks_script" {
+  count        = local.windows_enabled
+  bucket       = aws_s3_bucket.backups.id
+  key          = "scripts/windows/seed-paks-stage.ps1"
+  source       = "${path.module}/../scripts/seed-paks-stage.ps1"
+  etag         = filemd5("${path.module}/../scripts/seed-paks-stage.ps1")
+  content_type = "text/plain"
+}
+
 # The instance may read its own bootstrap scripts, and write backups under its OWN
 # prefix. Deliberately narrow: it cannot read or delete the world backups, and it
 # cannot write into world/linux/* (the shared instance role would otherwise let a
@@ -140,6 +155,18 @@ data "aws_iam_policy_document" "instance_scripts" {
     actions = ["s3:GetObject", "s3:PutObject"]
     resources = [
       "${aws_s3_bucket.backups.arn}/ue4ss-stage/*",
+    ]
+  }
+
+  # seed-paks-stage.ps1 publishes the D: pak stage here (write) and restores it onto a
+  # rebuilt volume (read). Scoped to this one prefix, like the UE4SS stage above:
+  # ListBucket is already granted bucket-wide by instance_backups, and junk written here
+  # can only affect a future pak restore, never the world backups.
+  statement {
+    sid     = "ReadWritePaksStage"
+    actions = ["s3:GetObject", "s3:PutObject"]
+    resources = [
+      "${aws_s3_bucket.backups.arn}/paks-stage/*",
     ]
   }
 
