@@ -17,11 +17,17 @@
 # exit 0, and leave the server modless while every check passed - a guard that cannot
 # tell "no mods staged" from "the stage is gone" is not a guard.
 #
-# sync is an OVERLAY (no --delete) in both directions, matching seed-ue4ss-stage.ps1. If
-# you REMOVE a pak locally, delete it from s3://<bucket>/paks-stage/ by hand too. Note
-# this differs from the LAUNCHER, where D: is authoritative and an unstaged live pak is
-# swept out; here neither side is authoritative, because a half-finished sync must never
-# be able to delete the only remaining copy.
+# PUBLISH is an OVERLAY (no --delete), matching seed-ue4ss-stage.ps1: removing a pak
+# locally leaves the old object in S3, so delete it from s3://<bucket>/paks-stage/ by
+# hand too. That is deliberate and it is the sibling's documented behaviour - --delete is
+# the flag that can erase the last copy of a mod nobody can re-download without a Nexus
+# login, so making these two scripts disagree would be a worse trap than either rule
+# alone. Changing both together is its own deliberate change.
+#
+# RESTORE is NOT an overlay: it stages into a scratch dir, verifies it holds every pak S3
+# lists, and only then swaps it in. It has to be exact, because palworld-launch.ps1
+# treats the stage as authoritative and sweeps live paks the stage does not list - a
+# partial restore landing directly in the stage would DELETE working mods on next launch.
 #
 # Pure ASCII (output goes to the SSM console), with a UTF-8 BOM like its siblings so a
 # future non-ASCII edit cannot silently break the PowerShell 5.1 parse.
@@ -57,17 +63,55 @@ if ($Restore) {
     exit 1
   }
 
-  New-Item -ItemType Directory -Force -Path $stageRoot | Out-Null
+  # Sync into a SCRATCH dir, never straight into the stage. palworld-launch.ps1 treats
+  # the stage as authoritative and sweeps live paks that it does not list, so a partial
+  # sync landing there directly would not merely be incomplete - it would actively delete
+  # working mods from ~mods on the next launch. The recovery tool would cause the outage
+  # it exists to fix. Validate the full expected set first, swap only then.
+  $scratch = "$stageRoot.incoming"
+  if (Test-Path $scratch) { Remove-Item $scratch -Recurse -Force -ErrorAction SilentlyContinue }
+  New-Item -ItemType Directory -Force -Path $scratch | Out-Null
+
   # --exact-timestamps is load-bearing going S3 -> local: the CLI skips same-SIZE objects
   # unless the local copy is newer, and a rebuilt pak very often lands on the same byte
-  # count. That exact trap cost a silent no-op restage on 2026-07-30 (see docs).
-  & $awsExe s3 sync "s3://$bucket/paks-stage/" "$stageRoot" `
+  # count. That exact trap cost a silent no-op restage on 2026-07-30 (see docs). Into an
+  # empty scratch dir every object transfers anyway; it is kept so this stays correct if
+  # the scratch is ever reused.
+  & $awsExe s3 sync "s3://$bucket/paks-stage/" "$scratch" `
     --region $region --exact-timestamps --only-show-errors
-  if ($LASTEXITCODE -ne 0) { Write-Output "FAILED: s3 sync exit $LASTEXITCODE"; exit 1 }
+  if ($LASTEXITCODE -ne 0) {
+    Write-Output "FAILED: s3 sync exit $LASTEXITCODE - stage left untouched"
+    Remove-Item $scratch -Recurse -Force -ErrorAction SilentlyContinue
+    exit 1
+  }
+
+  # Completeness, not "at least one". Compare against what S3 actually holds, so an
+  # interrupted transfer is caught rather than rounded up to success.
+  $remoteNames = @(& $awsExe s3 ls "s3://$bucket/paks-stage/" --region $region 2>$null |
+    ForEach-Object { ($_ -split '\s+', 4)[-1] } |
+    Where-Object { $_ -like "*.pak" })
+  $localNames = @(Get-ChildItem $scratch -Filter *.pak -ErrorAction SilentlyContinue |
+    ForEach-Object { $_.Name })
+  $absent = @($remoteNames | Where-Object { $localNames -notcontains $_ })
+  if ($remoteNames.Count -eq 0 -or $absent.Count -gt 0) {
+    Write-Output "FAILED: incomplete restore - stage left UNTOUCHED. Missing locally:"
+    $absent | ForEach-Object { Write-Output ("  " + $_) }
+    if ($remoteNames.Count -eq 0) { Write-Output "  (could not enumerate any .pak in S3)" }
+    Remove-Item $scratch -Recurse -Force -ErrorAction SilentlyContinue
+    exit 1
+  }
+
+  # Complete and verified: swap it in. Keep the old stage until the new one is in place,
+  # so a failure here cannot leave the box with no stage at all.
+  $previous = "$stageRoot.previous"
+  if (Test-Path $previous) { Remove-Item $previous -Recurse -Force -ErrorAction SilentlyContinue }
+  if (Test-Path $stageRoot) { Move-Item $stageRoot $previous -Force }
+  Move-Item $scratch $stageRoot -Force
+  Remove-Item $previous -Recurse -Force -ErrorAction SilentlyContinue
 
   $restored = @(Get-ChildItem $stageRoot -Filter *.pak -ErrorAction SilentlyContinue)
-  if ($restored.Count -eq 0) {
-    Write-Output "FAILED: sync exited 0 but '$stageRoot' still holds no .pak - do NOT trust this as a restore."
+  if ($restored.Count -ne $remoteNames.Count) {
+    Write-Output "FAILED: stage holds $($restored.Count) pak(s) after the swap, expected $($remoteNames.Count) - do NOT trust this as a restore."
     exit 1
   }
   Write-Output "OK: restored $($restored.Count) pak(s) to '$stageRoot':"
