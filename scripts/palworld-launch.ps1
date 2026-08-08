@@ -136,6 +136,19 @@ function Start-ServerIfAbsent {
   }
   if ($stagedPaks) {
     New-Item -ItemType Directory -Force -Path $pakLive | Out-Null
+    # D: is the master, so make that true in both directions: a pak dropped from the stage
+    # must not linger live. This also sweeps the OLD building paks, whose durable source
+    # (D:\PalServer\mods) the bootstrap stopped restoring precisely because they conflict
+    # with mod 1898 and leave NEITHER working. Without this the restore is additive and a
+    # stale pak survives every restart with nothing reporting it.
+    $stagedNames = $stagedPaks | ForEach-Object { $_.Name }
+    Get-ChildItem $pakLive -Filter *.pak -ErrorAction SilentlyContinue |
+      Where-Object { $stagedNames -notcontains $_.Name } |
+      ForEach-Object {
+        Remove-Item $_.FullName -Force -ErrorAction SilentlyContinue
+        Write-EventLog -LogName Application -Source "Palworld" -EventId 115 -EntryType Warning `
+          -Message "removed unstaged pak $($_.Name) from ~mods - $pakStage is the master" -ErrorAction SilentlyContinue
+      }
     foreach ($stagedPak in $stagedPaks) {
       $target = Join-Path $pakLive $stagedPak.Name
       $stageHash = (Get-FileHash $stagedPak.FullName -Algorithm SHA256).Hash
