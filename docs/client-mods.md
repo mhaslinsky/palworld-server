@@ -9,11 +9,13 @@ Everything here is **client-side**: you install it in your Palworld game, not on
 ## Step 1: Install UE4SS (required first, it loads the mods)
 
 Use the **Palworld experimental** build, matched to the current game version
-(**`v1.0.2.101103`** as of 2026-07-30). A mismatched UE4SS will crash the game.
+(**`v1.0.3.101283`** as of 2026-08-12). A mismatched UE4SS will crash the game.
 
 - Download: https://github.com/UE4SS-RE/RE-UE4SS/releases (experimental). We run
-  `UE4SS_v3.0.1-1012` on the server, unchanged across the 1.0.1 to 1.0.2 patch and
-  verified loading against `v1.0.2.101103`.
+  `UE4SS_v3.0.1-1012` on the server, unchanged across 1.0.1 to 1.0.2 to 1.0.3 and
+  verified loading against `v1.0.3.101283`. **UE4SS itself did not need updating for
+  the 1.0.3 patch** - only mod 1898 did (see the table below), which is the usual
+  shape: the loader survives patches, the AOB-scanning DLL mod does not.
 - Extract `dwmapi.dll` + the `ue4ss` folder into your game's Win64 folder:
   `...\steam\steamapps\common\Palworld\Pal\Binaries\Win64\`
 
@@ -23,7 +25,7 @@ Target folder: `...\Palworld\Pal\Binaries\Win64\ue4ss\Mods\`
 
 | Mod | Nexus | Version | Required? | Notes |
 |-----|-------|---------|-----------|-------|
-| **Building Restrictions Disabler** | [1898](https://www.nexusmods.com/palworld/mods/1898) | 1.78 BETA (DLL, client+server) | **Required to build freely** | Folder `BuildingRestrictionsDisabler\` (has `enabled.txt` + `dlls\main.dll`). Must be on both sides (the server already has it). 1.75 does NOT work on 1.0.2: it loads and then reports `Incompatible game client version`. |
+| **Building Restrictions Disabler** | [1898](https://www.nexusmods.com/palworld/mods/1898) | **1.82** (DLL, client+server) | **Required to build freely** | Folder `BuildingRestrictionsDisabler\` (has `enabled.txt` + `dlls\main.dll`). Must be on both sides (the server already has it). **Update to 1.82 for game 1.0.3**: 1.78 loads and then logs `Version pattern not found`, so building goes silently vanilla. Older still, 1.75 on 1.0.2 reported `Incompatible game client version`. |
 | **FSS – Full Sphere Summon** | [3620](https://www.nexusmods.com/palworld/mods/3620) | 0.7.0 (UE4SS Lua) | Optional | Folder `FullSphereSummon\` (has `enabled.txt` + `Scripts\main.lua`). Client-only; restores throw-to-summon. |
 | **Max Stack Count** | [376](https://www.nexusmods.com/palworld/mods/376) | 1.3 (UE4SS Lua) | **Required for raised stacks** | Folder `MaxStackCount\` (has `enabled.txt` + `Scripts\main.lua`). Raises item stack caps from 9999 to 999,999,999. Must be on both sides (the server already has it): a vanilla client stays capped at 9999 even though the server allows more. Confirmed in-game by multiple players. |
 
@@ -36,6 +38,38 @@ Join the server and try an illegal build (overlap / on a slope / no foundation).
 - **It places and sticks** → working.
 - **Blue/green preview then a red error** → the mod isn't right on the server (tell the admin).
 - **Normal vanilla block, no special preview** → your client mod isn't active (recheck Steps 1–2).
+
+## When Palworld patches (this WILL happen again)
+
+A base-game patch reliably breaks mod 1898 and reliably does not break UE4SS. 1898 finds
+the code it patches by AOB signature scan, and a patch moves those bytes, so the mod
+loads, registers, and then silently does nothing. **The symptom is not an error. It is
+building quietly behaving like vanilla**, which is easy to mistake for "the server is
+misconfigured".
+
+The sequence on 2026-08-12, which is the shape to expect:
+
+| Time (UTC) | What |
+|-----------|------|
+| 03:01 | Pocketpair ships 1.0.3. Steam updates CLIENTS on next launch |
+| ~03:00 onward | Players who relaunch get **version incompatible** and cannot join at all |
+| 05:44 | Mod 1898 publishes 1.82, the compatible build |
+
+So there is a window, nearly three hours that night, where the base patch is out and the
+mod is not. **This is why the server is never auto-updated**: updating inside that window
+gets everyone connected again with relaxed building silently broken.
+
+What to do as a player:
+
+1. Wait for the admin to say the server is updated. Until then, do not be surprised by
+   `version incompatible` - your client updated and the server has not yet.
+2. Once it is updated, check [mod 1898](https://www.nexusmods.com/palworld/mods/1898)
+   for a build matching the new game version and install it. Your builds get rejected
+   client-side if your 1898 is older than the server's, even though the server is fine.
+3. UE4SS itself almost certainly does not need touching.
+
+The admin gets a Discord alert within 30 minutes of any Steam build change, so nobody
+has to notice this by failing to connect.
 
 ## Don't run two building mods at once
 
@@ -53,8 +87,11 @@ Tracked here so we know what's set. These live on the server / in Terraform:
 - **MaxStackCount** ([376](https://www.nexusmods.com/palworld/mods/376), 1.3, UE4SS Lua): installed
   on the Windows dedicated server. Raises item stack caps from 9999 to 999,999,999. Enabled purely
   via `enabled.txt` (same override mechanism as Building Restrictions Disabler), not listed in
-  `mods.txt`. The server-side rewrite is confirmed firing in `UE4SS.log`
-  (`[Max Stack Count] set from 9999 to 999999999 [palServerRegisterHook]`) on `v1.0.2.101103`.
+  `mods.txt`. The server-side rewrite was last confirmed firing in `UE4SS.log`
+  (`[Max Stack Count] set from 9999 to 999999999 [palServerRegisterHook]`) on `v1.0.2.101103`,
+  and has **NOT been re-verified since the 1.0.3 patch**. It is a Lua hook rather than an AOB
+  scan, so it is much less likely than 1898 to have been broken, but "less likely" is not
+  "checked" - grep `UE4SS.log` for that line to settle it.
   It carries a client hook too, and players must install it client-side to get the raised cap:
   a vanilla client stays hard-capped at 9999 even though the server allows more (confirmed in-game
   by multiple players). It is therefore listed under Step 2 as a required player install.
