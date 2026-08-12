@@ -1,0 +1,20 @@
+scripts/palworld-idle.ps1
+  s_e474a6e718b2ee::t_98dbdd834eea68 210-215,217-218
+  s_e474a6e718b2ee::t_191b7c9dcae358 246-250,252
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "ef5fe688e0ba0c245606b4d18b9a58ef047a7b6a",
+  "prompts": {},
+  "sessions": {
+    "s_e474a6e718b2ee": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b37d46d2-b0bc-41d3-8065-034a0fad5ed6",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    }
+  }
+}
