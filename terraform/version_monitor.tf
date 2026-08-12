@@ -202,10 +202,10 @@ resource "aws_lambda_function" "version_monitor" {
       # Read ONLY to judge whether the publisher has gone silent. The version
       # comparison itself works fine on a stopped box and does not consult this.
       INSTANCE_ID = local.active_game_instance_id
-      # The publisher writes every ~2 min, so this tolerates seven missed cycles
-      # before accusing it of being dead. This alert says a component is broken, and
-      # crying wolf about that is how it gets muted.
-      PUBLISH_STALE_MINUTES = "15"
+      # Sized by update duration, not the ~2 min publish interval: update-server.ps1
+      # disables PalworldIdle while it runs, so the parameter legitimately goes
+      # unwritten that whole time. Do not lower it toward the interval.
+      PUBLISH_STALE_MINUTES = "45"
       # A cold boot runs SteamCMD before the scheduled task has necessarily fired.
       # Without this, every start would raise a false "publisher is dead".
       BOOT_GRACE_MINUTES = "20"

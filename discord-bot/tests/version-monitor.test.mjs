@@ -88,7 +88,7 @@ process.env.STATE_PARAM = "/palworld-server/version_monitor_state";
 process.env.STEAM_APP_ID = "2394010";
 process.env.REMIND_HOURS = "12";
 process.env.INSTANCE_ID = "i-test";
-process.env.PUBLISH_STALE_MINUTES = "15";
+process.env.PUBLISH_STALE_MINUTES = "45";
 process.env.BOOT_GRACE_MINUTES = "20";
 
 const {handler} = await import("../version-monitor/index.mjs");
@@ -298,6 +298,21 @@ await scenario("EC2 lookup fails",
 await scenario("parameter has no LastModifiedDate on a long-running box",
   {instanceState: "running", upMinutes: 600, publishedMinutesAgo: null},
   {status: "NO_DATA", alerts: true});
+// Fail closed on missing config, or an env typo silently disables the only defence
+// against a frozen parameter -- the same bug one level up.
+install({steamBuild: "24575149", installedBuild: "24575149", publishedMinutesAgo: 900});
+const savedInstanceId = process.env.INSTANCE_ID;
+delete process.env.INSTANCE_ID;
+const {handler: handlerNoInstanceId} = await import("../version-monitor/index.mjs?no-instance-id");
+const unconfigured = await handlerNoInstanceId();
+process.env.INSTANCE_ID = savedInstanceId;
+if (unconfigured.status === "UNKNOWN" && delivered.length === 1) {
+  console.log("PASS  unset INSTANCE_ID is UNKNOWN, never a silent OK");
+} else {
+  console.log(`FAIL  unset INSTANCE_ID gave ${unconfigured.status} with ${delivered.length} alert(s)`);
+  failures++;
+}
+
 await scenario("INSTANCE_ID matches no instance",
   {noInstance: true, steamBuild: "24575149", installedBuild: "24575149",
    publishedMinutesAgo: 900},

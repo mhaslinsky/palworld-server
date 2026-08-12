@@ -66,10 +66,10 @@ function numberSetting(raw, fallback) {
 const REMIND_HOURS = numberSetting(process.env.REMIND_HOURS, 12);
 const FETCH_TIMEOUT_MS = numberSetting(process.env.FETCH_TIMEOUT_MS, 8000);
 const INSTANCE_ID = process.env.INSTANCE_ID;
-// The on-box watcher publishes every ~2 min, so 15 tolerates seven missed cycles
-// before calling the publisher dead. Deliberately generous: this alert accuses a
-// component of being broken, and crying wolf about that is how it gets muted.
-const PUBLISH_STALE_MINUTES = numberSetting(process.env.PUBLISH_STALE_MINUTES, 15);
+// Sized by how long an UPDATE runs, not by the ~2 min publish interval:
+// update-server.ps1 disables PalworldIdle for the duration, so the parameter
+// legitimately goes unwritten that whole time. Do not lower it toward the interval.
+const PUBLISH_STALE_MINUTES = numberSetting(process.env.PUBLISH_STALE_MINUTES, 45);
 // A cold boot runs SteamCMD and the scheduled task has not necessarily fired yet, so
 // without this every single start would raise a false "publisher is dead". Matches
 // backup-monitor's grace, and for the same reason.
@@ -243,7 +243,13 @@ async function installedBuild() {
  * being read as a live one.
  */
 async function publisherSilence(publishedAt, nowMs) {
-  if (!INSTANCE_ID) return null;
+  // Fail CLOSED, exactly as BUILD_PARAM does. Returning null here would mean an env
+  // typo or a partial deploy silently disables the only defence against a frozen
+  // parameter reporting OK forever -- absence of the signal becoming a pass, which is
+  // the bug this whole function exists to close, one level up.
+  if (!INSTANCE_ID) {
+    throw classifiedError("instance-config", "INSTANCE_ID not set - publisher freshness cannot be judged");
+  }
   let instance;
   try {
     const result = await ec2.send(new DescribeInstancesCommand({InstanceIds: [INSTANCE_ID]}));
