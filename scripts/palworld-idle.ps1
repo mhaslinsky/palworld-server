@@ -258,8 +258,15 @@ $cred = New-Object System.Management.Automation.PSCredential("admin", $secure)
 function Get-WebhookUrl {
   if (-not $conf.WebhookParam) { return $null }
   try {
+    # Bounded, for the same reason the build publish is: Send-Notify is called from the
+    # duplicate-server reaping and idle-shutdown paths, so an unbounded CLI call that
+    # hangs on a wedged SSM endpoint or a slow credential lookup would stall the
+    # watchdog itself. That trades a missing alert for the memory exhaustion of
+    # 2026-07-31, or for a box that never shuts down. Resolving a webhook is
+    # best-effort; killing duplicate servers is not.
     $value = & $awsExe ssm get-parameter --name $conf.WebhookParam --with-decryption `
-      --region $conf.AwsRegion --query 'Parameter.Value' --output text 2>$null
+      --region $conf.AwsRegion --query 'Parameter.Value' --output text `
+      --cli-connect-timeout 3 --cli-read-timeout 5 2>$null
     # An unset SSM parameter comes back as the literal string "None".
     if ($value -and $value.Trim() -ne "None") { return $value.Trim() }
     # Reached when the CLI exits non-zero without throwing (denied IAM, no such
@@ -287,10 +294,11 @@ function Send-Notify([string]$content) {
     $body = @{ content = $content } | ConvertTo-Json -Compress
     # Windows PowerShell 5.1 otherwise sends string bodies through the ANSI code page.
     $bodyBytes = [Text.Encoding]::UTF8.GetBytes($body)
-    # -ErrorAction Stop is not decoration. This file sets $ErrorActionPreference =
-    # "Continue", so any non-terminating error would sail past the catch below and the
-    # EventId 117 entry would never be written - a logging fix that logs nothing.
-    # Explicit Stop makes the catch the only exit.
+    # -ErrorAction Stop settles a disagreement rather than fixing a proven bug: this file
+    # runs under "Continue", and reviewers split on whether Invoke-RestMethod's non-2xx
+    # error is terminating regardless of that. If it is not, the catch below never fires
+    # and this entire logging fix logs nothing. The flag costs nothing and removes the
+    # question, which is the right trade when the downside is a silent alert path.
     Invoke-RestMethod -Uri $url -Method Post -ContentType 'application/json' `
       -Body $bodyBytes -TimeoutSec 5 -ErrorAction Stop | Out-Null
   } catch {

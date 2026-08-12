@@ -187,19 +187,19 @@ per file - and the writers include `terraform/windows_user_data.ps1.tftpl`, not 
 each was found by widening the search rather than by thinking harder: `106` meant both
 "SteamCMD install failed" and "watchdog stuck disabled", `107` both "UE4SS restore
 failed" and "stale build stranded", `109` both "may serve an EMPTY world" and "alert
-dropped", `110` both "backup failed" and "Discord POST failed". Filtering for a severe
-id and getting unrelated noise defeats the point of having ids.
+dropped", `110` both "backup failed" and "Discord POST failed". Filtering for a severe id
+and getting unrelated noise defeats the point of having ids.
 
-**Before assigning an id, run the collision check over BOTH locations** (grepping only
-`scripts/` is how half of these got in):
+**Before assigning an id, check BOTH locations.** Grepping only `scripts/` is how half of
+these got in:
 
 ```bash
 grep -ho 'EventId 1[0-9][0-9]' scripts/*.ps1 terraform/*.tftpl | sort -u
 ```
 
-Note `windows_user_data.ps1.tftpl` owns 102, 106, 107 and 108 and **must not be edited
-to resolve a collision**: it is rendered into `user_data`, so a change there stops and
-starts the live server on apply (rule 5). Move the other side.
+`windows_user_data.ps1.tftpl` owns 102, 106, 107 and 108 and **must not be edited to
+resolve a collision**: it is rendered into `user_data`, so a change there stops and starts
+the live server on apply (rule 5). The other side always moves.
 
 | ID | Writer | Meaning |
 |----|--------|---------|
@@ -208,7 +208,7 @@ starts the live server on apply (rule 5). Move the other side.
 | 103 | idle | Roster publish failed. The off-box backup monitor reads a stale roster as "the idle watcher is dead". |
 | 104 | idle | Watchdog: the launcher script is missing, so a crashed server cannot be restarted. |
 | 105 | idle | Watchdog: the launcher exited non-zero; the server did not start. |
-| 106 | user_data | SteamCMD install failed after 3 attempts; the shipping exe is missing. |
+| 106 | user_data | SteamCMD install failed after 3 attempts; the shipping exe is missing. (Overlaps 101's meaning from a different stage of the box's life. Left as-is because the template cannot be edited safely.) |
 | 107 | user_data | Ambiguous RAW disks; the save volume was not initialized. |
 | 108 | user_data | UE4SS restore failed, its durable stage is missing, or the restore was incomplete and the server is vanilla. |
 | 109 | launch | No staged `GameUserSettings.ini`; the server may serve an **EMPTY world** while the real save sits intact on D:. |
