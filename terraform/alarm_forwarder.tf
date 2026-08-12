@@ -85,7 +85,13 @@ resource "aws_lambda_function" "alarm_forwarder" {
   filename         = data.archive_file.alarm_forwarder.output_path
   source_code_hash = data.archive_file.alarm_forwarder.output_base64sha256
 
-  timeout     = 15
+  # 30, not 15, and the arithmetic is the reason: each Discord POST can wait up to 8s
+  # and records are delivered sequentially, so 15 could expire mid-batch, SNS would
+  # retry the WHOLE event, and already-posted alarms would repeat. SNS-to-Lambda
+  # currently delivers one record per invocation, which makes this defensive rather
+  # than load-bearing, but the timeout should not be the thing standing between a
+  # correct loop and a duplicate-alert storm.
+  timeout     = 30
   memory_size = 128
 
   environment {
@@ -101,6 +107,12 @@ resource "aws_sns_topic_subscription" "alerts_discord" {
   topic_arn = aws_sns_topic.alerts.arn
   protocol  = "lambda"
   endpoint  = aws_lambda_function.alarm_forwarder.arn
+
+  # Ordered AFTER the invoke permission, or terraform is free to subscribe first and an
+  # alarm published during the apply reaches a function SNS is not yet allowed to call.
+  # SNS retries would probably cover it, but "probably recovered by a retry" is a poor
+  # guarantee for the channel that carries "a monitor could not tell you something".
+  depends_on = [aws_lambda_permission.alarm_forwarder_sns]
 }
 
 resource "aws_lambda_permission" "alarm_forwarder_sns" {
@@ -117,6 +129,23 @@ resource "aws_lambda_permission" "alarm_forwarder_sns" {
 # the forwarder that cannot deliver. The email subscription is the non-circular
 # channel; this one is best-effort by construction and says so rather than wearing a
 # guarantee it cannot keep.
+
+# The whole "Discord is fine because email covers the circular case" argument rests on
+# email ACTUALLY being subscribed, and alert_email is optional with an empty default.
+# Deployed without it, this forwarder is the only subscriber and the alarm's sole path
+# runs through the very webhook whose failure the alarm exists to report. That is a
+# configuration in which the alerting looks complete and is not, so it warns rather
+# than being left to a paragraph nobody rereads.
+#
+# A `check` rather than a precondition on purpose: this must not block an apply. A
+# Discord-only alarm channel is still better than none, and a guard that blocks
+# legitimate work gets removed.
+check "alarm_channel_independence" {
+  assert {
+    condition     = var.alert_email != ""
+    error_message = "alert_email is empty, so the Discord forwarder is the alerts topic's only subscriber. A dead Discord webhook then breaks the monitor AND its alarm, which is the exact case the SNS path exists for. Set alert_email (and click the confirmation mail) for a channel that does not depend on Discord."
+  }
+}
 
 output "alarm_forwarder_logs_command" {
   description = "Tail the SNS-to-Discord alarm forwarder's logs."
