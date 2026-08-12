@@ -180,6 +180,53 @@ await scenario("build parameter holds a non-numeric buildid",
 await scenario("publisher reported an unreadable manifest",
   {installedRaw: JSON.stringify({buildid: "", updated: 1, error: "manifest unreadable"})},
   {status: "NO_DATA", alerts: true});
+await scenario("build parameter is literal null",
+  {installedRaw: "null"}, {status: "UNKNOWN", alerts: true});
+
+console.log("\n--- The NO_DATA alert must say WHICH no-data this is ---");
+// "Never published" sends you to look at the publisher. "Cleared because the manifest
+// was unreadable" sends you to look at the INSTALL. Saying the first when it is the
+// second is a false statement about a box that deliberately published I-don't-know.
+install({installedRaw: JSON.stringify({buildid: "", updated: 1, error: "manifest unreadable at C:\\PalServer\\steamapps\\appmanifest_2394010.acf"})});
+await handler();
+if (delivered.length === 1 && /could not read the build manifest/.test(delivered[0]) && !/never been published/.test(delivered[0])) {
+  console.log("PASS  cleared-by-publisher NO_DATA names the manifest, not 'never published'");
+} else {
+  console.log(`FAIL  wrong NO_DATA wording: ${delivered[0]}`);
+  failures++;
+}
+install({installedRaw: JSON.stringify({buildid: "0", updated: 0})});
+await handler();
+if (delivered.length === 1 && /never been published/.test(delivered[0])) {
+  console.log("PASS  never-published NO_DATA keeps its own wording");
+} else {
+  console.log(`FAIL  wrong NO_DATA wording: ${delivered[0]}`);
+  failures++;
+}
+
+console.log("\n--- UNKNOWN dedupe keys on a CLASS, not a volatile message ---");
+// A message carrying a duration or a request id would mint a new key every run and
+// alert every 30 minutes all night, which gets the channel muted.
+install({steamThrows: true, state: {key: "unknown:steam-transport", alertedAt: Date.now() - 1 * HOUR}});
+await handler();
+if (delivered.length === 0) {
+  console.log("PASS  a differently-worded transport failure dedupes to the same class");
+} else {
+  console.log(`FAIL  re-alerted despite a same-class record: ${delivered[0]}`);
+  failures++;
+}
+
+console.log("\n--- A healthy check must not rewrite unchanged dedupe state ---");
+// An unconditional write is a PutParameter every 30 minutes forever, churning a new
+// parameter version each time to store a value that did not change.
+install({state: {key: "ok:24575149", alertedAt: Date.now() - 1 * HOUR}});
+await handler();
+if (statePut === null) {
+  console.log("PASS  unchanged OK state is not rewritten");
+} else {
+  console.log(`FAIL  rewrote unchanged state: ${JSON.stringify(statePut)}`);
+  failures++;
+}
 
 console.log("\n--- Dedupe must RESET on recovery, or the next patch is swallowed ---");
 install({});

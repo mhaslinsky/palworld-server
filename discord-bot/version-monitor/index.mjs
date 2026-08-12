@@ -57,6 +57,22 @@ const FETCH_TIMEOUT_MS = numberSetting(process.env.FETCH_TIMEOUT_MS, 8000);
 const ssm = new SSMClient({region: REGION});
 
 /**
+ * An error carrying a COARSE failure class for dedupe.
+ *
+ * The UNKNOWN dedupe key used to be the raw `error.message`. Stable messages
+ * ("steam API returned 503") re-nag on the intended 12h cadence, but an unstable one
+ * (a timeout carrying a duration, an SDK message carrying a request id) mints a new
+ * key on every run and alerts every 30 minutes all night. That is the opposite
+ * failure from silencing and it ends the same way: the channel gets muted, and then
+ * a real alert is missed. Key on the class, keep the full message in the alert body.
+ */
+function classifiedError(kind, message) {
+  const error = new Error(message);
+  error.kind = kind;
+  return error;
+}
+
+/**
  * Deliver an alert. THROWS if it cannot, so the invocation fails and the CloudWatch
  * alarm fires over SNS -- a channel that does not depend on Discord being healthy.
  * notify() is only ever called when something is already wrong, so a quiet return
@@ -93,11 +109,18 @@ async function notify(content) {
  * outage must not read as "no patch available".
  */
 async function steamBuild() {
-  const response = await fetch(`${STEAM_API}/${STEAM_APP_ID}`, {
-    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-  });
+  let response;
+  try {
+    response = await fetch(`${STEAM_API}/${STEAM_APP_ID}`, {
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    });
+  } catch (error) {
+    // Transport failures carry the most variable messages of any path here
+    // (timeouts, DNS, resets), which is exactly why they need the coarse class.
+    throw classifiedError("steam-transport", `steam API unreachable: ${error.message}`);
+  }
   if (!response.ok) {
-    throw new Error(`steam API returned ${response.status} ${response.statusText}`);
+    throw classifiedError("steam-http", `steam API returned ${response.status} ${response.statusText}`);
   }
   const body = await response.json();
   const branch = body?.data?.[STEAM_APP_ID]?.depots?.branches?.public;
@@ -105,35 +128,52 @@ async function steamBuild() {
   // The endpoint answers 200 with {"status":"error"} for an unknown appid, and a
   // reshaped payload would otherwise surface as undefined === undefined -> "match".
   if (!buildid) {
-    throw new Error(`steam API response had no public buildid for app ${STEAM_APP_ID}`);
+    throw classifiedError("steam-shape", `steam API response had no public buildid for app ${STEAM_APP_ID}`);
   }
   // Validate the SHAPE here, at the boundary, not at the comparison. A non-numeric
   // build id means the response is malformed, which is UNKNOWN - but the comparison
   // downstream would have to guess a direction for it, and guessing "behind" turns a
   // broken API into a confident "Palworld has an update" telling people to patch.
   if (!/^\d+$/.test(String(buildid))) {
-    throw new Error(`steam API returned a non-numeric buildid (${JSON.stringify(buildid)}) for app ${STEAM_APP_ID}`);
+    throw classifiedError("steam-shape", `steam API returned a non-numeric buildid (${JSON.stringify(buildid)}) for app ${STEAM_APP_ID}`);
   }
   return {buildid: String(buildid), updated: Number(branch?.timeupdated) || null};
 }
 
 /**
  * The build actually installed, as published by palworld-idle.ps1 every cycle.
- * Returns null when nothing has published yet -- distinct from a read failure,
- * because the two want different messages and only one of them is a fault.
+ *
+ * Always returns an object. `buildid` is null when nothing usable has been published,
+ * with `reason` carrying the publisher's own explanation when it left one -- which
+ * separates "never published" from "published a deliberate I-don't-know". A read
+ * failure THROWS instead, because that is a fault in the check rather than a state
+ * of the box, and the two want different messages.
  */
 async function installedBuild() {
   if (!BUILD_PARAM) {
-    throw new Error("BUILD_PARAM not set - nothing to compare against");
+    throw classifiedError("build-config", "BUILD_PARAM not set - nothing to compare against");
   }
-  const result = await ssm.send(new GetParameterCommand({Name: BUILD_PARAM}));
+  let result;
+  try {
+    result = await ssm.send(new GetParameterCommand({Name: BUILD_PARAM}));
+  } catch (error) {
+    throw classifiedError("build-read", `could not read ${BUILD_PARAM}: ${error.message}`);
+  }
   const raw = result.Parameter?.Value;
-  if (!raw || raw === "None") return null;
+  // An unset SSM parameter comes back as the literal string "None". Same shape as
+  // every other no-data return, so the caller has exactly one thing to check.
+  if (!raw || raw === "None") return {buildid: null, reason: null};
   let parsed;
   try {
     parsed = JSON.parse(raw);
   } catch (error) {
-    throw new Error(`${BUILD_PARAM} is not valid JSON: ${error.message}`);
+    throw classifiedError("build-json", `${BUILD_PARAM} is not valid JSON: ${error.message}`);
+  }
+  // Same shape guard readState() has. `JSON.parse("null")` is valid and returns null,
+  // and the property access below would throw a bare TypeError that surfaces to the
+  // operator as an unexplained stack rather than as "the parameter is malformed".
+  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw classifiedError("build-shape", `${BUILD_PARAM} is not a JSON object (got ${JSON.stringify(parsed)})`);
   }
   // Terraform seeds the parameter with buildid "0" so the resource can exist before
   // the box has ever published. The on-box watcher publishes the SAME empty-ish
@@ -141,12 +181,18 @@ async function installedBuild() {
   // build id stranded there. Both mean "nothing known about this box right now", and
   // treating either as a real build would report the server as astronomically behind
   // or, worse, silently OK against a build it no longer runs.
-  if (!parsed.buildid || parsed.buildid === "0") return null;
+  // The publisher attaches `error` when it had to clear the value because it could
+  // not read the appmanifest. Carrying it out means the NO_DATA alert can say what
+  // actually happened instead of "nothing has ever published", which would be a
+  // plainly false statement about a box that published a deliberate I-don't-know.
+  if (!parsed.buildid || parsed.buildid === "0") {
+    return {buildid: null, reason: typeof parsed.error === "string" ? parsed.error : null};
+  }
   // Same boundary validation as the Steam side. The publisher extracts \d+ from the
   // manifest, so anything else here means the parameter was written by something
   // else, and a bad value must not be handed to a comparison that assumes a number.
   if (!/^\d+$/.test(String(parsed.buildid))) {
-    throw new Error(`${BUILD_PARAM} has a non-numeric buildid (${JSON.stringify(parsed.buildid)})`);
+    throw classifiedError("build-shape", `${BUILD_PARAM} has a non-numeric buildid (${JSON.stringify(parsed.buildid)})`);
   }
   return {buildid: String(parsed.buildid), updated: Number(parsed.updated) || null};
 }
@@ -215,7 +261,11 @@ export const handler = async () => {
     steam = await steamBuild();
     installed = await installedBuild();
   } catch (error) {
-    const key = `unknown:${error.message}`;
+    // The coarse class, never the raw message: an unstable message would mint a new
+    // dedupe key every run and alert every 30 minutes. `other` covers anything thrown
+    // without a class, which is the conservative direction (it groups rather than
+    // splits, so the worst case is one missed distinction, not a night of spam).
+    const key = `unknown:${error.kind || "other"}`;
     const state = await readState();
     if (!alreadyReported(state, key, nowMs)) {
       await notify(`:warning: **Palworld version check could not run** - ${error.message}. This is the check itself failing, so it has NOT confirmed the server is current.`);
@@ -224,21 +274,35 @@ export const handler = async () => {
     return {status: "UNKNOWN", reason: error.message};
   }
 
-  if (!installed) {
-    const key = "no-data";
+  if (!installed.buildid) {
+    // Two different situations, and saying the wrong one sends the reader to the
+    // wrong place. No reason = nothing ever wrote the parameter, which a normal boot
+    // fixes. A reason = the publisher ran, could not read the appmanifest, and
+    // deliberately cleared the value, which means the INSTALL is suspect, not the
+    // publisher. The old text asserted "has never been published" for both.
+    const key = installed.reason ? "no-data-cleared" : "no-data-never";
     const state = await readState();
     if (!alreadyReported(state, key, nowMs)) {
-      await notify(`:warning: **Palworld version check has no installed build to compare against** - \`${BUILD_PARAM}\` has never been published. The on-box watcher writes it every cycle, so this clears itself once the box next runs; if it persists, \`PalworldIdle\` is not publishing.`);
+      const message = installed.reason
+        ? `:warning: **Palworld version check has no usable installed build** - the on-box watcher cleared \`${BUILD_PARAM}\` because it could not read the build manifest (${installed.reason}). The install itself is suspect: check that SteamCMD finished and that \`C:\\PalServer\\steamapps\` is intact.`
+        : `:warning: **Palworld version check has no installed build to compare against** - \`${BUILD_PARAM}\` has never been published. The on-box watcher writes it every cycle, so this clears itself once the box next runs; if it persists, \`PalworldIdle\` is not publishing.`;
+      await notify(message);
       await writeState({key, alertedAt: nowMs});
     }
-    return {status: "NO_DATA", steam: steam.buildid};
+    return {status: "NO_DATA", steam: steam.buildid, reason: installed.reason};
   }
 
   if (steam.buildid === installed.buildid) {
     console.log(`OK - installed ${installed.buildid} matches Steam public build`);
     // Clear the dedupe record so the NEXT patch alerts immediately rather than being
-    // suppressed by a stale key from the last one.
-    if (STATE_PARAM) await writeState({key: `ok:${steam.buildid}`, alertedAt: nowMs});
+    // suppressed by a stale key from the last one. Read first and write only on a
+    // CHANGE: an unconditional write is a PutParameter every 30 minutes forever,
+    // rewriting the same value and churning a new parameter version each time.
+    if (STATE_PARAM) {
+      const state = await readState();
+      const key = `ok:${steam.buildid}`;
+      if (state.key !== key) await writeState({key, alertedAt: nowMs});
+    }
     return {status: "OK", build: steam.buildid};
   }
 

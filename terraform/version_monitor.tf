@@ -59,8 +59,10 @@ resource "aws_iam_role_policy" "instance_build_windows" {
 
 # --- The monitor ----------------------------------------------------------------
 #
-# EVERY resource below is count-gated on windows_enabled, because everything this
-# monitor reads is Windows-side. `enable_windows_migration` defaults to FALSE
+# Every MANAGED resource below is count-gated on windows_enabled, because everything
+# this monitor reads is Windows-side. The two data sources are not: an IAM policy
+# document and a local zip cost nothing to evaluate when disabled, matching
+# backup_monitor.tf. `enable_windows_migration` defaults to FALSE
 # (variables.tf), and it is also the documented rollback lever, so an ungated monitor
 # would deploy on a Linux-only stack with no build parameter to read, report UNKNOWN
 # on every invocation, and nag Discord every 12h about a box that does not exist.
@@ -233,4 +235,11 @@ resource "aws_cloudwatch_metric_alarm" "version_monitor_errors" {
 
   alarm_actions = [aws_sns_topic.alerts.arn]
   ok_actions    = [aws_sns_topic.alerts.arn]
+}
+
+# Mirrors backup_monitor.tf's equivalent. The first time an alert fires is the worst
+# moment to be working out the log group's name by hand.
+output "version_monitor_logs_command" {
+  description = "Tail the version monitor's logs."
+  value       = try("aws logs tail /aws/lambda/${local.version_monitor_name} --follow --profile ${var.aws_profile} --region ${var.aws_region}", "")
 }

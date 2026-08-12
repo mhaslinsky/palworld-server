@@ -106,7 +106,16 @@ if ($conf.BuildParam -or $conf.RosterParam) {
       & $awsExe ssm put-parameter --name $buildParam --type String --overwrite `
         --value "file://$buildFile" --region $conf.AwsRegion 2>$null | Out-Null
       if ($LASTEXITCODE -ne 0) {
-        Write-Output "WARNING: UNKNOWN-build publish failed (aws exit $LASTEXITCODE)"
+        # This is the WORST branch in the whole block, so it gets the LOUDEST signal.
+        # The manifest is already unreadable AND the clear failed, which means the
+        # stranded previous build id survives in SSM - the exact stale-compare this
+        # block exists to prevent, now with nothing off-box able to tell. It briefly
+        # had only a Write-Output here, which vanishes in a SYSTEM Scheduled Task,
+        # making the worst case the quietest one. Its own EventId, not 106's, so the
+        # two are distinguishable in the log.
+        Write-EventLog -LogName Application -Source "Palworld" -EventId 107 -EntryType Error `
+          -Message "could not read the appmanifest AND could not publish the UNKNOWN sentinel to $buildParam (aws exit $LASTEXITCODE). A stale build id is stranded there; the version monitor may report OK against a build this box no longer runs." -ErrorAction SilentlyContinue
+        Write-Output "ERROR: UNKNOWN-build publish failed (aws exit $LASTEXITCODE) - stale build id stranded in $buildParam"
       }
     } else {
       $payload = @{ buildid = $buildId; updated = $now } | ConvertTo-Json -Compress
@@ -123,6 +132,11 @@ if ($conf.BuildParam -or $conf.RosterParam) {
       }
     }
   } catch {
+    # Write-Output alone disappears in a SYSTEM Scheduled Task, so a throw here (the
+    # CLI failing to invoke at all, WriteAllText denied) would have left no evidence
+    # anywhere. Same reasoning as the roster publish's EventId 103.
+    Write-EventLog -LogName Application -Source "Palworld" -EventId 106 -EntryType Warning `
+      -Message "installed-build publish threw: $($_.Exception.Message)" -ErrorAction SilentlyContinue
     Write-Output "WARNING: installed-build publish threw: $($_.Exception.Message)"
   }
 }
