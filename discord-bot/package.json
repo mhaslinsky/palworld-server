@@ -3,7 +3,7 @@
   "private": true,
   "description": "Dev-only workspace for testing the Lambda handlers. The handlers themselves have no dependencies beyond the AWS SDK bundled into the nodejs22.x runtime, and each Lambda is zipped from its OWN subdirectory (see archive_file in terraform) \u2014 so nothing here, including node_modules, ever ships to AWS.",
   "scripts": {
-    "test": "node tests/backup-monitor.test.mjs && node tests/ask-entry.test.mjs && node tests/ask-worker.test.mjs && node tests/palworld-update.test.mjs && node tests/ask-memory.test.mjs"
+    "test": "node tests/backup-monitor.test.mjs && node tests/version-monitor.test.mjs && node tests/ask-entry.test.mjs && node tests/ask-worker.test.mjs && node tests/palworld-update.test.mjs && node tests/ask-memory.test.mjs"
   },
   "devDependencies": {
     "@aws-sdk/client-bedrock-runtime": "^3.1090.0",

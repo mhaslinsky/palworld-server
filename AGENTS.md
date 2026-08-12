@@ -124,6 +124,27 @@ pak mods while every check passes.
 - `scripts/restore-drill.ps1` proves a backup actually restores. Run it after changing
   anything in the backup path, and before cutover.
 
+### 7b. Game updates are watched, never applied automatically
+
+`palworld-server-version-monitor` (Lambda, every 30 min) compares Steam's public
+build for app `2394010` against the build actually installed, and alerts Discord when
+they differ. It re-nags every 12 h while the box is behind, so one alert scrolling
+past at 3am does not read as "no problem".
+
+- The installed side comes from `/palworld-server/installed_build_windows`, which
+  `palworld-idle.ps1` publishes every cycle from Steam's `appmanifest`. That publish
+  sits **above** the watchdog's early exit on purpose: a server crash-looping after a
+  patch is exactly when the installed build matters, and exactly the cycle the
+  watchdog returns from early.
+- It does **not** key off instance state. The box sleeps most of the time and a patch
+  that lands while it sleeps still matters before the next start.
+- It alerts and stops there. Auto-updating a modded server is the wrong default: on
+  2026-08-12 the base patch landed at 03:01Z and mod 1898's compatible build did not
+  appear until 05:44Z, so an unattended update in that window yields a joinable
+  server with relaxed building silently vanilla and every check green.
+- The check failing is itself an alert (`UNKNOWN`). `api.steamcmd.net` is a
+  third-party mirror, and an outage must never read as "no patch available".
+
 ### 8. Verify on the box, not by exit code
 
 This codebase has produced several failures that reported success:
