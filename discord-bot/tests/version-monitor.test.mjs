@@ -12,8 +12,10 @@
 // the handler is imported.
 
 import {SSMClient} from "@aws-sdk/client-ssm";
+import {EC2Client} from "@aws-sdk/client-ec2";
 
 const HOUR = 3_600_000;
+const MINUTE = 60_000;
 
 let delivered = [];   // alerts ATTEMPTED, whether or not the POST succeeded
 let statePut = null;  // the dedupe record the handler wrote, if any
@@ -22,9 +24,19 @@ function install({steamBuild = "24575149", installedBuild = "24575149",
                   steamStatus = 200, steamBody = undefined, steamThrows = false,
                   installedRaw = undefined, buildParamThrows = false,
                   state = {}, webhook = "https://discord.test/webhook",
-                  failDelivery = false}) {
+                  failDelivery = false,
+                  instanceState = "stopped", upMinutes = 600,
+                  publishedMinutesAgo = 2, ec2Throws = false}) {
   delivered = [];
   statePut = null;
+
+  EC2Client.prototype.send = async () => {
+    if (ec2Throws) throw new Error("RequestLimitExceeded");
+    return {Reservations: [{Instances: [{
+      State: {Name: instanceState},
+      LaunchTime: new Date(Date.now() - upMinutes * MINUTE),
+    }]}]};
+  };
 
   SSMClient.prototype.send = async command => {
     const name = command.input.Name;
@@ -34,9 +46,14 @@ function install({steamBuild = "24575149", installedBuild = "24575149",
     }
     if (name === "/palworld-server/installed_build_windows") {
       if (buildParamThrows) throw new Error("ParameterNotFound");
-      return {Parameter: {Value: installedRaw !== undefined
-        ? installedRaw
-        : JSON.stringify({buildid: installedBuild, updated: 1786000000})}};
+      return {Parameter: {
+        Value: installedRaw !== undefined
+          ? installedRaw
+          : JSON.stringify({buildid: installedBuild, updated: 1786000000}),
+        LastModifiedDate: publishedMinutesAgo === null
+          ? undefined
+          : new Date(Date.now() - publishedMinutesAgo * MINUTE),
+      }};
     }
     if (name === "/palworld-server/version_monitor_state") {
       return {Parameter: {Value: JSON.stringify(state)}};
@@ -69,6 +86,9 @@ process.env.BUILD_PARAM = "/palworld-server/installed_build_windows";
 process.env.STATE_PARAM = "/palworld-server/version_monitor_state";
 process.env.STEAM_APP_ID = "2394010";
 process.env.REMIND_HOURS = "12";
+process.env.INSTANCE_ID = "i-test";
+process.env.PUBLISH_STALE_MINUTES = "15";
+process.env.BOOT_GRACE_MINUTES = "20";
 
 const {handler} = await import("../version-monitor/index.mjs");
 
@@ -237,6 +257,46 @@ if (statePut && String(statePut.key).startsWith("ok:")) {
   console.log(`FAIL  expected an ok: dedupe key after recovery, got ${JSON.stringify(statePut)}`);
   failures++;
 }
+
+console.log("\n--- RED: a FROZEN build parameter must never read as OK ---");
+// Codex's requested regression, corroborated by Grok and by cubic three times. A dead
+// publisher leaves a stale build id that compares perfectly against Steam. Content
+// alone cannot tell it from a correct one; only its age can, and only while running.
+await scenario("stale matching build on a RUNNING box is not OK",
+  {steamBuild: "24575149", installedBuild: "24575149",
+   instanceState: "running", upMinutes: 600, publishedMinutesAgo: 90},
+  {status: "NO_DATA", alerts: true});
+// The same staleness on a STOPPED box is correct and expected: it sleeps most of the
+// time and the last known build is still the right comparison. Alerting here would
+// fire on every normal night and get the channel muted.
+await scenario("stale matching build on a STOPPED box stays quiet",
+  {steamBuild: "24575149", installedBuild: "24575149",
+   instanceState: "stopped", publishedMinutesAgo: 900},
+  {status: "OK", alerts: false});
+// A cold boot runs SteamCMD before the scheduled task has necessarily fired, so
+// without the grace every single start would accuse the publisher of being dead.
+await scenario("stale build inside boot grace stays quiet",
+  {steamBuild: "24575149", installedBuild: "24575149",
+   instanceState: "running", upMinutes: 5, publishedMinutesAgo: 90},
+  {status: "OK", alerts: false});
+await scenario("fresh publish on a running box is genuinely OK",
+  {steamBuild: "24575149", installedBuild: "24575149",
+   instanceState: "running", upMinutes: 600, publishedMinutesAgo: 2},
+  {status: "OK", alerts: false});
+// A frozen parameter that is ALSO behind must report the publisher problem, because
+// "you are behind" invites an update against a build number nobody can vouch for.
+await scenario("stale AND behind reports the publisher, not the drift",
+  {steamBuild: "24600000", installedBuild: "24466863",
+   instanceState: "running", upMinutes: 600, publishedMinutesAgo: 90},
+  {status: "NO_DATA", alerts: true});
+// A freshness check that could not run has not established freshness.
+await scenario("EC2 lookup fails",
+  {instanceState: "running", ec2Throws: true}, {status: "UNKNOWN", alerts: true});
+// Never written at all, on a box up well past its grace, is the publisher being
+// silent rather than an absence of evidence.
+await scenario("parameter has no LastModifiedDate on a long-running box",
+  {instanceState: "running", upMinutes: 600, publishedMinutesAgo: null},
+  {status: "NO_DATA", alerts: true});
 
 console.log("\n--- RED: an undeliverable alert must FAIL the invocation ---");
 // The whole point of the CloudWatch alarm. If notify() swallowed a 429, the monitor

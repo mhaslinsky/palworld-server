@@ -7,11 +7,19 @@
 # the system knew a patch existed, and the box had been running the stale build for
 # three hours by then.
 #
-# Unlike backup-monitor this deliberately does NOT key off instance state. The box
+# The version COMPARISON never keys off instance state, unlike backup-monitor. The box
 # stops itself when empty, so it is stopped most of the time, and a patch landing
 # while it sleeps is exactly the thing worth knowing about before the next start.
 # The installed build comes from an SSM parameter the on-box watcher publishes, which
 # survives the box being down.
+#
+# Instance state IS read, for one narrow purpose: judging the publisher. The compared
+# value is whatever that watcher last wrote, so if it dies, loses its IAM, or starts
+# writing to a different parameter, the value freezes and the monitor reports OK
+# against a build the box may no longer run. A frozen value is indistinguishable from
+# a correct one by content; only its age gives it away, and age only means anything
+# while the box is running. So freshness is enforced when running and past boot grace,
+# and ignored entirely when stopped.
 #
 # It alerts. It does not update. See update-server.ps1's header for why an
 # unattended updater is the wrong answer on a modded server.
@@ -126,6 +134,23 @@ data "aws_iam_policy_document" "version_monitor" {
     actions   = ["kms:Decrypt"]
     resources = [data.aws_kms_key.ssm.arn]
   }
+
+  # Instance state is what makes a FROZEN build parameter detectable. The value the
+  # monitor compares is whatever the on-box publisher last wrote, so a dead publisher
+  # leaves a stale number that compares perfectly and reports OK forever. Age is the
+  # only tell, and age only means anything while the box is actually running.
+  # DescribeInstances takes no resource-level permissions; scope it to the region,
+  # exactly as backup_monitor.tf does.
+  statement {
+    sid       = "ReadInstanceState"
+    actions   = ["ec2:DescribeInstances"]
+    resources = ["*"]
+    condition {
+      test     = "StringEquals"
+      variable = "ec2:Region"
+      values   = [var.aws_region]
+    }
+  }
 }
 
 resource "aws_ssm_parameter" "version_monitor_state" {
@@ -174,6 +199,16 @@ resource "aws_lambda_function" "version_monitor" {
       BUILD_PARAM   = aws_ssm_parameter.installed_build_windows[0].name
       STATE_PARAM   = aws_ssm_parameter.version_monitor_state[0].name
       WEBHOOK_PARAM = aws_ssm_parameter.discord_webhook_url.name
+      # Read ONLY to judge whether the publisher has gone silent. The version
+      # comparison itself works fine on a stopped box and does not consult this.
+      INSTANCE_ID = local.active_game_instance_id
+      # The publisher writes every ~2 min, so this tolerates seven missed cycles
+      # before accusing it of being dead. This alert says a component is broken, and
+      # crying wolf about that is how it gets muted.
+      PUBLISH_STALE_MINUTES = "15"
+      # A cold boot runs SteamCMD before the scheduled task has necessarily fired.
+      # Without this, every start would raise a false "publisher is dead".
+      BOOT_GRACE_MINUTES = "20"
       # The DEDICATED SERVER app. The client (1623730) is a separate app; what decides
       # whether the box is compatible is what the box installs.
       STEAM_APP_ID = "2394010"
@@ -217,14 +252,21 @@ resource "aws_lambda_permission" "version_monitor_events" {
 # fails the invocation -- this is what turns that into something a human hears about,
 # over the SNS topic backup_monitor.tf already owns.
 resource "aws_cloudwatch_metric_alarm" "version_monitor_errors" {
-  count               = local.windows_enabled
-  alarm_name          = "${local.version_monitor_name}-errors"
-  alarm_description   = "The Palworld version monitor failed to run or could not deliver an alert."
-  namespace           = "AWS/Lambda"
-  metric_name         = "Errors"
-  dimensions          = { FunctionName = aws_lambda_function.version_monitor[0].function_name }
-  statistic           = "Sum"
-  period              = 1800
+  count             = local.windows_enabled
+  alarm_name        = "${local.version_monitor_name}-errors"
+  alarm_description = "The Palworld version monitor failed to run or could not deliver an alert."
+  namespace         = "AWS/Lambda"
+  metric_name       = "Errors"
+  dimensions        = { FunctionName = aws_lambda_function.version_monitor[0].function_name }
+  statistic         = "Sum"
+  # DOUBLE the invocation interval, not equal to it. With period == rate, CloudWatch's
+  # clock-aligned windows plus Lambda's scheduling jitter leave some windows holding
+  # zero datapoints and others holding two -- and treat_missing_data = "breaching"
+  # turns every empty window into a false alarm about a monitor that is working. The
+  # alarm that cries wolf is the alarm that gets muted, which would cost exactly the
+  # signal this alarm exists to carry. (backup_monitor.tf has period == rate too; that
+  # is a pre-existing instance of the same trap, not a precedent to copy.)
+  period              = 3600
   evaluation_periods  = 1
   threshold           = 0
   comparison_operator = "GreaterThanThreshold"

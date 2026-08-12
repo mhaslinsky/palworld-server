@@ -118,6 +118,13 @@ if ($conf.BuildParam -or $conf.RosterParam) {
         Write-Output "ERROR: UNKNOWN-build publish failed (aws exit $LASTEXITCODE) - stale build id stranded in $buildParam"
       }
     } else {
+      # WARNING: this republishes every cycle even when the build has not changed, and
+      # that is deliberate. The off-box monitor treats the parameter's LastModifiedDate
+      # as proof this publisher is still alive, so a write-on-change "optimisation"
+      # would freeze the timestamp on a healthy box and make the monitor report the
+      # publisher dead. The redundant write IS the heartbeat. (SSM version churn is a
+      # non-issue here: the roster parameter beside it publishes on the same 2-minute
+      # cycle and sat at version 7381 when this was written.)
       $payload = @{ buildid = $buildId; updated = $now } | ConvertTo-Json -Compress
       $buildFile = Join-Path $stateDir "installed_build.json"
       # Through a FILE, not an argument, for the same reason the roster is: inline

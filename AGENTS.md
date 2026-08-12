@@ -136,8 +136,15 @@ past at 3am does not read as "no problem".
   sits **above** the watchdog's early exit on purpose: a server crash-looping after a
   patch is exactly when the installed build matters, and exactly the cycle the
   watchdog returns from early.
-- It does **not** key off instance state. The box sleeps most of the time and a patch
-  that lands while it sleeps still matters before the next start.
+- The **comparison** does not key off instance state. The box sleeps most of the time
+  and a patch that lands while it sleeps still matters before the next start.
+- Instance state is read for one thing: judging the publisher. The compared value is
+  whatever the box last wrote, so a dead publisher freezes it and the monitor would
+  report OK forever against a build the box no longer runs. Only the value's AGE
+  betrays that, and age only means anything while the box is running, so freshness is
+  enforced when running and past boot grace and ignored when stopped. This is why
+  `palworld-idle.ps1` republishes the build every cycle even when unchanged: that
+  write IS the liveness signal, so do not "optimise" it into a write-on-change.
 - It alerts and stops there. Auto-updating a modded server is the wrong default: on
   2026-08-12 the base patch landed at 03:01Z and mod 1898's compatible build did not
   appear until 05:44Z, so an unattended update in that window yields a joinable

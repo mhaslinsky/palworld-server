@@ -13,21 +13,33 @@
 // that window produces a joinable server with relaxed building silently broken --
 // every check green, the thing people actually use dead. Alert; let a human choose.
 //
-// Deliberately does NOT key off instance state either, unlike backup-monitor. The box
-// stops itself when empty, so it is stopped most of the time, and a patch that lands
-// while it sleeps is still the thing you want to know about before you next start it.
-// The installed build is read from an SSM parameter the on-box watcher publishes, so
-// it survives the box being down.
+// Instance state is read, but only to judge the PUBLISHER, never to decide whether to
+// check. The box stops itself when empty, so it is stopped most of the time, and a
+// patch that lands while it sleeps is still the thing you want to know about before
+// you next start it -- so the comparison itself uses the last published build and
+// works fine on a sleeping box.
+//
+// What instance state buys is the one hole the comparison cannot see on its own: the
+// installed build is whatever the on-box watcher last wrote, so if that watcher dies,
+// loses its IAM, or starts writing to a different parameter, the value FREEZES and the
+// monitor keeps reporting OK against a build the box may no longer run. That is this
+// repo's house bug wearing the monitor's own clothes, and it is the same failure shape
+// as 2026-07-19, where a dead timer was invisible until a human went looking. A frozen
+// value is indistinguishable from a correct one by content alone; only its AGE gives it
+// away, and age is only meaningful while the box is actually running. Hence: freshness
+// is enforced when running and past boot grace, and ignored entirely when stopped.
 //
 // States, never collapsed into "fine":
 //   OK        - Steam's public build matches what is installed
 //   BEHIND    - Steam is ahead of the box                          -> alert
 //   AHEAD     - the box is ahead of Steam's published build        -> alert
-//   NO_DATA   - nothing has ever published an installed build      -> alert
+//   NO_DATA   - nothing usable has been published, OR the publisher
+//               has gone silent on a running box                   -> alert
 //   UNKNOWN   - the check itself could not run                     -> alert, because a
 //               check that did not run has NOT cleared anything
 
 import {SSMClient, GetParameterCommand, PutParameterCommand} from "@aws-sdk/client-ssm";
+import {EC2Client, DescribeInstancesCommand} from "@aws-sdk/client-ec2";
 
 const REGION = process.env.AWS_REGION || "us-east-1";
 const WEBHOOK_PARAM = process.env.WEBHOOK_PARAM;
@@ -53,8 +65,18 @@ function numberSetting(raw, fallback) {
 // problem". With it, an ignored patch keeps nagging on a cadence that is not spam.
 const REMIND_HOURS = numberSetting(process.env.REMIND_HOURS, 12);
 const FETCH_TIMEOUT_MS = numberSetting(process.env.FETCH_TIMEOUT_MS, 8000);
+const INSTANCE_ID = process.env.INSTANCE_ID;
+// The on-box watcher publishes every ~2 min, so 15 tolerates seven missed cycles
+// before calling the publisher dead. Deliberately generous: this alert accuses a
+// component of being broken, and crying wolf about that is how it gets muted.
+const PUBLISH_STALE_MINUTES = numberSetting(process.env.PUBLISH_STALE_MINUTES, 15);
+// A cold boot runs SteamCMD and the scheduled task has not necessarily fired yet, so
+// without this every single start would raise a false "publisher is dead". Matches
+// backup-monitor's grace, and for the same reason.
+const BOOT_GRACE_MINUTES = numberSetting(process.env.BOOT_GRACE_MINUTES, 20);
 
 const ssm = new SSMClient({region: REGION});
+const ec2 = new EC2Client({region: REGION});
 
 /**
  * An error carrying a COARSE failure class for dedupe.
@@ -92,6 +114,9 @@ async function notify(content) {
     method: "POST",
     headers: {"Content-Type": "application/json"},
     body: JSON.stringify({content}),
+    // Bounded like the Steam call. A hung webhook would otherwise burn the whole
+    // 30s Lambda timeout, which surfaces as a less legible failure than a timeout.
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
   });
   // fetch() does not reject on 401/404/429/500, so the status must be checked.
   if (!response.ok) {
@@ -160,9 +185,16 @@ async function installedBuild() {
     throw classifiedError("build-read", `could not read ${BUILD_PARAM}: ${error.message}`);
   }
   const raw = result.Parameter?.Value;
+  // SSM's own LastModifiedDate, NOT the `updated` field inside the payload. The
+  // payload's timestamp is written by the box, so a box with a stopped clock or a
+  // publisher writing a canned value could hand us a fresh-looking lie. The server
+  // side of the write is the one thing the publisher cannot forge.
+  const publishedAt = result.Parameter?.LastModifiedDate
+    ? new Date(result.Parameter.LastModifiedDate).getTime()
+    : null;
   // An unset SSM parameter comes back as the literal string "None". Same shape as
   // every other no-data return, so the caller has exactly one thing to check.
-  if (!raw || raw === "None") return {buildid: null, reason: null};
+  if (!raw || raw === "None") return {buildid: null, reason: null, publishedAt};
   let parsed;
   try {
     parsed = JSON.parse(raw);
@@ -186,7 +218,7 @@ async function installedBuild() {
   // actually happened instead of "nothing has ever published", which would be a
   // plainly false statement about a box that published a deliberate I-don't-know.
   if (!parsed.buildid || parsed.buildid === "0") {
-    return {buildid: null, reason: typeof parsed.error === "string" ? parsed.error : null};
+    return {buildid: null, reason: typeof parsed.error === "string" ? parsed.error : null, publishedAt};
   }
   // Same boundary validation as the Steam side. The publisher extracts \d+ from the
   // manifest, so anything else here means the parameter was written by something
@@ -194,7 +226,48 @@ async function installedBuild() {
   if (!/^\d+$/.test(String(parsed.buildid))) {
     throw classifiedError("build-shape", `${BUILD_PARAM} has a non-numeric buildid (${JSON.stringify(parsed.buildid)})`);
   }
-  return {buildid: String(parsed.buildid), updated: Number(parsed.updated) || null};
+  return {buildid: String(parsed.buildid), updated: Number(parsed.updated) || null, publishedAt};
+}
+
+/**
+ * Is the on-box publisher still writing?
+ *
+ * Returns null when the question does not apply -- no instance configured, the box is
+ * not running, or it is still inside its boot grace -- which the caller must treat as
+ * "not checked", never as "publisher healthy". A stale parameter on a STOPPED box is
+ * correct and expected: the box sleeps most of the time and the last known build is
+ * still the right thing to compare against.
+ *
+ * A lookup failure THROWS, because a freshness check that could not run has not
+ * established freshness, and this whole function exists to stop a frozen value from
+ * being read as a live one.
+ */
+async function publisherSilence(publishedAt, nowMs) {
+  if (!INSTANCE_ID) return null;
+  let instance;
+  try {
+    const result = await ec2.send(new DescribeInstancesCommand({InstanceIds: [INSTANCE_ID]}));
+    instance = result.Reservations?.[0]?.Instances?.[0];
+  } catch (error) {
+    throw classifiedError("instance-state", `could not read the state of ${INSTANCE_ID}: ${error.message}`);
+  }
+  if (instance?.State?.Name !== "running") return null;
+
+  // LaunchTime is the right clock: a stop/start refreshes it so a cold boot gets its
+  // full grace, while an in-place reboot does not -- and a reboot killing the
+  // scheduled task is exactly the 2026-07-19 failure this must still catch.
+  const launchTime = instance.LaunchTime ? new Date(instance.LaunchTime).getTime() : null;
+  const upMinutes = launchTime === null ? null : (nowMs - launchTime) / 60000;
+  if (upMinutes !== null && upMinutes < BOOT_GRACE_MINUTES) return null;
+
+  // Never published at all, on a box that has been up past its grace, is itself the
+  // publisher being silent -- not an absence of evidence.
+  if (publishedAt === null) {
+    return {ageMinutes: null, upMinutes};
+  }
+  const ageMinutes = (nowMs - publishedAt) / 60000;
+  if (ageMinutes <= PUBLISH_STALE_MINUTES) return null;
+  return {ageMinutes, upMinutes};
 }
 
 /** Dedupe state, so a standing problem nags on a schedule instead of every run. */
@@ -255,11 +328,16 @@ export const handler = async () => {
 
   let steam;
   let installed;
+  let silence;
   try {
     // Sequential on purpose: the Steam call is the one that fails, and there is no
     // point reading SSM to compare against a number we do not have.
     steam = await steamBuild();
     installed = await installedBuild();
+    // Before ANY comparison, because a frozen parameter compares perfectly well and
+    // that is the entire problem. Running this after the equality check would mean
+    // the false OK had already been returned.
+    silence = await publisherSilence(installed.publishedAt, nowMs);
   } catch (error) {
     // The coarse class, never the raw message: an unstable message would mint a new
     // dedupe key every run and alert every 30 minutes. `other` covers anything thrown
@@ -272,6 +350,22 @@ export const handler = async () => {
       await writeState({key, alertedAt: nowMs});
     }
     return {status: "UNKNOWN", reason: error.message};
+  }
+
+  // Ordered ahead of the no-data branch on purpose: a silent publisher on a running
+  // box is a more specific and more actionable statement than "no build published",
+  // and it is the only branch that can explain a value that LOOKS fine.
+  if (silence) {
+    const key = "publisher-silent";
+    const state = await readState();
+    if (!alreadyReported(state, key, nowMs)) {
+      const age = silence.ageMinutes === null
+        ? "has never been written"
+        : `has not been written in ${Math.round(silence.ageMinutes)} min (threshold ${PUBLISH_STALE_MINUTES} min)`;
+      await notify(`:rotating_light: **Palworld version check cannot trust the installed build** - the server has been up ${Math.round(silence.upMinutes ?? 0)} min but \`${BUILD_PARAM}\` ${age}. The on-box publisher writes it every ~2 min, so it has stopped: check the \`PalworldIdle\` scheduled task and the instance role's \`ssm:PutParameter\` grant. Until it resumes, any build shown here is FROZEN and a matching build does NOT mean the server is current.`);
+      await writeState({key, alertedAt: nowMs});
+    }
+    return {status: "NO_DATA", reason: "publisher silent", steam: steam.buildid, installed: installed.buildid};
   }
 
   if (!installed.buildid) {
