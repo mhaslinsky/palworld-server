@@ -1,0 +1,25 @@
+discord-bot/alarm-forwarder/index.mjs
+  s_e474a6e718b2ee::t_300f375f1a6d60 107-108,112
+  s_e474a6e718b2ee::t_95d804101cdd76 35-53
+discord-bot/tests/alarm-forwarder.test.mjs
+  s_e474a6e718b2ee::t_0277a07976d686 94-108
+terraform/alarm_forwarder.tf
+  s_e474a6e718b2ee::t_0ad3b1fcb1d8b9 155-165
+  s_e474a6e718b2ee::t_9ab1e17bd33612 103-113
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "59453d4f48c6d0caaa01ad2ca310f75c2f48ccad",
+  "prompts": {},
+  "sessions": {
+    "s_e474a6e718b2ee": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b37d46d2-b0bc-41d3-8065-034a0fad5ed6",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    }
+  }
+}
