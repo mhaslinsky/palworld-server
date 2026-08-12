@@ -162,6 +162,13 @@ async function steamBuild() {
   if (!/^\d+$/.test(String(buildid))) {
     throw classifiedError("steam-shape", `steam API returned a non-numeric buildid (${JSON.stringify(buildid)}) for app ${STEAM_APP_ID}`);
   }
+  // "0" is the installed side's no-data sentinel and it is equally not a build here,
+  // but it is truthy AND matches \d+, so both guards above wave it through. A mirror
+  // answering 0 on an error would then compare as a genuine build and fire a false
+  // AHEAD alert telling everyone the server is ahead of Steam.
+  if (String(buildid) === "0") {
+    throw classifiedError("steam-shape", `steam API returned buildid 0 for app ${STEAM_APP_ID}, which is a sentinel rather than a build`);
+  }
   return {buildid: String(buildid), updated: Number(branch?.timeupdated) || null};
 }
 

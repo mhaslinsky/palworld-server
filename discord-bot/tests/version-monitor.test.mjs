@@ -189,10 +189,13 @@ await scenario("dedupe record is an array",
   {status: "BEHIND", alerts: true});
 
 console.log("\n--- RED: a malformed build id is UNKNOWN, never 'you are behind' ---");
-// Guessing a direction for an unparseable build id turns a broken API into a
-// confident "Palworld has an update" that tells people to patch a current server.
+// Guessing a direction for a build id that is not one turns a broken API into a
+// confident alert telling people to patch a current server. Covers both shapes that
+// are not builds: non-numeric, and the numeric-but-sentinel "0".
 await scenario("steam returns a non-numeric buildid",
   {steamBuild: "not-a-build"}, {status: "UNKNOWN", alerts: true});
+await scenario("steam returns buildid 0",
+  {steamBuild: "0"}, {status: "UNKNOWN", alerts: true});
 await scenario("build parameter holds a non-numeric buildid",
   {installedRaw: JSON.stringify({buildid: "garbage", updated: 1})},
   {status: "UNKNOWN", alerts: true});
