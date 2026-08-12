@@ -64,6 +64,10 @@ $label       = $conf.ServerLabel
 $stateDir = "C:\PalServer\state"
 New-Item -ItemType Directory -Force -Path $stateDir | Out-Null
 $lock = Join-Path $stateDir "update.lock"
+# Carries "when was this update last making progress". Separate from the lock because
+# the lock is held open with FileShare::Read for the whole run, which excludes the
+# second write handle that stamping its own timestamp would need.
+$heartbeatFile = Join-Path $stateDir "update.heartbeat"
 
 # Absolute path, NOT bare "aws": the CLI is not on PATH in the SYSTEM context an SSM
 # command runs under, so `& aws ...` resolves to nothing and every call fails inside
@@ -231,6 +235,10 @@ function Remove-UpdateLock {
     $script:lockHandle = $null
   }
   Remove-Item $lock -Force -ErrorAction SilentlyContinue
+  # The sidecar goes with it. A heartbeat left behind after the lock is gone would make
+  # the NEXT update's lock look like it had already been running for however long this
+  # file had been sitting there.
+  Remove-Item $heartbeatFile -Force -ErrorAction SilentlyContinue
 }
 
 $lockHandle = Open-UpdateLock
@@ -268,16 +276,15 @@ $lockHandle.Flush()
 function Update-LockHeartbeat {
   if (-not $script:lockHandle) { return }
   try {
-    $beat = [Text.Encoding]::UTF8.GetBytes((Get-Date).ToString("o"))
-    $script:lockHandle.Position = 0
-    $script:lockHandle.Write($beat, 0, $beat.Length)
-    $script:lockHandle.Flush()
-    # The handle's own writes do not necessarily move LastWriteTime until close, and
-    # LastWriteTime is what the idle script reads. Set it explicitly.
-    (Get-Item $lock).LastWriteTime = Get-Date
+    # A SIDECAR file, not the lock itself. Stamping the lock's own LastWriteTime needs a
+    # second write handle, and this process holds it with FileShare::Read, which excludes
+    # exactly that - so the attempt raised a sharing violation on EVERY successful
+    # heartbeat, printed a failure warning each time, and never moved the timestamp it
+    # existed to move. A separate file has no such contention: opened, written, closed.
+    [IO.File]::WriteAllText($heartbeatFile, (Get-Date).ToString("o"))
   } catch {
-    # Best-effort by design. A failed heartbeat costs a possibly-early advisory
-    # warning; throwing here would abort a running update, which is far worse.
+    # Best-effort by design. A failed heartbeat costs a possibly-early advisory warning
+    # from the idle script; throwing here would abort a running update, which is worse.
     Write-Output "WARNING: update.lock heartbeat failed: $($_.Exception.Message)"
   }
 }

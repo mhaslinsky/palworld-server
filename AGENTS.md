@@ -227,6 +227,7 @@ the live server on apply (rule 5). The other side always moves.
 | 122 | launch | `PalworldIdle` was disabled at startup. Error = could NOT be re-enabled, so there is no watchdog and no idle shutdown; Warning = it was re-armed. |
 | 123 | update | The updater could not resolve the webhook; update progress and results will not reach Discord. |
 | 124 | update | The updater's Discord POST failed. The message body is in the entry, and the SSM command output still has the text. |
+| 125 | idle | `update.lock` state could NOT be determined. The cycle stands down, so the watchdog and idle-shutdown are both inactive until it clears; if it persists the box will not stop on its own. |
 
 116, 117, 120, 123 and 124 are the ones worth understanding: alerting is best-effort by
 design, because `Send-Notify` is called from the shutdown and save-verification paths
