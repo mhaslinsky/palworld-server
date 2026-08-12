@@ -33,16 +33,67 @@ $restBase = "http://127.0.0.1:$($conf.RestPort)/v1/api"
 # Stand down while an update is running. update-server.ps1 disables this task before it
 # stops the server, but that only stops FUTURE triggers: a cycle already in flight keeps
 # going, sees an absent process, and either relaunches the server into a running SteamCMD
-# or powers the box off mid-update. Both produce a half-patched install. The lock is held
-# open for the whole update, and the 30-min ceiling matches the updater's own staleness
-# rule so a crashed update cannot mute the watchdog forever.
+# or powers the box off mid-update. Both produce a half-patched install.
+#
+# Ask whether the lock is still HELD, not how old it is.
+#
+# The age test this replaces had a hole big enough to cause the failure it was written
+# to prevent: update-server.ps1 stamps the lock ONCE when it takes it (Open-UpdateLock,
+# then a single Write+Flush) and never refreshes it, so any update running past the
+# 30-minute ceiling let this script resume mid-update and relaunch the server into a
+# live SteamCMD. A big Steam patch is not a rare event.
+#
+# The updater holds the file with [IO.FileShare]::Read, which permits readers and
+# excludes writers, so a write-open attempt is a direct question: "is an updater still
+# alive?" It answers correctly in both directions the age test got wrong. A CRASHED
+# updater releases its handle the instant the process dies (the OS does it, no cleanup
+# code required), so the lock stops blocking immediately instead of muting the watchdog
+# for up to 30 minutes. A LONG-RUNNING updater keeps holding it, so this keeps standing
+# down for as long as the work genuinely takes.
+#
+# What remains is a HUNG updater: alive, doing nothing, holding the lock forever. That
+# is the one case the old ceiling handled and this does not, so it is handled
+# explicitly below rather than by pretending a timer can tell "hung" from "busy".
 $updateLock = Join-Path $stateDir "update.lock"
 if (Test-Path $updateLock) {
+  $lockHeld = $true
+  try {
+    # FileShare::None so this fails whenever ANYONE else holds the file, which is the
+    # whole question. Disposed immediately: this is a probe, not a claim on the lock,
+    # and holding it would block the updater's own writes.
+    $probe = [IO.File]::Open($updateLock, [IO.FileMode]::Open, [IO.FileAccess]::Write, [IO.FileShare]::None)
+    $probe.Dispose()
+    $lockHeld = $false
+  } catch {
+    # Cannot open for write => someone holds it => an updater is alive.
+    $lockHeld = $true
+  }
+
   $lockAge = (Get-Date) - (Get-Item $updateLock).LastWriteTime
-  if ($lockAge.TotalMinutes -lt 30) {
-    Write-Output "update in progress (lock is $([math]::Round($lockAge.TotalMinutes, 1)) min old) - standing down this cycle"
+  if ($lockHeld) {
+    # Standing down is correct, but standing down FOREVER without saying so is how a
+    # hung update quietly becomes a dead server on a billing box. Past the ceiling,
+    # keep deferring and start shouting: a human has to look, and the alternative
+    # (proceeding) is the half-patched install this whole block exists to prevent.
+    # Event Log only, deliberately no Send-Notify here. That function and the $awsExe
+    # it needs are both defined further down, and reordering this file to reach them
+    # would move the alerting setup above the lock check for one message. It is also
+    # redundant: standing down stops the roster publish, and the off-box backup monitor
+    # already alerts on a stale roster (ROSTER_STALE_MINUTES). An off-box signal is the
+    # better one anyway, since it survives the box being wedged.
+    if ($lockAge.TotalMinutes -ge 60) {
+      Write-EventLog -LogName Application -Source "Palworld" -EventId 119 -EntryType Error `
+        -Message "update.lock has been HELD for $([math]::Round($lockAge.TotalMinutes)) min. The watchdog and idle-shutdown have been standing down that whole time, so the box is billing and a crashed server will not be restarted. Check whether update-server.ps1 is hung." -ErrorAction SilentlyContinue
+    }
+    Write-Output "update in progress (lock held, $([math]::Round($lockAge.TotalMinutes, 1)) min) - standing down this cycle"
     exit 0
   }
+
+  # Not held: the updater is gone. The file is a leftover from a crashed run, so it is
+  # NOT a reason to stand down. Left in place rather than deleted, because deleting
+  # another script's file from here is how two cleanup paths start racing; the updater
+  # removes it itself, and a stale file that blocks nothing costs nothing.
+  Write-Output "stale update.lock ($([math]::Round($lockAge.TotalMinutes, 1)) min old, not held) - proceeding"
 }
 
 # Absolute path, NOT bare "aws": the CLI is not on PATH in the Scheduled Task's
@@ -125,7 +176,7 @@ if ($conf.BuildParam -or $conf.RosterParam) {
         # had only a Write-Output here, which vanishes in a SYSTEM Scheduled Task,
         # making the worst case the quietest one. Its own EventId, not 106's, so the
         # two are distinguishable in the log.
-        Write-EventLog -LogName Application -Source "Palworld" -EventId 107 -EntryType Error `
+        Write-EventLog -LogName Application -Source "Palworld" -EventId 121 -EntryType Error `
           -Message "could not read the appmanifest AND could not publish the UNKNOWN sentinel to $buildParam (aws exit $LASTEXITCODE). A stale build id is stranded there; the version monitor may report OK against a build this box no longer runs." -ErrorAction SilentlyContinue
         Write-Output "ERROR: UNKNOWN-build publish failed (aws exit $LASTEXITCODE) - stale build id stranded in $buildParam"
       }
@@ -213,10 +264,10 @@ function Get-WebhookUrl {
     if ($value -and $value.Trim() -ne "None") { return $value.Trim() }
     # Reached when the CLI exits non-zero without throwing (denied IAM, no such
     # parameter) or the value is genuinely unset. Both mean alerting is down.
-    Write-EventLog -LogName Application -Source "Palworld" -EventId 108 -EntryType Error `
+    Write-EventLog -LogName Application -Source "Palworld" -EventId 120 -EntryType Error `
       -Message "Get-WebhookUrl: $($conf.WebhookParam) resolved to nothing (aws exit $LASTEXITCODE). Discord alerts from this box are DOWN." -ErrorAction SilentlyContinue
   } catch {
-    Write-EventLog -LogName Application -Source "Palworld" -EventId 108 -EntryType Error `
+    Write-EventLog -LogName Application -Source "Palworld" -EventId 120 -EntryType Error `
       -Message "Get-WebhookUrl threw: $($_.Exception.Message). Discord alerts from this box are DOWN." -ErrorAction SilentlyContinue
   }
   return $null
@@ -236,8 +287,12 @@ function Send-Notify([string]$content) {
     $body = @{ content = $content } | ConvertTo-Json -Compress
     # Windows PowerShell 5.1 otherwise sends string bodies through the ANSI code page.
     $bodyBytes = [Text.Encoding]::UTF8.GetBytes($body)
+    # -ErrorAction Stop is not decoration. This file sets $ErrorActionPreference =
+    # "Continue", so any non-terminating error would sail past the catch below and the
+    # EventId 117 entry would never be written - a logging fix that logs nothing.
+    # Explicit Stop makes the catch the only exit.
     Invoke-RestMethod -Uri $url -Method Post -ContentType 'application/json' `
-      -Body $bodyBytes -TimeoutSec 5 | Out-Null
+      -Body $bodyBytes -TimeoutSec 5 -ErrorAction Stop | Out-Null
   } catch {
     # The likeliest failure of the three and previously the quietest: a revoked token,
     # a deleted webhook, a 429, or Discord being down. Invoke-RestMethod throws on a
