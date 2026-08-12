@@ -32,6 +32,25 @@ const ALARM_WEBHOOK_PARAM = process.env.ALARM_WEBHOOK_PARAM;
 
 const ssm = new SSMClient({region: REGION});
 
+// Discord rejects a `content` over 2000 characters with a 400. CloudWatch's own field
+// limits add up past that on their own: AlarmName 255 + AlarmDescription 1024 +
+// NewStateReason 1024 is 2303 before any formatting, and a long reason string is exactly
+// what an interesting alarm produces. Unclamped, the alarm most worth reading is the one
+// most likely to be rejected - and since this function deliberately has no alarm of its
+// own, the retries would expire and nobody would ever hear it.
+const DISCORD_CONTENT_LIMIT = 2000;
+
+/**
+ * Trim to Discord's limit from the END, so the headline (alarm name and state) always
+ * survives. Losing the tail of a reason string costs detail; losing the head would cost
+ * the identity of what fired.
+ */
+function clampForDiscord(content) {
+  if (content.length <= DISCORD_CONTENT_LIMIT) return content;
+  const suffix = "\n... (truncated)";
+  return content.slice(0, DISCORD_CONTENT_LIMIT - suffix.length) + suffix;
+}
+
 /**
  * Turn one CloudWatch alarm payload into a line worth reading at 2am.
  *
@@ -85,10 +104,12 @@ async function postToDiscord(content) {
   if (!url || url === "None") {
     throw new Error(`no webhook configured at ${ALARM_WEBHOOK_PARAM} - alarm NOT delivered: ${content}`);
   }
+  // Clamped HERE rather than only in formatAlarm, so every caller is covered including
+  // the raw-passthrough path for messages that are not alarms at all.
   const response = await fetch(url, {
     method: "POST",
     headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({content}),
+    body: JSON.stringify({content: clampForDiscord(content)}),
     signal: AbortSignal.timeout(8000),
   });
   // fetch() does not reject on 401/404/429/500.

@@ -91,6 +91,21 @@ await expectOk("JSON that is not an alarm is still forwarded",
   snsEvent(['{"hello":"world"}']),
   () => delivered.length === 1 && /hello/.test(delivered[0]));
 
+console.log("\n--- Oversized alarms must be trimmed, not rejected ---");
+// CloudWatch's own field limits exceed Discord's 2000-char cap before any formatting:
+// AlarmName 255 + AlarmDescription 1024 + NewStateReason 1024. Unclamped, Discord 400s,
+// and since this function has no alarm of its own the retries expire silently.
+install();
+await expectOk("a >2000 char alarm is clamped and still delivered",
+  snsEvent([alarmPayload({name: "A".repeat(255), description: "B".repeat(1024), reason: "C".repeat(1024)})]),
+  () => delivered.length === 1 && delivered[0].length <= 2000 && /\.\.\. \(truncated\)$/.test(delivered[0]));
+// The headline must survive: losing the tail costs detail, losing the head costs the
+// identity of what fired.
+install();
+await expectOk("the alarm name survives clamping",
+  snsEvent([alarmPayload({name: "palworld-server-backup-monitor-errors", reason: "D".repeat(2500)})]),
+  () => delivered[0].startsWith(":rotating_light: **palworld-server-backup-monitor-errors**"));
+
 console.log("\n--- Batches: one bad record must not lose the others ---");
 install();
 await expectOk("two alarms in one batch both deliver",

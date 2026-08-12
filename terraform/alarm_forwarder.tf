@@ -100,7 +100,17 @@ resource "aws_lambda_function" "alarm_forwarder" {
     }
   }
 
-  depends_on = [aws_cloudwatch_log_group.alarm_forwarder]
+  # The IAM grants too, not just the log group. They are separate graph branches, so
+  # terraform was free to create the function, its invoke permission, and the SNS
+  # subscription while the policies were still attaching - leaving a live subscription
+  # pointed at a function that cannot read the webhook. A partial apply would then look
+  # subscribed and deliver nothing, which is the failure this whole path exists to
+  # report on someone else's behalf.
+  depends_on = [
+    aws_cloudwatch_log_group.alarm_forwarder,
+    aws_iam_role_policy.alarm_forwarder,
+    aws_iam_role_policy_attachment.alarm_forwarder_logs,
+  ]
 }
 
 resource "aws_sns_topic_subscription" "alerts_discord" {
@@ -142,8 +152,17 @@ resource "aws_lambda_permission" "alarm_forwarder_sns" {
 # legitimate work gets removed.
 check "alarm_channel_independence" {
   assert {
-    condition     = var.alert_email != ""
-    error_message = "alert_email is empty, so the Discord forwarder is the alerts topic's only subscriber. A dead Discord webhook then breaks the monitor AND its alarm, which is the exact case the SNS path exists for. Set alert_email (and click the confirmation mail) for a channel that does not depend on Discord."
+    # NOT just "is an address configured". An SNS email subscription delivers NOTHING
+    # until its confirmation link is clicked, and terraform creates it in exactly that
+    # state - so asserting the address alone passes while the channel is inert, which
+    # is this repo's house bug wearing a guard's clothes. Observed live on 2026-08-12:
+    # the subscription sat at PendingConfirmation for an hour after a successful apply.
+    #
+    # pending_confirmation is the provider attribute that answers the real question.
+    # try(..., true) covers alert_email being unset, where the subscription does not
+    # exist at all and the honest answer is "no independent channel".
+    condition     = var.alert_email != "" && !try(aws_sns_topic_subscription.alerts_email[0].pending_confirmation, true)
+    error_message = "The alerts topic has no CONFIRMED independent subscriber, so the Discord forwarder is its only working path. A dead Discord webhook then breaks the monitor AND its alarm, which is the exact case the SNS path exists for. Set alert_email, then click the confirmation mail AWS sends: an unconfirmed subscription delivers nothing. Verify with: aws sns list-subscriptions-by-topic --topic-arn <alerts topic> (a real ARN means confirmed; the literal string PendingConfirmation means it is not)."
   }
 }
 
