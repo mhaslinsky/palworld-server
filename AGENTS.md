@@ -171,6 +171,33 @@ So: after a change, ask the running system what it thinks is true (`/v1/api/sett
 return code. And when adding a guard, **make it fail once on purpose** before believing
 it.
 
+### 8b. Windows Event Log IDs (source `Palworld`)
+
+`Write-Output` from a Scheduled Task running as SYSTEM goes nowhere a human will read,
+so every best-effort failure in `palworld-idle.ps1` also writes here. Check it first
+when the box is behaving oddly but nothing has alerted:
+
+```powershell
+Get-EventLog -LogName Application -Source Palworld -Newest 30 | Format-Table TimeGenerated, EventID, EntryType, Message -AutoSize
+```
+
+| ID | Meaning |
+|----|---------|
+| 103 | Roster publish failed. The off-box backup monitor reads a stale roster as "the idle watcher is dead". |
+| 104 | Watchdog: the launcher script is missing, so a crashed server cannot be restarted. |
+| 105 | Watchdog: the launcher exited non-zero; the server did not start. |
+| 106 | Installed-build publish failed or threw. The version monitor loses its freshness signal. |
+| 107 | The appmanifest was unreadable AND the UNKNOWN sentinel could not be published, so a stale build id is stranded in SSM. The worst branch, hence its own id. |
+| 108 | The Discord webhook could not be resolved from SSM. **Alerts from this box are down.** |
+| 109 | An alert was dropped because no webhook resolved. The message body is in the log entry. |
+| 110 | The Discord POST itself failed (revoked token, deleted webhook, 429, outage). The message body is in the log entry. |
+
+108 to 110 are the ones worth understanding: alerting is best-effort by design, because
+`Send-Notify` is called from the shutdown and save-verification paths where throwing
+would trade "I could not tell you" for "I stopped protecting the world". Best-effort is
+correct. Silent best-effort was the bug, and these ids are what makes a dropped alert
+recoverable rather than destroyed.
+
 ## Live-service etiquette
 
 - Check who is online first: `aws ssm get-parameter --name /palworld-server/roster`.
