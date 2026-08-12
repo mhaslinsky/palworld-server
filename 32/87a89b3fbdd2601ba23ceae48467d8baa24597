@@ -1,0 +1,50 @@
+discord-bot/version-monitor/index.mjs
+  s_e474a6e718b2ee::t_f2f8db1944d3e9 331,337-340
+  s_e474a6e718b2ee::t_c15df59b7d0c27 16-30,36-37,42
+  s_e474a6e718b2ee::t_be0a4d3095a28a 355-370
+  s_e474a6e718b2ee::t_f2469bfb37bf68 229-270
+  s_e474a6e718b2ee::t_01ffba5d93355f 188-194,197
+  s_e474a6e718b2ee::t_79d13cbc6749c3 117-119
+  s_e474a6e718b2ee::t_3983f7d0c5c178 221
+  s_e474a6e718b2ee::t_5f870c141e55b1 68-76,79
+terraform/version_monitor.tf
+  s_e474a6e718b2ee::t_b65c71d0de2c90 10,16-22
+  s_e474a6e718b2ee::t_4de36f63e5a0c8 137-153
+  s_e474a6e718b2ee::t_f0b20cff958672 202-211
+  s_e474a6e718b2ee::t_e5ebe843fae9ae 262-268
+  s_e474a6e718b2ee::t_fe03c7c916dc5a 255-261,269
+  s_252f5441763ce5::t_d3fbc1ff5ee93e 23
+discord-bot/tests/version-monitor.test.mjs
+  s_e474a6e718b2ee::t_3637b8425cccd6 15,18
+  s_e474a6e718b2ee::t_d558d9106ea393 89-91
+  s_e474a6e718b2ee::t_8315dbf08238b6 261-300
+  s_e474a6e718b2ee::t_2b43b3dc611e50 27-29,33-40,49-56
+AGENTS.md
+  s_e474a6e718b2ee::t_dafd4914a48438 139-147
+scripts/palworld-idle.ps1
+  s_e474a6e718b2ee::t_7239da5d415256 121-127
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "3287a89b3fbdd2601ba23ceae48467d8baa24597",
+  "prompts": {},
+  "sessions": {
+    "s_252f5441763ce5": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019ff693-ea8c-7242-a88d-54dc1851ac4a",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    },
+    "s_e474a6e718b2ee": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b37d46d2-b0bc-41d3-8065-034a0fad5ed6",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    }
+  }
+}
