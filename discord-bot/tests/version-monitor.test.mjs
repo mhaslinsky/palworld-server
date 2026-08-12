@@ -334,6 +334,22 @@ for (const sleepState of ["stopped", "stopping", "pending"]) {
     {status: "OK", alerts: false});
 }
 
+console.log("\n--- Missing dedupe config is announced, not merely felt ---");
+// Throwing here would abort inside the UNKNOWN catch BEFORE the alert is delivered,
+// turning a loud degradation into a silent one. So it delivers and attributes.
+install({steamBuild: "24575149", installedBuild: "24466863"});
+const savedStateParam = process.env.STATE_PARAM;
+delete process.env.STATE_PARAM;
+const {handler: handlerNoState} = await import("../version-monitor/index.mjs?no-state-param");
+const noState = await handlerNoState();
+process.env.STATE_PARAM = savedStateParam;
+if (noState.status === "BEHIND" && delivered.length === 1 && /Dedupe is DISABLED/.test(delivered[0])) {
+  console.log("PASS  unset STATE_PARAM still alerts, and says why it will repeat");
+} else {
+  console.log(`FAIL  unset STATE_PARAM gave ${noState.status}, ${delivered.length} alert(s), attributed=${/Dedupe is DISABLED/.test(delivered[0] || "")}`);
+  failures++;
+}
+
 console.log("\n--- RED: an undeliverable alert must FAIL the invocation ---");
 // The whole point of the CloudWatch alarm. If notify() swallowed a 429, the monitor
 // would detect a patch, tell nobody, and report success.

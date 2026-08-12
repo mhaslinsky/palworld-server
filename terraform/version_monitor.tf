@@ -282,6 +282,9 @@ resource "aws_cloudwatch_metric_alarm" "version_monitor_errors" {
 # Mirrors backup_monitor.tf's equivalent. The first time an alert fires is the worst
 # moment to be working out the log group's name by hand.
 output "version_monitor_logs_command" {
-  description = "Tail the version monitor's logs."
-  value       = try("aws logs tail /aws/lambda/${local.version_monitor_name} --follow --profile ${var.aws_profile} --region ${var.aws_region}", "")
+  description = "Tail the version monitor's logs. Empty when the monitor is not deployed."
+  # Gated like the resources it refers to. Emitting the command unconditionally hands
+  # out an instruction that fails on the default Windows-disabled configuration,
+  # against a log group that does not exist.
+  value = local.windows_enabled == 1 ? "aws logs tail /aws/lambda/${local.version_monitor_name} --follow --profile ${var.aws_profile} --region ${var.aws_region}" : ""
 }

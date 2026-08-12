@@ -104,6 +104,13 @@ async function notify(content) {
   if (!WEBHOOK_PARAM) {
     throw new Error(`WEBHOOK_PARAM not set - alert NOT delivered: ${content}`);
   }
+  // Attribute the drift rather than leaving people to infer it from a channel that
+  // will not stop repeating itself. Without STATE_PARAM every situation re-alerts on
+  // every invocation, which reads as the monitor malfunctioning rather than as a
+  // deployment missing a parameter terraform always sets.
+  if (!STATE_PARAM) {
+    content += "\n:warning: (Dedupe is DISABLED because `STATE_PARAM` is unset, so this repeats every 30 min until that deployment drift is fixed.)";
+  }
   const result = await ssm.send(new GetParameterCommand({Name: WEBHOOK_PARAM, WithDecryption: true}));
   const url = result.Parameter?.Value;
   // An unset SSM parameter comes back as the literal string "None".
@@ -299,6 +306,12 @@ async function publisherSilence(publishedAt, nowMs) {
 
 /** Dedupe state, so a standing problem nags on a schedule instead of every run. */
 async function readState() {
+  // Deliberately does NOT throw on an unset STATE_PARAM, unlike BUILD_PARAM and
+  // INSTANCE_ID. This is called from inside the UNKNOWN catch block, so throwing here
+  // would abort the invocation BEFORE the alert it was about to deliver -- converting
+  // a loud degradation into a silent one, which is precisely backwards. Missing dedupe
+  // is instead announced in the alert body by notify(), so the drift is attributed
+  // rather than merely felt as a channel that will not stop repeating itself.
   if (!STATE_PARAM) return {};
   try {
     const result = await ssm.send(new GetParameterCommand({Name: STATE_PARAM}));
