@@ -292,7 +292,12 @@ async function publisherSilence(publishedAt, nowMs) {
   // scheduled task is exactly the 2026-07-19 failure this must still catch.
   const launchTime = instance.LaunchTime ? new Date(instance.LaunchTime).getTime() : null;
   const upMinutes = launchTime === null ? null : (nowMs - launchTime) / 60000;
-  if (upMinutes !== null && upMinutes < BOOT_GRACE_MINUTES) return null;
+  // Reported rather than swallowed, because the NO_DATA branch needs it too. A box
+  // inside its boot grace has not published its first build yet, and on a fresh
+  // deployment that produced a "has never been published" alert during exactly the
+  // first 20 minutes the grace exists to excuse. Suppressing one and not the other
+  // made the grace half-applied.
+  if (upMinutes !== null && upMinutes < BOOT_GRACE_MINUTES) return {inGrace: true, upMinutes};
 
   // Never published at all, on a box that has been up past its grace, is itself the
   // publisher being silent -- not an absence of evidence.
@@ -395,6 +400,15 @@ export const handler = async () => {
   // Ordered ahead of the no-data branch on purpose: a silent publisher on a running
   // box is a more specific and more actionable statement than "no build published",
   // and it is the only branch that can explain a value that LOOKS fine.
+  // Inside boot grace nothing has been established yet, either about the publisher or
+  // about the build. Reporting OK here would borrow a verdict the run did not reach,
+  // so this returns its own state and stays quiet -- the same distinction
+  // backup-monitor draws with BOOTING.
+  if (silence?.inGrace) {
+    console.log(`BOOTING - up ${Math.round(silence.upMinutes ?? 0)} min, inside the ${BOOT_GRACE_MINUTES} min grace`);
+    return {status: "BOOTING", upMinutes: silence.upMinutes};
+  }
+
   if (silence) {
     const key = "publisher-silent";
     const state = await readState();

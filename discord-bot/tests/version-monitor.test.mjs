@@ -279,10 +279,21 @@ await scenario("stale matching build on a STOPPED box stays quiet",
   {status: "OK", alerts: false});
 // A cold boot runs SteamCMD before the scheduled task has necessarily fired, so
 // without the grace every single start would accuse the publisher of being dead.
+// BOOTING, not OK: inside the grace nothing has been established, and reporting OK
+// would borrow a verdict this run never reached.
 await scenario("stale build inside boot grace stays quiet",
   {steamBuild: "24575149", installedBuild: "24575149",
    instanceState: "running", upMinutes: 5, publishedMinutesAgo: 90},
-  {status: "OK", alerts: false});
+  {status: "BOOTING", alerts: false});
+// A freshly deployed box inside its grace has not published a first build yet.
+await scenario("never-published build inside boot grace stays quiet",
+  {installedRaw: JSON.stringify({buildid: "0", updated: 0}),
+   instanceState: "running", upMinutes: 5},
+  {status: "BOOTING", alerts: false});
+await scenario("never-published build PAST boot grace alerts",
+  {installedRaw: JSON.stringify({buildid: "0", updated: 0}),
+   instanceState: "running", upMinutes: 600},
+  {status: "NO_DATA", alerts: true});
 await scenario("fresh publish on a running box is genuinely OK",
   {steamBuild: "24575149", installedBuild: "24575149",
    instanceState: "running", upMinutes: 600, publishedMinutesAgo: 2},
