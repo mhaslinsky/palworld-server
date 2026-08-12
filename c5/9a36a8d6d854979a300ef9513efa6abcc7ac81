@@ -1,0 +1,41 @@
+scripts/palworld-idle.ps1
+  s_e474a6e718b2ee::t_a42016cc4cc02b 65-74,84-100
+  s_e474a6e718b2ee::t_d5f023ef21eace 58,60-64,75,82,103-119,122
+  s_e474a6e718b2ee::t_d40312f76474c3 123-138,140
+  s_e474a6e718b2ee::t_ed89f387d0379a 150,152-156
+  s_d6efb91b57e528::t_61a61dc55ada71 101-102
+AGENTS.md
+  s_e474a6e718b2ee::t_d5553eceaf88c8 230
+scripts/tests/Test-UpdateLockProbe.ps1
+  s_e474a6e718b2ee::t_1ab367fcc0bd4e 31-35
+  s_e474a6e718b2ee::t_037fc36d2d3375 3-4,6-11,13-16,23,25,29,36,42,44,54,58,61-62,65,68-71,73-75,77-78,81-85
+  s_e474a6e718b2ee::t_d0d74ad54f2bc2 46-53,55-56
+scripts/update-server.ps1
+  s_e474a6e718b2ee::t_7059c5d6baba80 279-284,286-287
+  s_e474a6e718b2ee::t_49e3f7114a1da8 67-70
+  s_e474a6e718b2ee::t_406a3579f8c2e9 238-241
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "c59a36a8d6d854979a300ef9513efa6abcc7ac81",
+  "prompts": {},
+  "sessions": {
+    "s_d6efb91b57e528": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "3c5a10dd-270d-4305-8827-6cbdbda81b92",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    },
+    "s_e474a6e718b2ee": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b37d46d2-b0bc-41d3-8065-034a0fad5ed6",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    }
+  }
+}
