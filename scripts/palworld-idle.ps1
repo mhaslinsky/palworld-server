@@ -96,15 +96,27 @@ if ($conf.BuildParam -or $conf.RosterParam) {
       # empty buildid is the same sentinel terraform seeds, which the Lambda already
       # maps to NO_DATA rather than to a match.
       #
-      # Safe against the obvious flap: an update in flight holds the lock checked at
-      # the top of this script, so this block never runs while SteamCMD has the
-      # manifest open.
+      # Mostly safe against the obvious flap: an update in flight holds the lock
+      # checked at the top of this script, so this block normally cannot run while
+      # SteamCMD has the manifest open. NOT a guarantee, and the gap is worth knowing:
+      # update-server.ps1 stamps that lock once when it takes it and never refreshes
+      # it, so an update running longer than the 30-minute ceiling lets this whole
+      # script resume mid-update. That hole is not this block's to close (the same
+      # gap lets the watchdog relaunch the server into a running SteamCMD, which is
+      # far worse than a bad build read), but do not read the line above as absolute.
+      # Bounded, because this block runs BEFORE the watchdog. An unbounded CLI call
+      # that hangs on a wedged endpoint or a credential lookup would delay the crashed
+      # -process check, leaving a dead server down while this cycle waits on AWS. 3s
+      # connect + 5s read caps a stalled attempt at roughly 24s including the CLI's
+      # own retries, well inside the 2-minute cycle. Publishing the build is
+      # best-effort; restarting a crashed server is not, so the watchdog wins ties.
       Write-Output "WARNING: could not read buildid from $manifest - publishing UNKNOWN"
       $payload = @{ buildid = ""; updated = $now; error = "manifest unreadable at $manifest" } | ConvertTo-Json -Compress
       $buildFile = Join-Path $stateDir "installed_build.json"
       [IO.File]::WriteAllText($buildFile, $payload, (New-Object Text.UTF8Encoding($false)))
       & $awsExe ssm put-parameter --name $buildParam --type String --overwrite `
-        --value "file://$buildFile" --region $conf.AwsRegion 2>$null | Out-Null
+        --value "file://$buildFile" --region $conf.AwsRegion `
+        --cli-connect-timeout 3 --cli-read-timeout 5 2>$null | Out-Null
       if ($LASTEXITCODE -ne 0) {
         # This is the WORST branch in the whole block, so it gets the LOUDEST signal.
         # The manifest is already unreadable AND the clear failed, which means the
@@ -131,7 +143,8 @@ if ($conf.BuildParam -or $conf.RosterParam) {
       # JSON loses every quote crossing cmd.exe. Verified broken that way 2026-07-18.
       [IO.File]::WriteAllText($buildFile, $payload, (New-Object Text.UTF8Encoding($false)))
       & $awsExe ssm put-parameter --name $buildParam --type String --overwrite `
-        --value "file://$buildFile" --region $conf.AwsRegion 2>$null | Out-Null
+        --value "file://$buildFile" --region $conf.AwsRegion `
+        --cli-connect-timeout 3 --cli-read-timeout 5 2>$null | Out-Null
       if ($LASTEXITCODE -ne 0) {
         Write-EventLog -LogName Application -Source "Palworld" -EventId 106 -EntryType Warning `
           -Message "installed-build publish to $buildParam failed (aws exit $LASTEXITCODE)" -ErrorAction SilentlyContinue

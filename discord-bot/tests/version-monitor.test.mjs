@@ -26,12 +26,13 @@ function install({steamBuild = "24575149", installedBuild = "24575149",
                   state = {}, webhook = "https://discord.test/webhook",
                   failDelivery = false,
                   instanceState = "stopped", upMinutes = 600,
-                  publishedMinutesAgo = 2, ec2Throws = false}) {
+                  publishedMinutesAgo = 2, ec2Throws = false, noInstance = false}) {
   delivered = [];
   statePut = null;
 
   EC2Client.prototype.send = async () => {
     if (ec2Throws) throw new Error("RequestLimitExceeded");
+    if (noInstance) return {Reservations: []};
     return {Reservations: [{Instances: [{
       State: {Name: instanceState},
       LaunchTime: new Date(Date.now() - upMinutes * MINUTE),
@@ -297,6 +298,23 @@ await scenario("EC2 lookup fails",
 await scenario("parameter has no LastModifiedDate on a long-running box",
   {instanceState: "running", upMinutes: 600, publishedMinutesAgo: null},
   {status: "NO_DATA", alerts: true});
+await scenario("INSTANCE_ID matches no instance",
+  {noInstance: true, steamBuild: "24575149", installedBuild: "24575149",
+   publishedMinutesAgo: 900},
+  {status: "UNKNOWN", alerts: true});
+// Terminated is not a nap. Reporting OK would describe a machine that is going away.
+await scenario("instance is terminated",
+  {instanceState: "terminated", steamBuild: "24575149", installedBuild: "24575149",
+   publishedMinutesAgo: 900},
+  {status: "UNKNOWN", alerts: true});
+// ...but the genuinely normal sleep states must stay quiet, or the alert fires on
+// every ordinary shutdown and gets muted.
+for (const sleepState of ["stopped", "stopping", "pending"]) {
+  await scenario(`instance is ${sleepState} (a normal sleep state)`,
+    {instanceState: sleepState, steamBuild: "24575149", installedBuild: "24575149",
+     publishedMinutesAgo: 900},
+    {status: "OK", alerts: false});
+}
 
 console.log("\n--- RED: an undeliverable alert must FAIL the invocation ---");
 // The whole point of the CloudWatch alarm. If notify() swallowed a 429, the monitor

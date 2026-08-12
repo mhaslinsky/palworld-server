@@ -251,7 +251,21 @@ async function publisherSilence(publishedAt, nowMs) {
   } catch (error) {
     throw classifiedError("instance-state", `could not read the state of ${INSTANCE_ID}: ${error.message}`);
   }
-  if (instance?.State?.Name !== "running") return null;
+  // No instance in the response is NOT "the box is asleep". It means the configured
+  // INSTANCE_ID does not resolve -- a rebuild, a wrong id, a stale terraform output --
+  // and silently skipping the freshness check there would let a stale build report OK
+  // for exactly as long as the misconfiguration lasts.
+  if (!instance) {
+    throw classifiedError("instance-missing", `${INSTANCE_ID} matched no instance, so publisher freshness cannot be judged`);
+  }
+  const state = instance.State?.Name;
+  // Only these are a normal sleep cycle. `terminated` and `shutting-down` are not:
+  // the box this monitor describes is going away, and reporting OK about its build
+  // would be describing a machine that no longer exists.
+  if (state === "stopped" || state === "stopping" || state === "pending") return null;
+  if (state !== "running") {
+    throw classifiedError("instance-state", `${INSTANCE_ID} is ${state || "in an unknown state"}, so publisher freshness cannot be judged`);
+  }
 
   // LaunchTime is the right clock: a stop/start refreshes it so a cold boot gets its
   // full grace, while an in-place reboot does not -- and a reboot killing the
