@@ -88,9 +88,26 @@ if ($conf.BuildParam -or $conf.RosterParam) {
       if ($match) { $buildId = $match.Matches[0].Groups[1].Value }
     }
     if (-not $buildId) {
-      # An absent or unparseable manifest is NOT "no update needed". Publishing a
-      # null build would let the monitor compare against nothing and report a match.
-      Write-Output "WARNING: could not read buildid from $manifest - build not published"
+      # An absent or unparseable manifest is NOT "no update needed", and it is also
+      # NOT "leave the last value alone". Leaving it would strand the PREVIOUS build
+      # id in the parameter, and the monitor would keep comparing Steam against a
+      # number that no longer describes this box - reporting a confident OK after a
+      # failed rebuild or a wiped install. So publish the UNKNOWN explicitly: an
+      # empty buildid is the same sentinel terraform seeds, which the Lambda already
+      # maps to NO_DATA rather than to a match.
+      #
+      # Safe against the obvious flap: an update in flight holds the lock checked at
+      # the top of this script, so this block never runs while SteamCMD has the
+      # manifest open.
+      Write-Output "WARNING: could not read buildid from $manifest - publishing UNKNOWN"
+      $payload = @{ buildid = ""; updated = $now; error = "manifest unreadable at $manifest" } | ConvertTo-Json -Compress
+      $buildFile = Join-Path $stateDir "installed_build.json"
+      [IO.File]::WriteAllText($buildFile, $payload, (New-Object Text.UTF8Encoding($false)))
+      & $awsExe ssm put-parameter --name $buildParam --type String --overwrite `
+        --value "file://$buildFile" --region $conf.AwsRegion 2>$null | Out-Null
+      if ($LASTEXITCODE -ne 0) {
+        Write-Output "WARNING: UNKNOWN-build publish failed (aws exit $LASTEXITCODE)"
+      }
     } else {
       $payload = @{ buildid = $buildId; updated = $now } | ConvertTo-Json -Compress
       $buildFile = Join-Path $stateDir "installed_build.json"

@@ -107,6 +107,13 @@ async function steamBuild() {
   if (!buildid) {
     throw new Error(`steam API response had no public buildid for app ${STEAM_APP_ID}`);
   }
+  // Validate the SHAPE here, at the boundary, not at the comparison. A non-numeric
+  // build id means the response is malformed, which is UNKNOWN - but the comparison
+  // downstream would have to guess a direction for it, and guessing "behind" turns a
+  // broken API into a confident "Palworld has an update" telling people to patch.
+  if (!/^\d+$/.test(String(buildid))) {
+    throw new Error(`steam API returned a non-numeric buildid (${JSON.stringify(buildid)}) for app ${STEAM_APP_ID}`);
+  }
   return {buildid: String(buildid), updated: Number(branch?.timeupdated) || null};
 }
 
@@ -129,9 +136,18 @@ async function installedBuild() {
     throw new Error(`${BUILD_PARAM} is not valid JSON: ${error.message}`);
   }
   // Terraform seeds the parameter with buildid "0" so the resource can exist before
-  // the box has ever published. Treating that as a real build would report the server
-  // as astronomically behind on the first run after every deploy.
+  // the box has ever published. The on-box watcher publishes the SAME empty-ish
+  // sentinel when it cannot read the appmanifest, rather than leaving the previous
+  // build id stranded there. Both mean "nothing known about this box right now", and
+  // treating either as a real build would report the server as astronomically behind
+  // or, worse, silently OK against a build it no longer runs.
   if (!parsed.buildid || parsed.buildid === "0") return null;
+  // Same boundary validation as the Steam side. The publisher extracts \d+ from the
+  // manifest, so anything else here means the parameter was written by something
+  // else, and a bad value must not be handed to a comparison that assumes a number.
+  if (!/^\d+$/.test(String(parsed.buildid))) {
+    throw new Error(`${BUILD_PARAM} has a non-numeric buildid (${JSON.stringify(parsed.buildid)})`);
+  }
   return {buildid: String(parsed.buildid), updated: Number(parsed.updated) || null};
 }
 
@@ -142,7 +158,14 @@ async function readState() {
     const result = await ssm.send(new GetParameterCommand({Name: STATE_PARAM}));
     const raw = result.Parameter?.Value;
     if (!raw || raw === "None") return {};
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    // `JSON.parse("null")` is valid JSON and returns null, which then throws on the
+    // first property access in alreadyReported() - killing the invocation on the very
+    // path that was about to deliver an alert. A string or array parses cleanly and
+    // is equally not a dedupe record. Anything that is not a plain object is treated
+    // as "no record", which is the conservative direction: it alerts.
+    if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+    return parsed;
   } catch (error) {
     // A missing or corrupt dedupe record must not suppress the alert it is meant to
     // pace. Losing it costs one duplicate message; honouring it costs the alert.
@@ -219,13 +242,11 @@ export const handler = async () => {
     return {status: "OK", build: steam.buildid};
   }
 
-  // Numeric compare, with a string fallback: buildids are monotonic integers today,
-  // but a non-numeric one must not silently evaluate to "not behind".
-  const steamNumber = Number(steam.buildid);
-  const installedNumber = Number(installed.buildid);
-  const behind = Number.isFinite(steamNumber) && Number.isFinite(installedNumber)
-    ? steamNumber > installedNumber
-    : true;
+  // Both sides were validated as \d+ at their boundaries, so this is a plain numeric
+  // compare with no fallback to guess about. Build ids are monotonic integers, and
+  // they are already past the 2^53 mantissa question by six orders of magnitude short
+  // of it, so Number is exact here.
+  const behind = Number(steam.buildid) > Number(installed.buildid);
 
   const key = `${behind ? "behind" : "ahead"}:${steam.buildid}:${installed.buildid}`;
   const state = await readState();

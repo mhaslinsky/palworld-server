@@ -58,6 +58,14 @@ resource "aws_iam_role_policy" "instance_build_windows" {
 }
 
 # --- The monitor ----------------------------------------------------------------
+#
+# EVERY resource below is count-gated on windows_enabled, because everything this
+# monitor reads is Windows-side. `enable_windows_migration` defaults to FALSE
+# (variables.tf), and it is also the documented rollback lever, so an ungated monitor
+# would deploy on a Linux-only stack with no build parameter to read, report UNKNOWN
+# on every invocation, and nag Discord every 12h about a box that does not exist.
+# A monitor that cannot observe its subject must not be deployed, rather than deployed
+# and permanently complaining.
 
 data "archive_file" "version_monitor" {
   type        = "zip"
@@ -76,24 +84,31 @@ data "aws_iam_policy_document" "version_monitor_assume" {
 }
 
 resource "aws_iam_role" "version_monitor" {
+  count              = local.windows_enabled
   name               = local.version_monitor_name
   assume_role_policy = data.aws_iam_policy_document.version_monitor_assume.json
 }
 
 resource "aws_iam_role_policy_attachment" "version_monitor_logs" {
-  role       = aws_iam_role.version_monitor.name
+  count      = local.windows_enabled
+  role       = aws_iam_role.version_monitor[0].name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
 data "aws_iam_policy_document" "version_monitor" {
+  count = local.windows_enabled
+
+  # No compact()/try() here any more: gating the whole monitor means the build
+  # parameter always exists when this document does, so a silently-dropped ARN is
+  # no longer possible. compact() would hide a broken reference as a shorter list.
   statement {
     sid     = "ReadWebhookAndBuild"
     actions = ["ssm:GetParameter"]
-    resources = compact([
+    resources = [
       aws_ssm_parameter.discord_webhook_url.arn,
-      try(aws_ssm_parameter.installed_build_windows[0].arn, ""),
-      aws_ssm_parameter.version_monitor_state.arn,
-    ])
+      aws_ssm_parameter.installed_build_windows[0].arn,
+      aws_ssm_parameter.version_monitor_state[0].arn,
+    ]
   }
 
   # Writes only its own dedupe record, so a standing "you are behind" nags on a
@@ -101,7 +116,7 @@ data "aws_iam_policy_document" "version_monitor" {
   statement {
     sid       = "WriteDedupeState"
     actions   = ["ssm:PutParameter"]
-    resources = [aws_ssm_parameter.version_monitor_state.arn]
+    resources = [aws_ssm_parameter.version_monitor_state[0].arn]
   }
 
   statement {
@@ -112,6 +127,7 @@ data "aws_iam_policy_document" "version_monitor" {
 }
 
 resource "aws_ssm_parameter" "version_monitor_state" {
+  count = local.windows_enabled
   name  = local.version_monitor_state_param
   type  = "String"
   value = jsonencode({})
@@ -122,19 +138,22 @@ resource "aws_ssm_parameter" "version_monitor_state" {
 }
 
 resource "aws_iam_role_policy" "version_monitor" {
+  count  = local.windows_enabled
   name   = local.version_monitor_name
-  role   = aws_iam_role.version_monitor.id
-  policy = data.aws_iam_policy_document.version_monitor.json
+  role   = aws_iam_role.version_monitor[0].id
+  policy = data.aws_iam_policy_document.version_monitor[0].json
 }
 
 resource "aws_cloudwatch_log_group" "version_monitor" {
+  count             = local.windows_enabled
   name              = "/aws/lambda/${local.version_monitor_name}"
   retention_in_days = 14
 }
 
 resource "aws_lambda_function" "version_monitor" {
+  count         = local.windows_enabled
   function_name = local.version_monitor_name
-  role          = aws_iam_role.version_monitor.arn
+  role          = aws_iam_role.version_monitor[0].arn
   runtime       = "nodejs22.x"
   handler       = "index.handler"
   architectures = ["arm64"]
@@ -147,8 +166,11 @@ resource "aws_lambda_function" "version_monitor" {
 
   environment {
     variables = {
-      BUILD_PARAM   = try(aws_ssm_parameter.installed_build_windows[0].name, "")
-      STATE_PARAM   = aws_ssm_parameter.version_monitor_state.name
+      # Direct references, not try(): the gate above guarantees both exist whenever
+      # this function does. A try() falling back to "" would ship a Lambda whose
+      # BUILD_PARAM is empty and whose every run is UNKNOWN.
+      BUILD_PARAM   = aws_ssm_parameter.installed_build_windows[0].name
+      STATE_PARAM   = aws_ssm_parameter.version_monitor_state[0].name
       WEBHOOK_PARAM = aws_ssm_parameter.discord_webhook_url.name
       # The DEDICATED SERVER app. The client (1623730) is a separate app; what decides
       # whether the box is compatible is what the box installs.
@@ -166,23 +188,26 @@ resource "aws_lambda_function" "version_monitor" {
 # minute -- what matters is that it is found before the next play session, not
 # within seconds. ~1,450 invocations/mo, inside the free tier.
 resource "aws_cloudwatch_event_rule" "version_monitor" {
+  count               = local.windows_enabled
   name                = local.version_monitor_name
   description         = "Alert when Steam's public Palworld build differs from the one installed on the server"
   schedule_expression = "rate(30 minutes)"
 }
 
 resource "aws_cloudwatch_event_target" "version_monitor" {
-  rule      = aws_cloudwatch_event_rule.version_monitor.name
+  count     = local.windows_enabled
+  rule      = aws_cloudwatch_event_rule.version_monitor[0].name
   target_id = "lambda"
-  arn       = aws_lambda_function.version_monitor.arn
+  arn       = aws_lambda_function.version_monitor[0].arn
 }
 
 resource "aws_lambda_permission" "version_monitor_events" {
+  count         = local.windows_enabled
   statement_id  = "AllowExecutionFromEventBridge"
   action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.version_monitor.function_name
+  function_name = aws_lambda_function.version_monitor[0].function_name
   principal     = "events.amazonaws.com"
-  source_arn    = aws_cloudwatch_event_rule.version_monitor.arn
+  source_arn    = aws_cloudwatch_event_rule.version_monitor[0].arn
 }
 
 # The Discord webhook is the only alert path, so a broken webhook means the monitor
@@ -190,11 +215,12 @@ resource "aws_lambda_permission" "version_monitor_events" {
 # fails the invocation -- this is what turns that into something a human hears about,
 # over the SNS topic backup_monitor.tf already owns.
 resource "aws_cloudwatch_metric_alarm" "version_monitor_errors" {
+  count               = local.windows_enabled
   alarm_name          = "${local.version_monitor_name}-errors"
   alarm_description   = "The Palworld version monitor failed to run or could not deliver an alert."
   namespace           = "AWS/Lambda"
   metric_name         = "Errors"
-  dimensions          = { FunctionName = aws_lambda_function.version_monitor.function_name }
+  dimensions          = { FunctionName = aws_lambda_function.version_monitor[0].function_name }
   statistic           = "Sum"
   period              = 1800
   evaluation_periods  = 1

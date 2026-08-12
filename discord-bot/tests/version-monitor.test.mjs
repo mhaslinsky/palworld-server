@@ -157,6 +157,29 @@ await scenario("a NEWER patch lands while already behind",
 await scenario("dedupe record is corrupt",
   {steamBuild: "24575149", installedBuild: "24466863", state: "not an object"},
   {status: "BEHIND", alerts: true});
+// `JSON.parse("null")` is valid and returns null, which threw on the first property
+// access and killed the invocation on the exact path that was about to alert. The
+// string case above does NOT cover this: a string has no `.key` but does not throw.
+await scenario("dedupe record is literal null",
+  {steamBuild: "24575149", installedBuild: "24466863", state: null},
+  {status: "BEHIND", alerts: true});
+await scenario("dedupe record is an array",
+  {steamBuild: "24575149", installedBuild: "24466863", state: []},
+  {status: "BEHIND", alerts: true});
+
+console.log("\n--- RED: a malformed build id is UNKNOWN, never 'you are behind' ---");
+// Guessing a direction for an unparseable build id turns a broken API into a
+// confident "Palworld has an update" that tells people to patch a current server.
+await scenario("steam returns a non-numeric buildid",
+  {steamBuild: "not-a-build"}, {status: "UNKNOWN", alerts: true});
+await scenario("build parameter holds a non-numeric buildid",
+  {installedRaw: JSON.stringify({buildid: "garbage", updated: 1})},
+  {status: "UNKNOWN", alerts: true});
+// The on-box watcher publishes this when it cannot read the appmanifest, instead of
+// stranding the previous build id. It must land as NO_DATA, not as a comparison.
+await scenario("publisher reported an unreadable manifest",
+  {installedRaw: JSON.stringify({buildid: "", updated: 1, error: "manifest unreadable"})},
+  {status: "NO_DATA", alerts: true});
 
 console.log("\n--- Dedupe must RESET on recovery, or the next patch is swallowed ---");
 install({});
