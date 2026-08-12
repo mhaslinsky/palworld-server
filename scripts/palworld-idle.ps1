@@ -125,7 +125,7 @@ if ($conf.BuildParam -or $conf.RosterParam) {
         # had only a Write-Output here, which vanishes in a SYSTEM Scheduled Task,
         # making the worst case the quietest one. Its own EventId, not 106's, so the
         # two are distinguishable in the log.
-        Write-EventLog -LogName Application -Source "Palworld" -EventId 107 -EntryType Error `
+        Write-EventLog -LogName Application -Source "Palworld" -EventId 121 -EntryType Error `
           -Message "could not read the appmanifest AND could not publish the UNKNOWN sentinel to $buildParam (aws exit $LASTEXITCODE). A stale build id is stranded there; the version monitor may report OK against a build this box no longer runs." -ErrorAction SilentlyContinue
         Write-Output "ERROR: UNKNOWN-build publish failed (aws exit $LASTEXITCODE) - stale build id stranded in $buildParam"
       }
@@ -213,10 +213,10 @@ function Get-WebhookUrl {
     if ($value -and $value.Trim() -ne "None") { return $value.Trim() }
     # Reached when the CLI exits non-zero without throwing (denied IAM, no such
     # parameter) or the value is genuinely unset. Both mean alerting is down.
-    Write-EventLog -LogName Application -Source "Palworld" -EventId 108 -EntryType Error `
+    Write-EventLog -LogName Application -Source "Palworld" -EventId 120 -EntryType Error `
       -Message "Get-WebhookUrl: $($conf.WebhookParam) resolved to nothing (aws exit $LASTEXITCODE). Discord alerts from this box are DOWN." -ErrorAction SilentlyContinue
   } catch {
-    Write-EventLog -LogName Application -Source "Palworld" -EventId 108 -EntryType Error `
+    Write-EventLog -LogName Application -Source "Palworld" -EventId 120 -EntryType Error `
       -Message "Get-WebhookUrl threw: $($_.Exception.Message). Discord alerts from this box are DOWN." -ErrorAction SilentlyContinue
   }
   return $null
