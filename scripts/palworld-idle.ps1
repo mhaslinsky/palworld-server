@@ -45,6 +45,122 @@ if (Test-Path $updateLock) {
   }
 }
 
+# Absolute path, NOT bare "aws": the CLI is not on PATH in the Scheduled Task's
+# SYSTEM context, so `& aws ...` resolved to nothing and every SSM call failed
+# silently inside its catch block - the roster simply never published and nothing
+# said so. Verified on the box 2026-07-18.
+#
+# Resolved HERE, above the watchdog, rather than beside the roster publish: the
+# build publish below has to run on cycles where the game process is dead, and the
+# watchdog exits early on exactly those cycles.
+$awsExe = "C:\Program Files\Amazon\AWSCLIV2\aws.exe"
+if (-not (Test-Path $awsExe)) {
+  $resolved = (Get-Command aws -ErrorAction SilentlyContinue).Source
+  if ($resolved) { $awsExe = $resolved }
+}
+
+# --- Publish the INSTALLED build id (best-effort; never blocks anything) -------
+# Read from Steam's own appmanifest, which is the only on-box record of what is
+# actually installed - the game's /info version string is a marketing version that
+# does not map back to a Steam buildid, so it cannot be compared with what Steam
+# publishes. The off-box version monitor compares this against the current public
+# buildid to tell you the server is behind BEFORE a player hits "version incompatible".
+#
+# Deliberately ABOVE the watchdog's early exit. A server that is crash-looping after
+# a patch is the case where knowing the installed build matters most, and that is
+# precisely the cycle where the watchdog returns before ever reaching the roster
+# publish. Publishing only on healthy cycles would go quiet exactly when it counts.
+if ($conf.BuildParam -or $conf.RosterParam) {
+  # No BuildParam in idle.conf.json on a box built before this existed: user_data
+  # writes that file and user_data does NOT re-run on a stop/start, so requiring the
+  # key would mean this never publishes until the instance is rebuilt. Derived from
+  # the roster param, which sits in the same namespace, so it works on today's box.
+  $buildParam = if ($conf.BuildParam) { $conf.BuildParam }
+                else { $conf.RosterParam -replace '/[^/]+$', '/installed_build_windows' }
+  try {
+    $manifest = "C:\PalServer\steamapps\appmanifest_2394010.acf"
+    $buildId = $null
+    if (Test-Path $manifest) {
+      # The acf is Valve's KeyValues format, not JSON. Only the top-level "buildid"
+      # is wanted; "TargetBuildID" sits beside it and is what the install was ASKED
+      # for, which stays put when an update fails halfway.
+      $match = Select-String -Path $manifest -Pattern '^\s*"buildid"\s+"(\d+)"' | Select-Object -First 1
+      if ($match) { $buildId = $match.Matches[0].Groups[1].Value }
+    }
+    if (-not $buildId) {
+      # An absent or unparseable manifest is NOT "no update needed", and it is also
+      # NOT "leave the last value alone". Leaving it would strand the PREVIOUS build
+      # id in the parameter, and the monitor would keep comparing Steam against a
+      # number that no longer describes this box - reporting a confident OK after a
+      # failed rebuild or a wiped install. So publish the UNKNOWN explicitly: an
+      # empty buildid is the same sentinel terraform seeds, which the Lambda already
+      # maps to NO_DATA rather than to a match.
+      #
+      # Mostly safe against the obvious flap: an update in flight holds the lock
+      # checked at the top of this script, so this block normally cannot run while
+      # SteamCMD has the manifest open. NOT a guarantee, and the gap is worth knowing:
+      # update-server.ps1 stamps that lock once when it takes it and never refreshes
+      # it, so an update running longer than the 30-minute ceiling lets this whole
+      # script resume mid-update. That hole is not this block's to close (the same
+      # gap lets the watchdog relaunch the server into a running SteamCMD, which is
+      # far worse than a bad build read), but do not read the line above as absolute.
+      # Bounded, because this block runs BEFORE the watchdog. An unbounded CLI call
+      # that hangs on a wedged endpoint or a credential lookup would delay the crashed
+      # -process check, leaving a dead server down while this cycle waits on AWS. 3s
+      # connect + 5s read caps a stalled attempt at roughly 24s including the CLI's
+      # own retries, well inside the 2-minute cycle. Publishing the build is
+      # best-effort; restarting a crashed server is not, so the watchdog wins ties.
+      Write-Output "WARNING: could not read buildid from $manifest - publishing UNKNOWN"
+      $payload = @{ buildid = ""; updated = $now; error = "manifest unreadable at $manifest" } | ConvertTo-Json -Compress
+      $buildFile = Join-Path $stateDir "installed_build.json"
+      [IO.File]::WriteAllText($buildFile, $payload, (New-Object Text.UTF8Encoding($false)))
+      & $awsExe ssm put-parameter --name $buildParam --type String --overwrite `
+        --value "file://$buildFile" --region $conf.AwsRegion `
+        --cli-connect-timeout 3 --cli-read-timeout 5 2>$null | Out-Null
+      if ($LASTEXITCODE -ne 0) {
+        # This is the WORST branch in the whole block, so it gets the LOUDEST signal.
+        # The manifest is already unreadable AND the clear failed, which means the
+        # stranded previous build id survives in SSM - the exact stale-compare this
+        # block exists to prevent, now with nothing off-box able to tell. It briefly
+        # had only a Write-Output here, which vanishes in a SYSTEM Scheduled Task,
+        # making the worst case the quietest one. Its own EventId, not 106's, so the
+        # two are distinguishable in the log.
+        Write-EventLog -LogName Application -Source "Palworld" -EventId 107 -EntryType Error `
+          -Message "could not read the appmanifest AND could not publish the UNKNOWN sentinel to $buildParam (aws exit $LASTEXITCODE). A stale build id is stranded there; the version monitor may report OK against a build this box no longer runs." -ErrorAction SilentlyContinue
+        Write-Output "ERROR: UNKNOWN-build publish failed (aws exit $LASTEXITCODE) - stale build id stranded in $buildParam"
+      }
+    } else {
+      # WARNING: this republishes every cycle even when the build has not changed, and
+      # that is deliberate. The off-box monitor treats the parameter's LastModifiedDate
+      # as proof this publisher is still alive, so a write-on-change "optimisation"
+      # would freeze the timestamp on a healthy box and make the monitor report the
+      # publisher dead. The redundant write IS the heartbeat. (SSM version churn is a
+      # non-issue here: the roster parameter beside it publishes on the same 2-minute
+      # cycle and sat at version 7381 when this was written.)
+      $payload = @{ buildid = $buildId; updated = $now } | ConvertTo-Json -Compress
+      $buildFile = Join-Path $stateDir "installed_build.json"
+      # Through a FILE, not an argument, for the same reason the roster is: inline
+      # JSON loses every quote crossing cmd.exe. Verified broken that way 2026-07-18.
+      [IO.File]::WriteAllText($buildFile, $payload, (New-Object Text.UTF8Encoding($false)))
+      & $awsExe ssm put-parameter --name $buildParam --type String --overwrite `
+        --value "file://$buildFile" --region $conf.AwsRegion `
+        --cli-connect-timeout 3 --cli-read-timeout 5 2>$null | Out-Null
+      if ($LASTEXITCODE -ne 0) {
+        Write-EventLog -LogName Application -Source "Palworld" -EventId 106 -EntryType Warning `
+          -Message "installed-build publish to $buildParam failed (aws exit $LASTEXITCODE)" -ErrorAction SilentlyContinue
+        Write-Output "WARNING: installed-build publish failed (aws exit $LASTEXITCODE)"
+      }
+    }
+  } catch {
+    # Write-Output alone disappears in a SYSTEM Scheduled Task, so a throw here (the
+    # CLI failing to invoke at all, WriteAllText denied) would have left no evidence
+    # anywhere. Same reasoning as the roster publish's EventId 103.
+    Write-EventLog -LogName Application -Source "Palworld" -EventId 106 -EntryType Warning `
+      -Message "installed-build publish threw: $($_.Exception.Message)" -ErrorAction SilentlyContinue
+    Write-Output "WARNING: installed-build publish threw: $($_.Exception.Message)"
+  }
+}
+
 # Watchdog. The launcher's only other trigger is -AtStartup, so without this a
 # crashed PalServer would stay dead until the next reboot. (An earlier version of
 # this file CLAIMED the idle task did this and did not - a comment describing
@@ -75,16 +191,6 @@ if (-not (Get-Process -Name "PalServer-Win64-Shipping" -ErrorAction SilentlyCont
 }
 $secure = ConvertTo-SecureString $conf.AdminPassword -AsPlainText -Force
 $cred = New-Object System.Management.Automation.PSCredential("admin", $secure)
-
-# Absolute path, NOT bare "aws": the CLI is not on PATH in the Scheduled Task's
-# SYSTEM context, so `& aws ...` resolved to nothing and every SSM call failed
-# silently inside its catch block - the roster simply never published and nothing
-# said so. Verified on the box 2026-07-18.
-$awsExe = "C:\Program Files\Amazon\AWSCLIV2\aws.exe"
-if (-not (Test-Path $awsExe)) {
-  $resolved = (Get-Command aws -ErrorAction SilentlyContinue).Source
-  if ($resolved) { $awsExe = $resolved }
-}
 
 function Get-WebhookUrl {
   if (-not $conf.WebhookParam) { return $null }
