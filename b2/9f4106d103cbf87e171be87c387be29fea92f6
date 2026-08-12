@@ -1,0 +1,43 @@
+scripts/update-server.ps1
+  s_e474a6e718b2ee::t_0e52e2d9c2a184 110-111,113-123
+  s_e474a6e718b2ee::t_9409944b3eee1b 256-284
+  s_e474a6e718b2ee::t_eb2d8d90ac7bfb 87-92
+  s_e474a6e718b2ee::t_d42b2e61eeadf5 303,320,332,356,375,401
+scripts/palworld-launch.ps1
+  s_e474a6e718b2ee::t_98edf0ea4ad41b 52,56
+scripts/tests/Test-UpdateLockProbe.ps1
+  s_e474a6e718b2ee::t_c353791be42066 1-70
+AGENTS.md
+  s_e474a6e718b2ee::t_54664231a05746 184-204,207,211-213,224-229
+  s_e474a6e718b2ee::t_183256104af39e 231-233,235-238
+  s_276064a3bf2297::t_ee477444e43bbe 230
+scripts/palworld-idle.ps1
+  s_e474a6e718b2ee::t_f05042200ca917 78-83
+  s_e474a6e718b2ee::t_77d083e4cfce00 179,267,270
+  s_e474a6e718b2ee::t_066c665fef5d6a 36-56,59-71,73-77,84-88,91-96
+  s_e474a6e718b2ee::t_6f030866352258 290-293,295
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "b29f4106d103cbf87e171be87c387be29fea92f6",
+  "prompts": {},
+  "sessions": {
+    "s_276064a3bf2297": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019ff6ed-2ee0-7c73-8de5-4c6eb5610a5c",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    },
+    "s_e474a6e718b2ee": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b37d46d2-b0bc-41d3-8065-034a0fad5ed6",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    }
+  }
+}
