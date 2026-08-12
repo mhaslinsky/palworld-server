@@ -146,7 +146,7 @@ if ($conf.BuildParam -or $conf.RosterParam) {
         --value "file://$buildFile" --region $conf.AwsRegion `
         --cli-connect-timeout 3 --cli-read-timeout 5 2>$null | Out-Null
       if ($LASTEXITCODE -ne 0) {
-        Write-EventLog -LogName Application -Source "Palworld" -EventId 106 -EntryType Warning `
+        Write-EventLog -LogName Application -Source "Palworld" -EventId 118 -EntryType Warning `
           -Message "installed-build publish to $buildParam failed (aws exit $LASTEXITCODE)" -ErrorAction SilentlyContinue
         Write-Output "WARNING: installed-build publish failed (aws exit $LASTEXITCODE)"
       }
@@ -155,7 +155,7 @@ if ($conf.BuildParam -or $conf.RosterParam) {
     # Write-Output alone disappears in a SYSTEM Scheduled Task, so a throw here (the
     # CLI failing to invoke at all, WriteAllText denied) would have left no evidence
     # anywhere. Same reasoning as the roster publish's EventId 103.
-    Write-EventLog -LogName Application -Source "Palworld" -EventId 106 -EntryType Warning `
+    Write-EventLog -LogName Application -Source "Palworld" -EventId 118 -EntryType Warning `
       -Message "installed-build publish threw: $($_.Exception.Message)" -ErrorAction SilentlyContinue
     Write-Output "WARNING: installed-build publish threw: $($_.Exception.Message)"
   }
@@ -227,7 +227,7 @@ function Send-Notify([string]$content) {
   if (-not $url) {
     # Get-WebhookUrl has already logged WHY. This logs WHAT was lost, so the alert
     # survives in the Event Log even though it never reached Discord.
-    Write-EventLog -LogName Application -Source "Palworld" -EventId 109 -EntryType Warning `
+    Write-EventLog -LogName Application -Source "Palworld" -EventId 116 -EntryType Warning `
       -Message "alert NOT delivered (no webhook): $content" -ErrorAction SilentlyContinue
     Write-Output "WARNING: alert NOT delivered (no webhook): $content"
     return
@@ -242,7 +242,7 @@ function Send-Notify([string]$content) {
     # The likeliest failure of the three and previously the quietest: a revoked token,
     # a deleted webhook, a 429, or Discord being down. Invoke-RestMethod throws on a
     # non-2xx, so this is the branch that actually fires in practice.
-    Write-EventLog -LogName Application -Source "Palworld" -EventId 110 -EntryType Error `
+    Write-EventLog -LogName Application -Source "Palworld" -EventId 117 -EntryType Error `
       -Message "Discord POST failed: $($_.Exception.Message). Alert NOT delivered: $content" -ErrorAction SilentlyContinue
     Write-Output "ERROR: Discord POST failed ($($_.Exception.Message)); alert NOT delivered: $content"
   }

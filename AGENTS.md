@@ -181,22 +181,38 @@ when the box is behaving oddly but nothing has alerted:
 Get-EventLog -LogName Application -Source Palworld -Newest 30 | Format-Table TimeGenerated, EventID, EntryType, Message -AutoSize
 ```
 
-| ID | Meaning |
-|----|---------|
-| 103 | Roster publish failed. The off-box backup monitor reads a stale roster as "the idle watcher is dead". |
-| 104 | Watchdog: the launcher script is missing, so a crashed server cannot be restarted. |
-| 105 | Watchdog: the launcher exited non-zero; the server did not start. |
-| 106 | Installed-build publish failed or threw. The version monitor loses its freshness signal. |
-| 107 | The appmanifest was unreadable AND the UNKNOWN sentinel could not be published, so a stale build id is stranded in SSM. The worst branch, hence its own id. |
-| 108 | The Discord webhook could not be resolved from SSM. **Alerts from this box are down.** |
-| 109 | An alert was dropped because no webhook resolved. The message body is in the log entry. |
-| 110 | The Discord POST itself failed (revoked token, deleted webhook, 429, outage). The message body is in the log entry. |
+**The source is shared by every script, so ids must be allocated across the whole repo,
+not per file.** Three collisions have already happened by checking only one file:
+`106` meant both "watchdog stuck disabled" and "build publish failed", `109` meant both
+"may serve an EMPTY world" and "alert dropped", `110` meant both "backup failed" and
+"Discord POST failed". Filtering for a severe id and getting unrelated noise defeats
+the point of having ids. **Grep `scripts/*.ps1` for `EventId` before assigning one.**
 
-108 to 110 are the ones worth understanding: alerting is best-effort by design, because
-`Send-Notify` is called from the shutdown and save-verification paths where throwing
-would trade "I could not tell you" for "I stopped protecting the world". Best-effort is
-correct. Silent best-effort was the bug, and these ids are what makes a dropped alert
-recoverable rather than destroyed.
+| ID | Script | Meaning |
+|----|--------|---------|
+| 101 | launch | `PalServer` shipping exe missing. |
+| 103 | idle | Roster publish failed. The off-box backup monitor reads a stale roster as "the idle watcher is dead". |
+| 104 | idle | Watchdog: the launcher script is missing, so a crashed server cannot be restarted. |
+| 105 | idle | Watchdog: the launcher exited non-zero; the server did not start. |
+| 106 | launch | `PalworldIdle` was disabled at startup. Error = could NOT be re-enabled, so there is no watchdog and no idle shutdown; Warning = it was re-armed. |
+| 107 | idle | The appmanifest was unreadable AND the UNKNOWN sentinel could not be published, so a stale build id is stranded in SSM. |
+| 108 | idle | The Discord webhook could not be resolved from SSM. **Alerts from this box are down.** |
+| 109 | launch | No staged `GameUserSettings.ini`; the server may serve an **EMPTY world** while the real save sits intact on D:. |
+| 110 | backup | Backup failed. |
+| 111 | idle | A duplicate `PalServer` was reaped (which one was kept, and why). |
+| 112 | launch | Launch failed: no process object, exited within 10s, or no process appeared within 10s. |
+| 113 | launch | Timed out after 30s waiting for the start lock while no server is running. |
+| 114 | idle | **FAILED** to kill duplicate `PalServer` processes. This is the condition that exhausted memory on 2026-07-31. |
+| 115 | launch | Pak-mod staging: removed unstaged, restored from stage, failed to restore, or removed under vanilla mode. |
+| 116 | idle | An alert was dropped because no webhook resolved. The message body is in the entry. |
+| 117 | idle | The Discord POST itself failed (revoked token, deleted webhook, 429, outage). The message body is in the entry. |
+| 118 | idle | Installed-build publish failed or threw. The version monitor loses its freshness signal. |
+
+108, 116 and 117 are the ones worth understanding: alerting is best-effort by design,
+because `Send-Notify` is called from the shutdown and save-verification paths where
+throwing would trade "I could not tell you" for "I stopped protecting the world".
+Best-effort is correct. Silent best-effort was the bug, and these ids are what make a
+dropped alert recoverable rather than destroyed.
 
 ## Live-service etiquette
 
