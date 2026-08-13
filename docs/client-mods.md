@@ -87,11 +87,26 @@ Tracked here so we know what's set. These live on the server / in Terraform:
 - **MaxStackCount** ([376](https://www.nexusmods.com/palworld/mods/376), 1.3, UE4SS Lua): installed
   on the Windows dedicated server. Raises item stack caps from 9999 to 999,999,999. Enabled purely
   via `enabled.txt` (same override mechanism as Building Restrictions Disabler), not listed in
-  `mods.txt`. The server-side rewrite was last confirmed firing in `UE4SS.log`
-  (`[Max Stack Count] set from 9999 to 999999999 [palServerRegisterHook]`) on `v1.0.2.101103`,
-  and has **NOT been re-verified since the 1.0.3 patch**. It is a Lua hook rather than an AOB
-  scan, so it is much less likely than 1898 to have been broken, but "less likely" is not
-  "checked" - grep `UE4SS.log` for that line to settle it.
+  `mods.txt`. On `v1.0.3.101283` it LOADS - `UE4SS.log` shows
+  `Max Stack Count version 1.3 intended for UE4SS 3.0.1 loaded for game version 0.4.11` -
+  but the line that proves the rewrite actually FIRED,
+  `[Max Stack Count] set from 9999 to 999999999 [palServerRegisterHook]`, was **not
+  present** when checked on 2026-08-12 with zero players connected. It was last seen on
+  `v1.0.2.101103`.
+
+  Loaded is not working, and this repo has already been burned by exactly that gap: mod
+  1898 spent a day logging itself as loaded while silently doing nothing. The likeliest
+  benign explanation here is the hook's own name - `palServerRegisterHook` suggests it
+  fires when a player registers, and nobody had connected since that launch. **Settle it
+  the next time someone is on**, rather than assuming either way:
+
+  ```powershell
+  Select-String -Path C:\PalServer\Pal\Binaries\Win64\ue4ss\UE4SS.log -Pattern 'palServerRegisterHook'
+  ```
+
+  If it still does not appear with a player connected, the stack cap is vanilla and the
+  mod needs a build matching 1.0.3. Note `UE4SS.log` is TRUNCATED on every launch, so
+  check it during the session you care about, not after a restart.
   It carries a client hook too, and players must install it client-side to get the raised cap:
   a vanilla client stays hard-capped at 9999 even though the server allows more (confirmed in-game
   by multiple players). It is therefore listed under Step 2 as a required player install.
