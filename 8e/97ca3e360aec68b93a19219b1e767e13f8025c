@@ -1,0 +1,26 @@
+scripts/tests/Test-UpdateLockProbe.ps1
+  s_e474a6e718b2ee::t_9aa3fecbce2568 1-86
+scripts/palworld-idle.ps1
+  s_e474a6e718b2ee::t_9aa3fecbce2568 36-56,58,60-142,145-156
+scripts/update-server.ps1
+  s_e474a6e718b2ee::t_9aa3fecbce2568 67-70,91-96,114-115,117-127,238-241,264-291,310,327,339,363,382,408
+AGENTS.md
+  s_e474a6e718b2ee::t_ca74aa26ab5a3d 248-250
+  s_e474a6e718b2ee::t_bed30c0310012a 244
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "8e97ca3e360aec68b93a19219b1e767e13f8025c",
+  "prompts": {},
+  "sessions": {
+    "s_e474a6e718b2ee": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b37d46d2-b0bc-41d3-8065-034a0fad5ed6",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    }
+  }
+}
