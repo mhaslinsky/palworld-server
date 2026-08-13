@@ -241,9 +241,13 @@ the live server on apply (rule 5). The other side always moves.
 | 116 | idle | An alert was dropped because no webhook resolved. The message body is in the entry. |
 | 117 | idle | The Discord POST itself failed (revoked token, deleted webhook, 429, outage). The message body is in the entry. |
 | 118 | idle | Installed-build publish failed or threw. The version monitor loses its freshness signal. |
+| 119 | idle | `update.lock` has been HELD over an hour. The watchdog and idle-shutdown have been standing down that whole time, so the box is billing and a crashed server will not be restarted. Logged once per stuck lock. |
 | 120 | idle | The Discord webhook could not be resolved from SSM. **Alerts from this box are down.** |
 | 121 | idle | The appmanifest was unreadable AND the UNKNOWN sentinel could not be published, so a stale build id is stranded in SSM. |
 | 122 | launch | `PalworldIdle` was disabled at startup. Error = could NOT be re-enabled, so there is no watchdog and no idle shutdown; Warning = it was re-armed. |
+| 123 | update | The updater could not resolve the webhook; update progress and results will not reach Discord. |
+| 124 | update | The updater's Discord POST failed. The message body is in the entry, and the SSM command output still has the text. |
+| 125 | idle | `update.lock` state could NOT be determined. The cycle stands down, so the watchdog and idle-shutdown are both inactive until it clears; if it persists the box will not stop on its own. |
 
 116, 117 and 120 are the ones worth understanding: alerting is best-effort by design,
 because `Send-Notify` is called from the shutdown and save-verification paths where

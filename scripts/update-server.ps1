@@ -64,6 +64,10 @@ $label       = $conf.ServerLabel
 $stateDir = "C:\PalServer\state"
 New-Item -ItemType Directory -Force -Path $stateDir | Out-Null
 $lock = Join-Path $stateDir "update.lock"
+# Carries "when was this update last making progress". Separate from the lock because
+# the lock is held open with FileShare::Read for the whole run, which excludes the
+# second write handle that stamping its own timestamp would need.
+$heartbeatFile = Join-Path $stateDir "update.heartbeat"
 
 # Absolute path, NOT bare "aws": the CLI is not on PATH in the SYSTEM context an SSM
 # command runs under, so `& aws ...` resolves to nothing and every call fails inside
@@ -84,7 +88,12 @@ function Get-WebhookUrl {
       --region $conf.AwsRegion --query 'Parameter.Value' --output text 2>$null
     # An unset SSM parameter comes back as the literal string "None".
     if ($value -and $value.Trim() -ne "None") { return $value.Trim() }
-  } catch { }
+    Write-EventLog -LogName Application -Source "Palworld" -EventId 123 -EntryType Error `
+      -Message "update-server Get-WebhookUrl: $($conf.WebhookParam) resolved to nothing (aws exit $LASTEXITCODE). Update progress and results will not reach Discord." -ErrorAction SilentlyContinue
+  } catch {
+    Write-EventLog -LogName Application -Source "Palworld" -EventId 123 -EntryType Error `
+      -Message "update-server Get-WebhookUrl threw: $($_.Exception.Message). Update progress and results will not reach Discord." -ErrorAction SilentlyContinue
+  }
   return $null
 }
 
@@ -102,9 +111,20 @@ function Send-Notify([string]$content) {
     $body = @{ content = $content } | ConvertTo-Json -Compress
     # PS 5.1 otherwise sends string bodies through the ANSI code page, mangling emoji.
     $bodyBytes = [Text.Encoding]::UTF8.GetBytes($body)
+    # -ErrorAction Stop because this file also runs under "Continue"; without it a
+    # non-terminating error would skip the catch and the failure would vanish.
     Invoke-RestMethod -Uri $url -Method Post -ContentType 'application/json' `
-      -Body $bodyBytes -TimeoutSec 5 | Out-Null
-  } catch { }
+      -Body $bodyBytes -TimeoutSec 5 -ErrorAction Stop | Out-Null
+  } catch {
+    # This one is worse than the idle script's equivalent, because an update posts its
+    # progress AND its verdict here. A swallowed failure meant a build swap that
+    # announced nothing: no "starting", no "back up on version X", no warning that the
+    # mod did not load. The Write-Output above already echoed the text to the SSM
+    # command output, so this records that Discord specifically did not get it.
+    Write-EventLog -LogName Application -Source "Palworld" -EventId 124 -EntryType Error `
+      -Message "update-server Discord POST failed: $($_.Exception.Message). Not delivered: $content" -ErrorAction SilentlyContinue
+    Write-Output "ERROR: Discord POST failed ($($_.Exception.Message)); the line above did not reach Discord"
+  }
 }
 
 function Get-LatestLevelSav {
@@ -215,6 +235,10 @@ function Remove-UpdateLock {
     $script:lockHandle = $null
   }
   Remove-Item $lock -Force -ErrorAction SilentlyContinue
+  # The sidecar goes with it. A heartbeat left behind after the lock is gone would make
+  # the NEXT update's lock look like it had already been running for however long this
+  # file had been sitting there.
+  Remove-Item $heartbeatFile -Force -ErrorAction SilentlyContinue
 }
 
 $lockHandle = Open-UpdateLock
@@ -237,6 +261,34 @@ $stamp = [Text.Encoding]::UTF8.GetBytes((Get-Date).ToString("o"))
 $lockHandle.Write($stamp, 0, $stamp.Length)
 $lockHandle.Flush()
 
+# Re-stamp the lock so its age means "how long has this update been running", not "when
+# did it start". palworld-idle.ps1 decides whether to stand down by asking whether the
+# handle is still HELD, so this timestamp no longer gates anything; what it feeds is the
+# 60-minute "this update looks hung" warning, and a timestamp frozen at acquisition
+# would fire that warning on every update that outlives an hour of honest work.
+#
+# Called at phase boundaries rather than on a timer: a background heartbeat job would
+# have to be reaped on every exit path, and getting that wrong risks leaving a thread
+# holding the lock after the updater is gone. Phase boundaries cost nothing and cannot
+# outlive the process. A single phase can still exceed an hour (SteamCMD on a very large
+# patch over a slow link), and the warning is deliberately advisory for that reason: it
+# says look, it does not act.
+function Update-LockHeartbeat {
+  if (-not $script:lockHandle) { return }
+  try {
+    # A SIDECAR file, not the lock itself. Stamping the lock's own LastWriteTime needs a
+    # second write handle, and this process holds it with FileShare::Read, which excludes
+    # exactly that - so the attempt raised a sharing violation on EVERY successful
+    # heartbeat, printed a failure warning each time, and never moved the timestamp it
+    # existed to move. A separate file has no such contention: opened, written, closed.
+    [IO.File]::WriteAllText($heartbeatFile, (Get-Date).ToString("o"))
+  } catch {
+    # Best-effort by design. A failed heartbeat costs a possibly-early advisory warning
+    # from the idle script; throwing here would abort a running update, which is worse.
+    Write-Output "WARNING: update.lock heartbeat failed: $($_.Exception.Message)"
+  }
+}
+
 $watchdogDisabled = $false
 $modOk = $null       # $null = not checked; $true/$false = FILES verified after re-stage
 $modRuntime = $null  # 'ok'/'failed'/'unknown' - what the mod said about itself once up
@@ -255,6 +307,7 @@ try {
     if ($oldInfo) { $oldVersion = $oldInfo.version }
   } catch { }
 
+  Update-LockHeartbeat
   # --- 1. force-save and PROVE it reached disk (200 on /save is not proof) -----
   if (Get-Process -Name $shipping -ErrorAction SilentlyContinue) {
     $before = (Get-LatestLevelSav).LastWriteTimeUtc
@@ -271,6 +324,7 @@ try {
     }
   }
 
+  Update-LockHeartbeat
   # --- 2. fresh pre-update backup (best-effort, LOUD on failure) ---------------
   # backup-to-s3.ps1 does its own save+verify+upload; a build swap deserves a known
   # escape hatch beyond the 30-min rolling backups.
@@ -282,6 +336,7 @@ try {
     }
   }
 
+  Update-LockHeartbeat
   # --- 3. disable the watchdog so it cannot relaunch mid-update ----------------
   # ASK the task what state it is in rather than trusting the cmdlet. PalworldIdle
   # relaunches the server whenever the process is absent, which is exactly what step 4
@@ -305,6 +360,7 @@ try {
     return
   }
 
+  Update-LockHeartbeat
   # --- 4. graceful stop, then confirm the process is really gone ---------------
   # 60s of warning, not 5: this drops everyone, and AGENTS.md asks for a real announce
   # and wait. The Discord side names who is online before it gets here.
@@ -323,6 +379,7 @@ try {
   # ignored it, and only after the wait above - so it is not racing an unsaved world.
   Get-Process -Name $shipping -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 
+  Update-LockHeartbeat
   # --- 5. update to latest. TWICE: first pass often only self-updates steamcmd --
   if (-not (Test-Path $steamcmd)) {
     Send-Notify "❌ **$label**: steamcmd is missing at ``$steamcmd`` - cannot update. Relaunching the current build."
@@ -348,6 +405,7 @@ try {
     return
   }
 
+  Update-LockHeartbeat
   # --- 5b. handle the UE4SS mod layer per -Mods -------------------------------
   # This is a MODDED server. SteamCMD 'validate' re-checks the official depot and can
   # drop the injected UE4SS loader, and a base patch usually outruns the mod builds -

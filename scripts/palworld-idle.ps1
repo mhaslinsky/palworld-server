@@ -33,16 +33,127 @@ $restBase = "http://127.0.0.1:$($conf.RestPort)/v1/api"
 # Stand down while an update is running. update-server.ps1 disables this task before it
 # stops the server, but that only stops FUTURE triggers: a cycle already in flight keeps
 # going, sees an absent process, and either relaunches the server into a running SteamCMD
-# or powers the box off mid-update. Both produce a half-patched install. The lock is held
-# open for the whole update, and the 30-min ceiling matches the updater's own staleness
-# rule so a crashed update cannot mute the watchdog forever.
+# or powers the box off mid-update. Both produce a half-patched install.
+#
+# Ask whether the lock is still HELD, not how old it is.
+#
+# The age test this replaces had a hole big enough to cause the failure it was written
+# to prevent: update-server.ps1 stamps the lock ONCE when it takes it (Open-UpdateLock,
+# then a single Write+Flush) and never refreshes it, so any update running past the
+# 30-minute ceiling let this script resume mid-update and relaunch the server into a
+# live SteamCMD. A big Steam patch is not a rare event.
+#
+# The updater holds the file with [IO.FileShare]::Read, which permits readers and
+# excludes writers, so a write-open attempt is a direct question: "is an updater still
+# alive?" It answers correctly in both directions the age test got wrong. A CRASHED
+# updater releases its handle the instant the process dies (the OS does it, no cleanup
+# code required), so the lock stops blocking immediately instead of muting the watchdog
+# for up to 30 minutes. A LONG-RUNNING updater keeps holding it, so this keeps standing
+# down for as long as the work genuinely takes.
+#
+# What remains is a HUNG updater: alive, doing nothing, holding the lock forever. That
+# is the one case the old ceiling handled and this does not, so it is handled
+# explicitly below rather than by pretending a timer can tell "hung" from "busy".
 $updateLock = Join-Path $stateDir "update.lock"
+$lockWarned = Join-Path $stateDir "update_lock_warned"
 if (Test-Path $updateLock) {
-  $lockAge = (Get-Date) - (Get-Item $updateLock).LastWriteTime
-  if ($lockAge.TotalMinutes -lt 30) {
-    Write-Output "update in progress (lock is $([math]::Round($lockAge.TotalMinutes, 1)) min old) - standing down this cycle"
+  # THREE states, not two. A first version treated every exception as "held", which
+  # meant an access-denied, a path race, or any other I/O fault muted the watchdog and
+  # idle-shutdown indefinitely while the Scheduled Task history reported success -
+  # the house bug, inside the guard written to prevent a different instance of it.
+  #
+  # Two traps, both found by running this rather than reasoning about it:
+  #
+  # 1. PowerShell WRAPS exceptions from .NET method calls in a
+  #    MethodInvocationException, so `catch [System.IO.IOException]` does not match and
+  #    $_.Exception is the wrapper. Unwrap to the innermost exception first. Without
+  #    this every probe returned 'unknown', which would have exited non-zero every
+  #    cycle and left the watchdog and idle-shutdown permanently dead.
+  # 2. HResult is PLATFORM-SPECIFIC: a sharing violation is 0x80070020 on Windows and
+  #    35 on Darwin. Matching on it makes the guard untestable off the box, so classify
+  #    by exception TYPE, which is stable.
+  $lockState = 'unknown'
+  try {
+    # FileShare::None so this fails whenever ANYONE else holds the file, which is the
+    # whole question. Disposed immediately: this is a probe, not a claim on the lock,
+    # and holding it would block the updater's own writes.
+    $probe = [IO.File]::Open($updateLock, [IO.FileMode]::Open, [IO.FileAccess]::Write, [IO.FileShare]::None)
+    $probe.Dispose()
+    $lockState = 'free'
+  } catch {
+    $inner = $_.Exception
+    while ($inner.InnerException) { $inner = $inner.InnerException }
+    if ($inner -is [System.IO.FileNotFoundException] -or $inner -is [System.IO.DirectoryNotFoundException]) {
+      # Deleted between Test-Path and here. No lock, so nothing to stand down for.
+      $lockState = 'free'
+    } elseif ($inner -is [System.UnauthorizedAccessException]) {
+      # Permissions, not a live updater. The question was not answered.
+      $lockState = 'unknown'
+    } elseif ($inner -is [System.IO.IOException]) {
+      # A sharing violation, which is what a live updater looks like. A rarer IOException
+      # (a disk fault) also lands here and stands the cycle down, which is the safe
+      # direction: refusing to relaunch is recoverable, relaunching into a running
+      # SteamCMD is the half-patched install.
+      $lockState = 'held'
+    } else {
+      $lockState = 'unknown'
+    }
+  }
+
+  $lockWriteTime = (Get-Item $updateLock -ErrorAction SilentlyContinue).LastWriteTime
+  # update-server.ps1 cannot refresh the lock file's own timestamp while holding it
+  # (its FileShare::Read excludes the second write handle a timestamp set needs), so it
+  # touches this sidecar instead. Prefer it; fall back to the lock's own mtime.
+  $heartbeat = Join-Path $stateDir "update.heartbeat"
+  $heartbeatTime = (Get-Item $heartbeat -ErrorAction SilentlyContinue).LastWriteTime
+  if ($heartbeatTime) { $lockWriteTime = $heartbeatTime }
+  $lockAge = if ($lockWriteTime) { (Get-Date) - $lockWriteTime } else { [TimeSpan]::Zero }
+
+  if ($lockState -eq 'unknown') {
+    # Stand down, because proceeding risks relaunching into a live SteamCMD, and a
+    # half-patched install is worse than a delayed restart. But this is NOT the
+    # ordinary held path and must not be logged as one: the check itself failed.
+    Write-EventLog -LogName Application -Source "Palworld" -EventId 125 -EntryType Error `
+      -Message "could not determine whether update.lock is held ($($Error[0].Exception.GetType().Name): $($Error[0].Exception.Message)). Standing down, so the watchdog and idle-shutdown are BOTH inactive until this clears. If it persists the box will not stop on its own." -ErrorAction SilentlyContinue
+    Write-Output "ERROR: update.lock state UNKNOWN - standing down (watchdog and idle-shutdown inactive)"
+    exit 1
+  }
+
+  if ($lockState -eq 'held') {
+    # A NARROW backstop, and worth understanding what it does not cover. It fires only
+    # while THIS script is running, and update-server.ps1 disables PalworldIdle before
+    # the stop and SteamCMD phases - so the classic hung update, wedged inside SteamCMD,
+    # never reaches this line at all. Claiming otherwise would be a warning that cannot
+    # fire in the case it was written for.
+    #
+    # What actually detects that: standing down (or being disabled) stops the roster
+    # publish, and the off-box backup monitor alerts on a stale roster within
+    # ROSTER_STALE_MINUTES. Off-box is the right place for it, since it survives the box
+    # being wedged. This line covers the remaining case: the task re-armed, or never
+    # disabled, while a lock is still held.
+    #
+    # Once per stuck lock, not once per cycle. At a 2-minute cadence an undeduped alert
+    # writes 30 entries an hour, and a log nobody can skim is a log nobody reads.
+    if ($lockAge.TotalMinutes -ge 60 -and -not (Test-Path $lockWarned)) {
+      New-Item -ItemType File -Path $lockWarned -Force | Out-Null
+      Write-EventLog -LogName Application -Source "Palworld" -EventId 119 -EntryType Error `
+        -Message "update.lock has been HELD for $([math]::Round($lockAge.TotalMinutes)) min. The watchdog and idle-shutdown have been standing down that whole time, so the box is billing and a crashed server will not be restarted. Check whether update-server.ps1 is hung. Logged once per stuck lock." -ErrorAction SilentlyContinue
+    }
+    Write-Output "update in progress (lock held, $([math]::Round($lockAge.TotalMinutes, 1)) min) - standing down this cycle"
     exit 0
   }
+
+  # Not held: the updater is gone. The file is a leftover from a crashed run, so it is
+  # NOT a reason to stand down. Left in place rather than deleted, because deleting
+  # another script's file from here is how two cleanup paths start racing; the updater
+  # removes it itself, and a stale file that blocks nothing costs nothing.
+  Remove-Item $lockWarned -Force -ErrorAction SilentlyContinue
+  Write-Output "stale update.lock ($([math]::Round($lockAge.TotalMinutes, 1)) min old, not held) - proceeding"
+} else {
+  # No lock at all: clear the once-per-stuck-lock marker so the NEXT stuck lock alerts.
+  # Without this the warning fires once in the box's lifetime, which is a dedupe that
+  # has quietly become a mute.
+  Remove-Item $lockWarned -Force -ErrorAction SilentlyContinue
 }
 
 # Absolute path, NOT bare "aws": the CLI is not on PATH in the Scheduled Task's
