@@ -171,6 +171,66 @@ So: after a change, ask the running system what it thinks is true (`/v1/api/sett
 return code. And when adding a guard, **make it fail once on purpose** before believing
 it.
 
+### 8b. Windows Event Log IDs (source `Palworld`)
+
+`Write-Output` from a Scheduled Task running as SYSTEM goes nowhere a human will read,
+so every best-effort failure in `palworld-idle.ps1` also writes here. Check it first
+when the box is behaving oddly but nothing has alerted:
+
+```powershell
+Get-EventLog -LogName Application -Source Palworld -Newest 30 | Format-Table TimeGenerated, EventID, EntryType, Message -AutoSize
+```
+
+**The source is shared by every writer, so ids are allocated across the whole repo, not
+per file - and the writers include `terraform/windows_user_data.ps1.tftpl`, not just
+`scripts/*.ps1`.** Four ids carried two meanings each before this registry existed, and
+each was found by widening the search rather than by thinking harder: `106` meant both
+"SteamCMD install failed" and "watchdog stuck disabled", `107` both "UE4SS restore
+failed" and "stale build stranded", `109` both "may serve an EMPTY world" and "alert
+dropped", `110` both "backup failed" and "Discord POST failed". Filtering for a severe id
+and getting unrelated noise defeats the point of having ids.
+
+**Before assigning an id, check BOTH locations.** Grepping only `scripts/` is how half of
+these got in:
+
+```bash
+grep -ho 'EventId 1[0-9][0-9]' scripts/*.ps1 terraform/*.tftpl | sort -u
+```
+
+`windows_user_data.ps1.tftpl` owns 102, 106, 107 and 108 and **must not be edited to
+resolve a collision**: it is rendered into `user_data`, so a change there stops and starts
+the live server on apply (rule 5). The other side always moves.
+
+| ID | Writer | Meaning |
+|----|--------|---------|
+| 101 | launch | `PalServer` shipping exe missing. |
+| 102 | user_data | A bootstrap script fetched from S3 was unusable. |
+| 103 | idle | Roster publish failed. The off-box backup monitor reads a stale roster as "the idle watcher is dead". |
+| 104 | idle | Watchdog: the launcher script is missing, so a crashed server cannot be restarted. |
+| 105 | idle | Watchdog: the launcher exited non-zero; the server did not start. |
+| 106 | user_data | SteamCMD install failed after 3 attempts; the shipping exe is missing. (Overlaps 101's meaning from a different stage of the box's life. Left as-is because the template cannot be edited safely.) |
+| 107 | user_data | Ambiguous RAW disks; the save volume was not initialized. |
+| 108 | user_data | UE4SS restore failed, its durable stage is missing, or the restore was incomplete and the server is vanilla. |
+| 109 | launch | No staged `GameUserSettings.ini`; the server may serve an **EMPTY world** while the real save sits intact on D:. |
+| 110 | backup | Backup failed. |
+| 111 | idle | A duplicate `PalServer` was reaped (which one was kept, and why). |
+| 112 | launch | Launch failed: no process object, exited within 10s, or no process appeared within 10s. |
+| 113 | launch | Timed out after 30s waiting for the start lock while no server is running. |
+| 114 | idle | **FAILED** to kill duplicate `PalServer` processes. This is the condition that exhausted memory on 2026-07-31. |
+| 115 | launch | Pak-mod staging: removed unstaged, restored from stage, failed to restore, or removed under vanilla mode. |
+| 116 | idle | An alert was dropped because no webhook resolved. The message body is in the entry. |
+| 117 | idle | The Discord POST itself failed (revoked token, deleted webhook, 429, outage). The message body is in the entry. |
+| 118 | idle | Installed-build publish failed or threw. The version monitor loses its freshness signal. |
+| 120 | idle | The Discord webhook could not be resolved from SSM. **Alerts from this box are down.** |
+| 121 | idle | The appmanifest was unreadable AND the UNKNOWN sentinel could not be published, so a stale build id is stranded in SSM. |
+| 122 | launch | `PalworldIdle` was disabled at startup. Error = could NOT be re-enabled, so there is no watchdog and no idle shutdown; Warning = it was re-armed. |
+
+116, 117 and 120 are the ones worth understanding: alerting is best-effort by design,
+because `Send-Notify` is called from the shutdown and save-verification paths where
+throwing would trade "I could not tell you" for "I stopped protecting the world".
+Best-effort is correct. Silent best-effort was the bug, and these ids are what make a
+dropped alert recoverable rather than destroyed.
+
 ## Live-service etiquette
 
 - Check who is online first: `aws ssm get-parameter --name /palworld-server/roster`.

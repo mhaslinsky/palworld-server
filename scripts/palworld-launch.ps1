@@ -49,11 +49,11 @@ if (-not $updateLive) {
     # Say which way it went. "Tried to re-arm the watchdog" is not the same claim as
     # "the watchdog is armed", and only the second one is worth anything here.
     if ($nowState -eq 'Disabled') {
-      Write-EventLog -LogName Application -Source "Palworld" -EventId 106 -EntryType Error `
+      Write-EventLog -LogName Application -Source "Palworld" -EventId 122 -EntryType Error `
         -Message "PalworldIdle was disabled at startup and could NOT be re-enabled - no watchdog, no idle shutdown" -ErrorAction SilentlyContinue
       Write-Output "ERROR: PalworldIdle stuck disabled - no watchdog, no idle shutdown"
     } else {
-      Write-EventLog -LogName Application -Source "Palworld" -EventId 106 -EntryType Warning `
+      Write-EventLog -LogName Application -Source "Palworld" -EventId 122 -EntryType Warning `
         -Message "PalworldIdle was found disabled at startup (likely a killed update) and has been re-enabled" -ErrorAction SilentlyContinue
       Write-Output "re-armed PalworldIdle (was disabled, likely a killed update)"
     }

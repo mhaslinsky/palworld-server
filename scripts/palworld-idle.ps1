@@ -125,7 +125,7 @@ if ($conf.BuildParam -or $conf.RosterParam) {
         # had only a Write-Output here, which vanishes in a SYSTEM Scheduled Task,
         # making the worst case the quietest one. Its own EventId, not 106's, so the
         # two are distinguishable in the log.
-        Write-EventLog -LogName Application -Source "Palworld" -EventId 107 -EntryType Error `
+        Write-EventLog -LogName Application -Source "Palworld" -EventId 121 -EntryType Error `
           -Message "could not read the appmanifest AND could not publish the UNKNOWN sentinel to $buildParam (aws exit $LASTEXITCODE). A stale build id is stranded there; the version monitor may report OK against a build this box no longer runs." -ErrorAction SilentlyContinue
         Write-Output "ERROR: UNKNOWN-build publish failed (aws exit $LASTEXITCODE) - stale build id stranded in $buildParam"
       }
@@ -146,7 +146,7 @@ if ($conf.BuildParam -or $conf.RosterParam) {
         --value "file://$buildFile" --region $conf.AwsRegion `
         --cli-connect-timeout 3 --cli-read-timeout 5 2>$null | Out-Null
       if ($LASTEXITCODE -ne 0) {
-        Write-EventLog -LogName Application -Source "Palworld" -EventId 106 -EntryType Warning `
+        Write-EventLog -LogName Application -Source "Palworld" -EventId 118 -EntryType Warning `
           -Message "installed-build publish to $buildParam failed (aws exit $LASTEXITCODE)" -ErrorAction SilentlyContinue
         Write-Output "WARNING: installed-build publish failed (aws exit $LASTEXITCODE)"
       }
@@ -155,7 +155,7 @@ if ($conf.BuildParam -or $conf.RosterParam) {
     # Write-Output alone disappears in a SYSTEM Scheduled Task, so a throw here (the
     # CLI failing to invoke at all, WriteAllText denied) would have left no evidence
     # anywhere. Same reasoning as the roster publish's EventId 103.
-    Write-EventLog -LogName Application -Source "Palworld" -EventId 106 -EntryType Warning `
+    Write-EventLog -LogName Application -Source "Palworld" -EventId 118 -EntryType Warning `
       -Message "installed-build publish threw: $($_.Exception.Message)" -ErrorAction SilentlyContinue
     Write-Output "WARNING: installed-build publish threw: $($_.Exception.Message)"
   }
@@ -192,27 +192,72 @@ if (-not (Get-Process -Name "PalServer-Win64-Shipping" -ErrorAction SilentlyCont
 $secure = ConvertTo-SecureString $conf.AdminPassword -AsPlainText -Force
 $cred = New-Object System.Management.Automation.PSCredential("admin", $secure)
 
+# Every alert this script raises goes through the two functions below: duplicate-server
+# reaping, a failed force-save, a missing Level.sav, the idle-shutdown warning. All of
+# them used to be droppable without leaving a single trace anywhere - three separate
+# silent paths (an empty catch here, a bare `return` in Send-Notify, and an empty catch
+# around the POST itself). A box whose Discord alerts had gone dark was therefore
+# indistinguishable from a box with nothing to say.
+#
+# These stay BEST-EFFORT on purpose. Send-Notify is called from the shutdown and
+# save-verification paths, where throwing would turn "I could not tell you" into "I
+# stopped doing the thing that protects the world". Best-effort is right; SILENT
+# best-effort is what was wrong. Failures now land in the Event Log WITH the message
+# that was lost, so an undelivered alert is downgraded rather than destroyed.
 function Get-WebhookUrl {
   if (-not $conf.WebhookParam) { return $null }
   try {
+    # Bounded, for the same reason the build publish is: Send-Notify is called from the
+    # duplicate-server reaping and idle-shutdown paths, so an unbounded CLI call that
+    # hangs on a wedged SSM endpoint or a slow credential lookup would stall the
+    # watchdog itself. That trades a missing alert for the memory exhaustion of
+    # 2026-07-31, or for a box that never shuts down. Resolving a webhook is
+    # best-effort; killing duplicate servers is not.
     $value = & $awsExe ssm get-parameter --name $conf.WebhookParam --with-decryption `
-      --region $conf.AwsRegion --query 'Parameter.Value' --output text 2>$null
+      --region $conf.AwsRegion --query 'Parameter.Value' --output text `
+      --cli-connect-timeout 3 --cli-read-timeout 5 2>$null
     # An unset SSM parameter comes back as the literal string "None".
     if ($value -and $value.Trim() -ne "None") { return $value.Trim() }
-  } catch { }
+    # Reached when the CLI exits non-zero without throwing (denied IAM, no such
+    # parameter) or the value is genuinely unset. Both mean alerting is down.
+    Write-EventLog -LogName Application -Source "Palworld" -EventId 120 -EntryType Error `
+      -Message "Get-WebhookUrl: $($conf.WebhookParam) resolved to nothing (aws exit $LASTEXITCODE). Discord alerts from this box are DOWN." -ErrorAction SilentlyContinue
+  } catch {
+    Write-EventLog -LogName Application -Source "Palworld" -EventId 120 -EntryType Error `
+      -Message "Get-WebhookUrl threw: $($_.Exception.Message). Discord alerts from this box are DOWN." -ErrorAction SilentlyContinue
+  }
   return $null
 }
 
 function Send-Notify([string]$content) {
   $url = Get-WebhookUrl
-  if (-not $url) { return }
+  if (-not $url) {
+    # Get-WebhookUrl has already logged WHY. This logs WHAT was lost, so the alert
+    # survives in the Event Log even though it never reached Discord.
+    Write-EventLog -LogName Application -Source "Palworld" -EventId 116 -EntryType Warning `
+      -Message "alert NOT delivered (no webhook): $content" -ErrorAction SilentlyContinue
+    Write-Output "WARNING: alert NOT delivered (no webhook): $content"
+    return
+  }
   try {
     $body = @{ content = $content } | ConvertTo-Json -Compress
     # Windows PowerShell 5.1 otherwise sends string bodies through the ANSI code page.
     $bodyBytes = [Text.Encoding]::UTF8.GetBytes($body)
+    # -ErrorAction Stop settles a disagreement rather than fixing a proven bug: this file
+    # runs under "Continue", and reviewers split on whether Invoke-RestMethod's non-2xx
+    # error is terminating regardless of that. If it is not, the catch below never fires
+    # and this entire logging fix logs nothing. The flag costs nothing and removes the
+    # question, which is the right trade when the downside is a silent alert path.
     Invoke-RestMethod -Uri $url -Method Post -ContentType 'application/json' `
-      -Body $bodyBytes -TimeoutSec 5 | Out-Null
-  } catch { }
+      -Body $bodyBytes -TimeoutSec 5 -ErrorAction Stop | Out-Null
+  } catch {
+    # The likeliest failure of the three and previously the quietest: a revoked token,
+    # a deleted webhook, a 429, or Discord being down. Invoke-RestMethod throws on a
+    # non-2xx, so this is the branch that actually fires in practice.
+    Write-EventLog -LogName Application -Source "Palworld" -EventId 117 -EntryType Error `
+      -Message "Discord POST failed: $($_.Exception.Message). Alert NOT delivered: $content" -ErrorAction SilentlyContinue
+    Write-Output "ERROR: Discord POST failed ($($_.Exception.Message)); alert NOT delivered: $content"
+  }
 }
 
 # --- Reap duplicate servers ---------------------------------------------------
@@ -310,6 +355,12 @@ if ($conf.RosterParam) {
       Write-Output "WARNING: roster publish failed (aws exit $LASTEXITCODE)"
     }
   } catch {
+    # Write-Output alone vanishes in a SYSTEM Scheduled Task. The non-zero-exit branch
+    # above already logs EventId 103; a throw here (the CLI failing to invoke at all,
+    # WriteAllText denied) left nothing anywhere, and a stale roster is what the
+    # off-box backup monitor reads as "the idle watcher is dead".
+    Write-EventLog -LogName Application -Source "Palworld" -EventId 103 -EntryType Warning `
+      -Message "roster publish threw: $($_.Exception.Message)" -ErrorAction SilentlyContinue
     Write-Output "WARNING: roster publish threw: $($_.Exception.Message)"
   }
 }
