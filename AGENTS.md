@@ -152,6 +152,26 @@ past at 3am does not read as "no problem".
 - The check failing is itself an alert (`UNKNOWN`). `api.steamcmd.net` is a
   third-party mirror, and an outage must never read as "no patch available".
 
+### 7c. When a monitor cannot alert, the SNS topic is what tells you
+
+Both monitors alert to Discord themselves and **throw** when a Discord delivery fails,
+so the invocation errors and a CloudWatch alarm fires on `palworld-server-alerts`.
+That topic has two subscribers, and knowing which covers what matters:
+
+- **Email** (`alert_email` in tfvars). The only channel independent of Discord, so it
+  is the one that covers a dead or misconfigured webhook. AWS requires clicking a
+  confirmation mail; until that happens the subscription reads `PendingConfirmation`
+  and delivers **nothing**, which looks identical to being set up.
+- **Discord**, via `palworld-server-alarm-forwarder` (SNS cannot post to Discord
+  directly - AWS Chatbot has no Discord support and a raw HTTPS subscription sends an
+  envelope Discord rejects). It posts to the **same webhook the monitors use**, by
+  deliberate choice, so it does NOT cover a broken webhook: that case is circular. It
+  does cover a monitor crashing for other reasons and a monitor not running at all,
+  since both alarms use `treat_missing_data = "breaching"`.
+
+The forwarder has no alarm on its own errors on purpose: it would route through the
+topic it subscribes to. It is best-effort, and email is the guarantee.
+
 ### 8. Verify on the box, not by exit code
 
 This codebase has produced several failures that reported success:
