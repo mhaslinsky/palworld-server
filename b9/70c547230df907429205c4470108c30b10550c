@@ -1,0 +1,19 @@
+terraform/windows_instance.tf
+  s_3569224e020a6f::t_e80cfaceeb2768 66-68,70-79
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "b970c547230df907429205c4470108c30b10550c",
+  "prompts": {},
+  "sessions": {
+    "s_3569224e020a6f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0811cdd5-eee4-4466-bc34-bf612b1e4f89",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    }
+  }
+}
