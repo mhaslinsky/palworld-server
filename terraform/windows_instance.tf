@@ -63,8 +63,20 @@ resource "aws_instance" "server_windows" {
     # Its OWN roster param, not the live server's - see windows.tf. Repointed at cutover.
     roster_param = local.windows_roster_param_name
 
-    # Mirrors the live Linux OptionSettings so behaviour is identical after cutover.
+    # Windows is the live server, so this list is the source of truth for a rebuild.
+    # It has diverged from the Linux rollback path in user_data.sh.tftpl; see the
+    # endgame block below, which was applied on the box first and mirrored here.
     option_settings = join(",", [
+      # Endgame tuning: everyone is max level, so the grind that remains is material,
+      # not XP. Applied live 2026-08-21 and recorded here so a rebuild does not revert
+      # it. Prepended for the same truncation reason as the decay key below.
+      "ExpRate=20.000000",
+      "EnemyDropItemRate=2.000000",
+      "CollectionDropRate=2.000000",
+      # Lower is FASTER for both of these: one is a respawn speed, the other a span.
+      "CollectionObjectRespawnSpeedRate=0.500000",
+      "SupplyDropSpan=60",
+      "ItemWeightRate=0.500000",
       # Base structure decay OFF (owner decision). Kept near the FRONT: OptionSettings
       # is one line and tail keys are the first casualty if it is ever truncated.
       "BuildObjectDeteriorationDamageRate=0.000000",
