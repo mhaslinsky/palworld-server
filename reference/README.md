@@ -66,14 +66,25 @@ is the fix, and the stock file sits on the box as `main.lua.stock`.
 
 ## `AutoHatch-main.lua`
 
-A hardened `AutoHatch\Scripts\main.lua` for Nexus mod 1959 v0.9.9.6 that **did NOT fix
-the crash**. Kept as the evidence behind the bug report, not as a fix to redeploy.
+A hardened `AutoHatch\Scripts\main.lua` for Nexus mod 1959 v0.9.9.6. **This is the file
+the server runs**, deployed to live C: and the D: UE4SS stage.
 
-Tried on 2026-08-23 and it crashed the same way. The guards held and that is precisely
-what it proved: the Lua completes cleanly (`possession:done`, no error), then the server
-dies 13 s later with `initparam` never firing. The fault is in the compiled Blueprint
-inside `AutoHatch.pak`, which stores the objects Lua hands it and dereferences them on a
-later tick. The trace breadcrumbs in this file are what localised that, so it stays.
+It did not fix the crash, and was never going to: the crash was a missing
+`MemberVariableLayout.ini` (AGENTS.md rule 6). What it does carry is one load-bearing
+correction plus the instrumentation that found the real cause.
+
+The correction: stock reads `messageStruct.senderPlayerUId` with a lower-case s on lines
+80, 84 and 86, where the field is `SenderPlayerUId`. It returns nil, so `guidToString` gets
+nil and `!autohatch on/off` cannot resolve a player. With this fixed the commands work.
+
+The rest is defensive and worth keeping: `alive()` guards before every dereference and
+every `_ModActor:` call, `guidToString(nil)` returning nil instead of throwing, and
+`trace()` breadcrumbs on hook entry. Those breadcrumbs are what proved the Lua side
+completed cleanly while the process still died, which is what redirected the investigation
+off the mod's Lua and eventually onto the loader. The `OnCompleteInitializeParameter` hook
+also derives the player state from the character's own controller rather than a
+module-level `playerState` that holds whichever state was created last server-wide; that
+dangling pointer was real, and is simply not what was crashing us.
 
 sha256 `ba7401f61341d50ba76bead61d44b84be72850d8b7e04ff035b88b666585c33a`.
 

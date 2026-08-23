@@ -124,42 +124,57 @@ make each one's sweep delete the other's mods.
 to publish an empty stage, because an empty baseline restores cleanly and leaves the
 server with no pak mods while every check passes.
 
-**Auto Hatch (Nexus 1959) is DISABLED and stays that way until upstream fixes it.**
-Four `EXCEPTION_ACCESS_VIOLATION reading 0x1` crashes across 2026-08-22 and 08-23, always
-10-30 s after a player joined. Removing it left the box clean for over four hours with the
-other three mods loaded, which is what attributes the crash to it. UE4SS frames sit on top
-of that stack, but UE4SS is injected into every Palworld crash, so the stack is not the
-evidence - the presence/absence test is.
+**The UE4SS install must be the WHOLE Okaetsu folder, not just `UE4SS.dll`.** The fork
+ships `ue4ss\MemberVariableLayout.ini`, ~1000 lines of byte offsets for this game build
+(`ClassPrivate = 0x10`, `NamePrivate = 0x18`, and so on). It was **missing** on this box
+until 2026-08-23: someone had installed by copying selected files, and the D: stage
+inherited the gap. Without it UE4SS falls back to built-in offsets, so every Lua member
+read lands on the wrong memory and returns garbage that is then dereferenced. That is
+where `EXCEPTION_ACCESS_VIOLATION reading address 0x0000000000000001` comes from.
 
-**The fault is in the mod's Blueprint, past where anything here can fix it.** A hardened
-`main.lua` (guards on every dereference, plus trace breadcrumbs) was tried on 08-23 and did
-NOT help. The breadcrumbs are what settles it: `possession:enter` -> the three blueprint
-calls -> `possession:done`, cleanly, no Lua error, then **13 s of silence and a crash**,
-with `initparam` never firing. The objects handed to the ModActor are stored and
-dereferenced later on the blueprint side, inside `AutoHatch.pak`. Guarding the handoff, and
-we do guard it, cannot reach that. Reported to the author; re-test only against a new
-upstream release.
+It cost four crashes across two nights, chased through two wrong theories, because the
+loader was "verified" by hashing one file. `UE4SS.dll` matching proves the DLL, not the
+installation. `seed-ue4ss-stage.ps1` now requires `MemberVariableLayout.ini`, so a stage
+missing it can never be published as a baseline again.
 
-Disabled by rename, not deleted, so re-enabling is `AutoHatch.pak.disabled` ->
-`AutoHatch.pak` in `D:\PalServer\logicmods-stage` plus `enabled.txt.disabled` ->
-`enabled.txt` in both UE4SS `Mods\AutoHatch` folders. Both stages and both live folders,
-four files. Do not re-enable on a server anyone is playing on.
+The tell is worth memorising: mods that read member variables by name from Lua break,
+while mods that do not are fine. Auto Hatch reads `playerState.PlayerUId`, the chat
+struct's fields and an archive's `Bytes`, so it crashed on every join. Building
+Restrictions Disabler is a DLL doing AOB signature scans and Creative Menu is mostly
+Blueprint, so both looked perfectly healthy throughout and made the fault look
+Auto-Hatch-specific.
+
+**Still different from the release: `dwmapi.dll`** (ours `cfbd121b...`, Okaetsu's
+`6c6e7151...`), so the injector is probably upstream RE-UE4SS. Deliberately not swapped
+while the layout fix was being validated, since changing two variables at once would have
+made the result unattributable. Worth closing if anything like this recurs.
+
+**Auto Hatch (Nexus 1959) is ENABLED and working** as of 2026-08-23: it registers players,
+attaches to Ancient Hatcheries, and hatches eggs to the correct owner. It runs a hardened
+`main.lua` (see `reference/README.md`) whose casing fix is load-bearing for the
+`!autohatch on/off` chat commands. Disable it by renaming, not deleting, and **always in
+the stage** rather than only the live folder: the launcher treats the stage as master and
+would restore a live pak you deleted, and a running server holds a mounted pak locked so
+the live rename fails outright. Four files, both stages and both live folders.
+
+**Lua relative paths resolve against the process working directory**, which
+`palworld-launch.ps1` sets to `C:\PalServer`, NOT the `ue4ss` folder that UE4SS mod
+authors assume. Auto Hatch's `saveToJson` opens `.\Mods\AutoHatch\Scripts\AutoHatch.json`
+and threw until `C:\PalServer\Mods\AutoHatch\Scripts` was created. The deduction, not a
+guess: `io.open(path, "w")` creates the file, so "No such file or directory" means the
+DIRECTORY is missing, and the ue4ss-relative one already exists. The same assumption is
+why `BPModLoaderMod` reports `load_order.txt not present`. That directory lives on C: and
+so is lost on an instance replacement, costing players their saved on/off preference.
 
 **Testing a mod costs a 30-minute budget, not a 10-minute one.** `palworld-idle.ps1` stops
 the whole instance after `ThresholdMin` empty, and an empty soak plus a wait for a tester
 crossed it: the box powered off mid-run and `SendCommand` then failed `InvalidInstanceId`,
 which reads exactly like a broken script. Check `describe-instances` for
-`stopped / User initiated` before concluding anything from an SSM failure, and have the
-tester ready before starting the soak.
+`stopped / User initiated` before concluding anything from an SSM failure.
 
 **Snapshot `UE4SS.log` while testing a mod, or the recovery destroys the evidence.** The
-watchdog restarts within 2 min and the new run truncates it. Every crash finding above came
-from a rolling copy taken every 10 s into `D:\PalServer\autohatch-test`.
-
-Disable a pak in the **stage**, never only in the live folder. Two reasons, both learned
-the hard way that night: the launcher treats the stage as the master and would restore a
-live pak you deleted, and a running server holds a mounted pak locked, so the live rename
-fails outright while a script that does not check its own `Move-Item` reports success.
+watchdog restarts within 2 min and the new run truncates it. Every finding above came from
+a rolling copy taken every 10 s into `D:\PalServer\autohatch-test`.
 
 A LogicMods pak additionally needs Okaetsu's `BPModLoaderMod` fix at
 `Win64\ue4ss\Mods\BPModLoaderMod\Scripts\main.lua`. Stock UE4SS races the map load on
