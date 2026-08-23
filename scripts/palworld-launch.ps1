@@ -60,6 +60,87 @@ if (-not $updateLive) {
   }
 }
 
+# Reconciles one live pak folder on C: against its D: stage, treating the stage as the
+# master: restores what is staged, sweeps what is not, and clears the folder outright when
+# the UE4SS loader is absent (vanilla mode).
+# Writes NOTHING to the success stream, for the reason spelled out on
+# Start-ServerIfAbsent below: that function's exit code IS its whole output stream.
+function Restore-StagedPaks {
+  param(
+    [Parameter(Mandatory = $true)][string]$StageDir,
+    [Parameter(Mandatory = $true)][string]$LiveDir
+  )
+  # D: is the master, copied only on a hash mismatch. Callers reach it on the absent-server
+  # path only (Start-ServerIfAbsent returns early when the server is up), so there is
+  # no contention with the running server, which holds a mounted pak open and locked -
+  # verified 2026-08-08, a delete of the live pak was refused while the server ran. The
+  # consequence worth knowing: staging a NEW version of a pak takes effect at the next
+  # restart, not immediately.
+  #
+  # An empty or missing stage is NOT an error - a box legitimately running no pak mods
+  # must not log a fault on every launch. Failing to restore one that IS staged is.
+  $stagedPaks = Get-ChildItem $StageDir -Filter *.pak -ErrorAction SilentlyContinue
+  # `/palworld-update mods:vanilla` guarantees a JOINABLE box after a patch by stripping
+  # the UE4SS loader. Restoring paks regardless would quietly hollow that lever out: the
+  # one command meant to rescue a crash-looping server would keep re-adding a mod layer
+  # every launch. Absent loader means vanilla, so clear the staged paks back out instead.
+  # Reversible - mods:restage puts the loader back and the next launch restores them.
+  if (-not (Test-Path "C:\PalServer\Pal\Binaries\Win64\dwmapi.dll")) {
+    foreach ($stagedPak in $stagedPaks) {
+      $vanillaTarget = Join-Path $LiveDir $stagedPak.Name
+      if (Test-Path $vanillaTarget) {
+        Remove-Item $vanillaTarget -Force -ErrorAction SilentlyContinue
+        Write-EventLog -LogName Application -Source "Palworld" -EventId 115 -EntryType Warning `
+          -Message "UE4SS loader absent (vanilla mode); removed pak mod $($stagedPak.Name) so the server really is unmodded" -ErrorAction SilentlyContinue
+      }
+    }
+    $stagedPaks = $null
+  }
+  if ($stagedPaks) {
+    New-Item -ItemType Directory -Force -Path $LiveDir | Out-Null
+    # D: is the master, so make that true in both directions: a pak dropped from the stage
+    # must not linger live. This also sweeps the OLD building paks, whose durable source
+    # (D:\PalServer\mods) the bootstrap stopped restoring precisely because they conflict
+    # with mod 1898 and leave NEITHER working. Without this the restore is additive and a
+    # stale pak survives every restart with nothing reporting it.
+    $stagedNames = $stagedPaks | ForEach-Object { $_.Name }
+    Get-ChildItem $LiveDir -Filter *.pak -ErrorAction SilentlyContinue |
+      Where-Object { $stagedNames -notcontains $_.Name } |
+      ForEach-Object {
+        Remove-Item $_.FullName -Force -ErrorAction SilentlyContinue
+        Write-EventLog -LogName Application -Source "Palworld" -EventId 115 -EntryType Warning `
+          -Message "removed unstaged pak $($_.Name) from $LiveDir - $StageDir is the master" -ErrorAction SilentlyContinue
+      }
+    foreach ($stagedPak in $stagedPaks) {
+      $target = Join-Path $LiveDir $stagedPak.Name
+      $stageHash = (Get-FileHash $stagedPak.FullName -Algorithm SHA256).Hash
+      # A hash that could not be computed is NOT a match. Under the Continue error policy
+      # Get-FileHash fails non-terminating and yields $null, and with the live pak also
+      # absent $null -eq $null would skip the copy silently - "I could not check" arriving
+      # as "it already matches", with no copy and no log.
+      if (-not $stageHash) {
+        Write-EventLog -LogName Application -Source "Palworld" -EventId 115 -EntryType Error `
+          -Message "could not hash staged pak $($stagedPak.FullName) - NOT restoring it; server may start without the mod" -ErrorAction SilentlyContinue
+        continue
+      }
+      $liveHash = if (Test-Path $target) { (Get-FileHash $target -Algorithm SHA256).Hash } else { $null }
+      if ($liveHash -eq $stageHash) { continue }
+      Copy-Item $stagedPak.FullName $target -Force -ErrorAction SilentlyContinue
+      # Verify the copy rather than trusting Copy-Item: a truncated or absent pak leaves
+      # the server perfectly joinable with the mod missing, which is the failure this
+      # whole block exists to prevent and the one nobody would notice.
+      $afterHash = if (Test-Path $target) { (Get-FileHash $target -Algorithm SHA256).Hash } else { $null }
+      if ($afterHash -eq $stageHash) {
+        Write-EventLog -LogName Application -Source "Palworld" -EventId 115 -EntryType Information `
+          -Message "restored pak mod $($stagedPak.Name) from $StageDir" -ErrorAction SilentlyContinue
+      } else {
+        Write-EventLog -LogName Application -Source "Palworld" -EventId 115 -EntryType Error `
+          -Message "FAILED to restore pak mod $($stagedPak.Name) from $StageDir - server will run WITHOUT it" -ErrorAction SilentlyContinue
+      }
+    }
+  }
+}
+
 # Returns an exit code, and writes NOTHING to the success stream. A PowerShell function's
 # return value is its ENTIRE output stream, so one stray Write-Output here makes the
 # caller's $exitCode an Object[], and `exit` on a non-integer silently becomes 0. Measured
@@ -101,82 +182,17 @@ function Start-ServerIfAbsent {
   }
 
   # Restore pak mods from the persistent volume, same reasoning as GameUserSettings.ini
-  # above: C: is rebuilt on every instance replacement, D: is not. A pak in ~mods is NOT
+  # above: C: is rebuilt on every instance replacement, D: is not. Neither pak folder is
   # covered by the UE4SS stage (that overlays Win64 only), so without this a rebuild comes
   # up with the pak mods silently absent - the server boots fine and reports healthy, and
   # the only symptom is a mod that quietly stopped existing.
   #
-  # D: is the master, copied only on a hash mismatch. This runs on the absent-server path
-  # only (the guard at the top of this function returns early when it is up), so there is
-  # no contention with the running server, which holds a mounted pak open and locked -
-  # verified 2026-08-08, a delete of the live pak was refused while the server ran. The
-  # consequence worth knowing: staging a NEW version of a pak takes effect at the next
-  # restart, not immediately.
-  #
-  # An empty or missing stage is NOT an error - a box legitimately running no pak mods
-  # must not log a fault on every launch. Failing to restore one that IS staged is.
-  $pakStage = "D:\PalServer\paks-stage"
-  $pakLive = "C:\PalServer\Pal\Content\Paks\~mods"
-  $stagedPaks = Get-ChildItem $pakStage -Filter *.pak -ErrorAction SilentlyContinue
-  # `/palworld-update mods:vanilla` guarantees a JOINABLE box after a patch by stripping
-  # the UE4SS loader. Restoring paks regardless would quietly hollow that lever out: the
-  # one command meant to rescue a crash-looping server would keep re-adding a mod layer
-  # every launch. Absent loader means vanilla, so clear the staged paks back out instead.
-  # Reversible - mods:restage puts the loader back and the next launch restores them.
-  if (-not (Test-Path "C:\PalServer\Pal\Binaries\Win64\dwmapi.dll")) {
-    foreach ($stagedPak in $stagedPaks) {
-      $vanillaTarget = Join-Path $pakLive $stagedPak.Name
-      if (Test-Path $vanillaTarget) {
-        Remove-Item $vanillaTarget -Force -ErrorAction SilentlyContinue
-        Write-EventLog -LogName Application -Source "Palworld" -EventId 115 -EntryType Warning `
-          -Message "UE4SS loader absent (vanilla mode); removed pak mod $($stagedPak.Name) so the server really is unmodded" -ErrorAction SilentlyContinue
-      }
-    }
-    $stagedPaks = $null
-  }
-  if ($stagedPaks) {
-    New-Item -ItemType Directory -Force -Path $pakLive | Out-Null
-    # D: is the master, so make that true in both directions: a pak dropped from the stage
-    # must not linger live. This also sweeps the OLD building paks, whose durable source
-    # (D:\PalServer\mods) the bootstrap stopped restoring precisely because they conflict
-    # with mod 1898 and leave NEITHER working. Without this the restore is additive and a
-    # stale pak survives every restart with nothing reporting it.
-    $stagedNames = $stagedPaks | ForEach-Object { $_.Name }
-    Get-ChildItem $pakLive -Filter *.pak -ErrorAction SilentlyContinue |
-      Where-Object { $stagedNames -notcontains $_.Name } |
-      ForEach-Object {
-        Remove-Item $_.FullName -Force -ErrorAction SilentlyContinue
-        Write-EventLog -LogName Application -Source "Palworld" -EventId 115 -EntryType Warning `
-          -Message "removed unstaged pak $($_.Name) from ~mods - $pakStage is the master" -ErrorAction SilentlyContinue
-      }
-    foreach ($stagedPak in $stagedPaks) {
-      $target = Join-Path $pakLive $stagedPak.Name
-      $stageHash = (Get-FileHash $stagedPak.FullName -Algorithm SHA256).Hash
-      # A hash that could not be computed is NOT a match. Under the Continue error policy
-      # Get-FileHash fails non-terminating and yields $null, and with the live pak also
-      # absent $null -eq $null would skip the copy silently - "I could not check" arriving
-      # as "it already matches", with no copy and no log.
-      if (-not $stageHash) {
-        Write-EventLog -LogName Application -Source "Palworld" -EventId 115 -EntryType Error `
-          -Message "could not hash staged pak $($stagedPak.FullName) - NOT restoring it; server may start without the mod" -ErrorAction SilentlyContinue
-        continue
-      }
-      $liveHash = if (Test-Path $target) { (Get-FileHash $target -Algorithm SHA256).Hash } else { $null }
-      if ($liveHash -eq $stageHash) { continue }
-      Copy-Item $stagedPak.FullName $target -Force -ErrorAction SilentlyContinue
-      # Verify the copy rather than trusting Copy-Item: a truncated or absent pak leaves
-      # the server perfectly joinable with the mod missing, which is the failure this
-      # whole block exists to prevent and the one nobody would notice.
-      $afterHash = if (Test-Path $target) { (Get-FileHash $target -Algorithm SHA256).Hash } else { $null }
-      if ($afterHash -eq $stageHash) {
-        Write-EventLog -LogName Application -Source "Palworld" -EventId 115 -EntryType Information `
-          -Message "restored pak mod $($stagedPak.Name) from $pakStage" -ErrorAction SilentlyContinue
-      } else {
-        Write-EventLog -LogName Application -Source "Palworld" -EventId 115 -EntryType Error `
-          -Message "FAILED to restore pak mod $($stagedPak.Name) from $pakStage - server will run WITHOUT it" -ErrorAction SilentlyContinue
-      }
-    }
-  }
+  # Two stages, because the game mounts the two folders differently and a pak in the wrong
+  # one is inert: ~mods takes plain content paks (CreativeMenu_P.pak), while LogicMods
+  # takes Blueprint mods that UE4SS's BPModLoaderMod finds by scanning that exact path
+  # (AutoHatch.pak). Separate stages keep each one's sweep scoped to its own folder.
+  Restore-StagedPaks -StageDir "D:\PalServer\paks-stage"      -LiveDir "C:\PalServer\Pal\Content\Paks\~mods"
+  Restore-StagedPaks -StageDir "D:\PalServer\logicmods-stage" -LiveDir "C:\PalServer\Pal\Content\Paks\LogicMods"
 
   $started = Start-Process -FilePath $exe `
     -ArgumentList "Pal", "-port=$($conf.GamePort)", "-players=$($conf.MaxPlayers)", "-log" `

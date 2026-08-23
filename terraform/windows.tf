@@ -116,9 +116,10 @@ resource "aws_s3_object" "windows_seed_script" {
 }
 
 # The same idea for pak mods, which the UE4SS stage does not cover. palworld-launch.ps1
-# restores them from D:\PalServer\paks-stage before every launch and D: survives an
-# instance replacement, so this is not the rebuild path - it is the off-volume baseline
-# for a LOST volume, where the launcher would otherwise start a modless server silently.
+# restores them from D:\PalServer\paks-stage and D:\PalServer\logicmods-stage before
+# every launch and D: survives an instance replacement, so this is not the rebuild path -
+# it is the off-volume baseline for a LOST volume, where the launcher would otherwise
+# start a modless server silently. One script, two stages, selected with -Stage.
 # On demand via SSM like its sibling, so it is not in the boot fetch list and does not
 # change the user_data hash.
 resource "aws_s3_object" "windows_seed_paks_script" {
@@ -167,6 +168,19 @@ data "aws_iam_policy_document" "instance_scripts" {
     actions = ["s3:GetObject", "s3:PutObject"]
     resources = [
       "${aws_s3_bucket.backups.arn}/paks-stage/*",
+    ]
+  }
+
+  # The same, for `seed-paks-stage.ps1 -Stage logicmods`. A separate prefix rather than a
+  # subfolder of paks-stage/: the publish side lists its prefix and treats every .pak it
+  # finds as belonging to that stage, and the launcher then sweeps the live folder to
+  # match. Nesting one stage inside the other would make each one's sweep delete the
+  # other's mods.
+  statement {
+    sid     = "ReadWriteLogicModsStage"
+    actions = ["s3:GetObject", "s3:PutObject"]
+    resources = [
+      "${aws_s3_bucket.backups.arn}/logicmods-stage/*",
     ]
   }
 
