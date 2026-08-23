@@ -66,10 +66,14 @@ is the fix, and the stock file sits on the box as `main.lua.stock`.
 
 ## `AutoHatch-main.lua`
 
-A hardened `AutoHatch\Scripts\main.lua` for Nexus mod 1959 v0.9.9.6, **not yet proven**.
-Auto Hatch crashed the server twice on 2026-08-22 with `EXCEPTION_ACCESS_VIOLATION`
-reading `0x1` once it genuinely loaded, and this is the candidate fix for a controlled
-retry. The mod is disabled until that retry happens (AGENTS.md rule 6).
+A hardened `AutoHatch\Scripts\main.lua` for Nexus mod 1959 v0.9.9.6 that **did NOT fix
+the crash**. Kept as the evidence behind the bug report, not as a fix to redeploy.
+
+Tried on 2026-08-23 and it crashed the same way. The guards held and that is precisely
+what it proved: the Lua completes cleanly (`possession:done`, no error), then the server
+dies 13 s later with `initparam` never firing. The fault is in the compiled Blueprint
+inside `AutoHatch.pak`, which stores the objects Lua hands it and dereferences them on a
+later tick. The trace breadcrumbs in this file are what localised that, so it stays.
 
 sha256 `ba7401f61341d50ba76bead61d44b84be72850d8b7e04ff035b88b666585c33a`.
 

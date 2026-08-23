@@ -124,14 +124,37 @@ make each one's sweep delete the other's mods.
 to publish an empty stage, because an empty baseline restores cleanly and leaves the
 server with no pak mods while every check passes.
 
-**Auto Hatch (Nexus 1959) is staged but DISABLED - it crashed the server.** Installed
-2026-08-22, and once it genuinely loaded it took the server down twice: a crash dump
-about 8 s after a player joined, then a second one ~2.5 min into the watchdog's restart.
-Removing it returned the box to a clean 5 min with the other three mods intact, which is
-what identifies it as the cause. It is disabled by rename, not deleted, so re-enabling is
-`AutoHatch.pak.disabled` -> `AutoHatch.pak` in `D:\PalServer\logicmods-stage` plus
-`enabled.txt.disabled` -> `enabled.txt` in both UE4SS `Mods\AutoHatch` folders. Do not
-re-enable without first reading the dumps in `Pal\Saved\Crashes`.
+**Auto Hatch (Nexus 1959) is DISABLED and stays that way until upstream fixes it.**
+Four `EXCEPTION_ACCESS_VIOLATION reading 0x1` crashes across 2026-08-22 and 08-23, always
+10-30 s after a player joined. Removing it left the box clean for over four hours with the
+other three mods loaded, which is what attributes the crash to it. UE4SS frames sit on top
+of that stack, but UE4SS is injected into every Palworld crash, so the stack is not the
+evidence - the presence/absence test is.
+
+**The fault is in the mod's Blueprint, past where anything here can fix it.** A hardened
+`main.lua` (guards on every dereference, plus trace breadcrumbs) was tried on 08-23 and did
+NOT help. The breadcrumbs are what settles it: `possession:enter` -> the three blueprint
+calls -> `possession:done`, cleanly, no Lua error, then **13 s of silence and a crash**,
+with `initparam` never firing. The objects handed to the ModActor are stored and
+dereferenced later on the blueprint side, inside `AutoHatch.pak`. Guarding the handoff, and
+we do guard it, cannot reach that. Reported to the author; re-test only against a new
+upstream release.
+
+Disabled by rename, not deleted, so re-enabling is `AutoHatch.pak.disabled` ->
+`AutoHatch.pak` in `D:\PalServer\logicmods-stage` plus `enabled.txt.disabled` ->
+`enabled.txt` in both UE4SS `Mods\AutoHatch` folders. Both stages and both live folders,
+four files. Do not re-enable on a server anyone is playing on.
+
+**Testing a mod costs a 30-minute budget, not a 10-minute one.** `palworld-idle.ps1` stops
+the whole instance after `ThresholdMin` empty, and an empty soak plus a wait for a tester
+crossed it: the box powered off mid-run and `SendCommand` then failed `InvalidInstanceId`,
+which reads exactly like a broken script. Check `describe-instances` for
+`stopped / User initiated` before concluding anything from an SSM failure, and have the
+tester ready before starting the soak.
+
+**Snapshot `UE4SS.log` while testing a mod, or the recovery destroys the evidence.** The
+watchdog restarts within 2 min and the new run truncates it. Every crash finding above came
+from a rolling copy taken every 10 s into `D:\PalServer\autohatch-test`.
 
 Disable a pak in the **stage**, never only in the live folder. Two reasons, both learned
 the hard way that night: the launcher treats the stage as the master and would restore a
