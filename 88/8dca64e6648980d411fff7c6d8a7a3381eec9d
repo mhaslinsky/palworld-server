@@ -1,0 +1,28 @@
+reference/BPModLoaderMod-main.lua
+  s_29a076f0caae7f::t_4891cd8231f5fd 1-399
+AGENTS.md
+  s_29a076f0caae7f::t_1c94c60ff5ab25 115,127-140,148-155
+  s_29a076f0caae7f::t_10d9a4056581c4 156
+docs/client-mods.md
+  s_29a076f0caae7f::t_1c94c60ff5ab25 34-37
+reference/README.md
+  s_29a076f0caae7f::t_c7ac7d6c598dd8 47-65
+scripts/seed-ue4ss-stage.ps1
+  s_29a076f0caae7f::t_1c94c60ff5ab25 43-46,63
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "888dca64e6648980d411fff7c6d8a7a3381eec9d",
+  "prompts": {},
+  "sessions": {
+    "s_29a076f0caae7f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "eefa28da-f6f4-43ee-b96d-e29d05051c64",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    }
+  }
+}
