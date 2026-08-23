@@ -1,0 +1,34 @@
+scripts/palworld-launch.ps1
+  s_29a076f0caae7f::t_074a7bae935e0d 63,66-70,80,88,98,105,110,113,133,136,140-193
+  s_29a076f0caae7f::t_d03282ff662c9b 64-65,71-72
+docs/client-mods.md
+  s_29a076f0caae7f::t_7c7700035834d6 32-44
+terraform/windows.tf
+  s_29a076f0caae7f::t_13d1790293a2fe 119-122,174-183
+  s_29a076f0caae7f::t_a0b3c661eb1e98 184-186
+scripts/seed-ue4ss-stage.ps1
+  s_29a076f0caae7f::t_612dc9c2416b27 40-41,44-49,56-60,63
+scripts/seed-paks-stage.ps1
+  s_29a076f0caae7f::t_324e13d78d5d84 48-49,59-64,79,81,99,109,183,192,196,200,211,225,252,261,271,275-276
+  s_29a076f0caae7f::t_4feb731e602997 1-3,5-15
+  s_29a076f0caae7f::t_1f43defaee3a73 16
+  s_29a076f0caae7f::t_612dc9c2416b27 17-18
+AGENTS.md
+  s_29a076f0caae7f::t_7c7700035834d6 108-132
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "83e6548534e2ca566e9a24e88ff9a3f06659be48",
+  "prompts": {},
+  "sessions": {
+    "s_29a076f0caae7f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "eefa28da-f6f4-43ee-b96d-e29d05051c64",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    }
+  }
+}
