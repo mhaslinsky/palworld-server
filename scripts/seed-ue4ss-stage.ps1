@@ -37,10 +37,13 @@ if (-not $bucket) { Write-Output "REFUSING: no BackupBucket in idle.conf.json"; 
 $modDir = "$win64\ue4ss\Mods\BuildingRestrictionsDisabler"
 $modsTxt = "$win64\ue4ss\Mods\mods.txt"
 $maxStackDir = "$win64\ue4ss\Mods\MaxStackCount"
-$autoHatchDir = "$win64\ue4ss\Mods\AutoHatch"
 $bpmlMain = "$win64\ue4ss\Mods\BPModLoaderMod\Scripts\main.lua"
 $enableLine = (Test-Path $modsTxt) -and `
   (Select-String -Path $modsTxt -Pattern 'BuildingRestrictionsDisabler\s*:\s*1' -Quiet)
+# AutoHatch is deliberately absent from this list: it is staged but DISABLED (see AGENTS.md
+# rule 6), so requiring it would make this refuse to publish a stage that is exactly as
+# intended. Only mods that are supposed to be live belong in a completeness check.
+#
 # Test-Path is the WRONG check for this one file: the stock BPModLoaderMod main.lua also
 # exists, and shipping it is precisely the failure - stock races the map load on dedicated
 # servers, so every LogicMods pak silently fails to mount while the stage looks complete.
@@ -54,13 +57,10 @@ $ok = (Test-Path "$win64\dwmapi.dll") -and `
       $enableLine -and `
       (Test-Path "$maxStackDir\enabled.txt") -and `
       (Test-Path "$maxStackDir\Scripts\main.lua") -and `
-      (Test-Path "$autoHatchDir\enabled.txt") -and `
-      (Test-Path "$autoHatchDir\Scripts\main.lua") -and `
-      (Test-Path "$autoHatchDir\Scripts\utils.lua") -and `
       $bpmlFixed
 if (-not $ok) {
   Write-Output "REFUSING: '$win64' is missing load-bearing UE4SS/mod files - not publishing a broken baseline."
-  Write-Output "  need: Win64\dwmapi.dll, Win64\ue4ss\UE4SS.dll, ...\BuildingRestrictionsDisabler\dlls\main.dll + enabled.txt, 'BuildingRestrictionsDisabler : 1' in mods.txt, ...\MaxStackCount\enabled.txt + Scripts\main.lua, ...\AutoHatch\enabled.txt + Scripts\main.lua + Scripts\utils.lua, and the LogicMods-fix ...\BPModLoaderMod\Scripts\main.lua"
+  Write-Output "  need: Win64\dwmapi.dll, Win64\ue4ss\UE4SS.dll, ...\BuildingRestrictionsDisabler\dlls\main.dll + enabled.txt, 'BuildingRestrictionsDisabler : 1' in mods.txt, ...\MaxStackCount\enabled.txt + Scripts\main.lua, and the LogicMods-fix ...\BPModLoaderMod\Scripts\main.lua"
   exit 1
 }
 

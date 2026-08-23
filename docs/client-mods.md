@@ -31,8 +31,10 @@ Target folder: `...\Palworld\Pal\Binaries\Win64\ue4ss\Mods\`
 
 ### Server-only mods (nothing for you to install)
 
-**Auto Hatch** ([1959](https://www.nexusmods.com/palworld/mods/1959)) runs entirely on the
-server. Eggs from the Breeding Farm are collected, incubated and hatched automatically,
+**Auto Hatch** ([1959](https://www.nexusmods.com/palworld/mods/1959)) is **not currently
+enabled** - it crashed the server twice on 2026-08-22 and was disabled the same night. The
+rest of this section describes what it does if it is ever re-enabled. It runs entirely on
+the server. Eggs from the Breeding Farm are collected, incubated and hatched automatically,
 and the hatched Pal goes to whoever owns the Pal in the **leftmost** Breeding Farm slot.
 Type `!autohatch off` in chat to opt out (`!autohatch on` to come back); the setting is
 per-player and survives a restart. You need a free inventory slot for the egg pickup, and

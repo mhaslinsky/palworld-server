@@ -112,7 +112,7 @@ and reports no error:
 | Live folder | Durable stage | Holds |
 |---|---|---|
 | `Pal\Content\Paks\~mods` | `D:\PalServer\paks-stage` | plain content paks (`CreativeMenu_P.pak`) |
-| `Pal\Content\Paks\LogicMods` | `D:\PalServer\logicmods-stage` | Blueprint mods UE4SS's `BPModLoaderMod` mounts by scanning that exact path (`AutoHatch.pak`) |
+| `Pal\Content\Paks\LogicMods` | `D:\PalServer\logicmods-stage` | Blueprint mods UE4SS's `BPModLoaderMod` mounts by scanning that exact path |
 
 `palworld-launch.ps1` mirrors each stage into its own live folder before every launch,
 treating D: as the master - an unstaged pak is swept out. Each stage is authoritative for
@@ -124,12 +124,35 @@ make each one's sweep delete the other's mods.
 to publish an empty stage, because an empty baseline restores cleanly and leaves the
 server with no pak mods while every check passes.
 
+**Auto Hatch (Nexus 1959) is staged but DISABLED - it crashed the server.** Installed
+2026-08-22, and once it genuinely loaded it took the server down twice: a crash dump
+about 8 s after a player joined, then a second one ~2.5 min into the watchdog's restart.
+Removing it returned the box to a clean 5 min with the other three mods intact, which is
+what identifies it as the cause. It is disabled by rename, not deleted, so re-enabling is
+`AutoHatch.pak.disabled` -> `AutoHatch.pak` in `D:\PalServer\logicmods-stage` plus
+`enabled.txt.disabled` -> `enabled.txt` in both UE4SS `Mods\AutoHatch` folders. Do not
+re-enable without first reading the dumps in `Pal\Saved\Crashes`.
+
+Disable a pak in the **stage**, never only in the live folder. Two reasons, both learned
+the hard way that night: the launcher treats the stage as the master and would restore a
+live pak you deleted, and a running server holds a mounted pak locked, so the live rename
+fails outright while a script that does not check its own `Move-Item` reports success.
+
 A LogicMods pak additionally needs Okaetsu's `BPModLoaderMod` fix at
 `Win64\ue4ss\Mods\BPModLoaderMod\Scripts\main.lua`. Stock UE4SS races the map load on
 dedicated servers and silently fails to mount LogicMods - the server is joinable, the pak
 is present, and the mod simply does not exist. The stock file is kept beside it as
 `main.lua.stock`, and `seed-ue4ss-stage.ps1` matches the fix's header rather than testing
 for the file, because both files exist and only one works.
+
+That fix carries a **local patch**, and it is load-bearing. Upstream's `LoadMod` returns
+`false` on an invalid World without adding the mod to `ModsToRevalidate`, which only the
+Actor-invalid branch does. `LoadModsDelayed` then iterates an empty table, leaves
+`WasSuccessful` true, and prints `Finished loading LogicMods!` having loaded nothing. The
+observed result was a mod that logged a clean load and did not exist: every hook threw on
+a nil `_ModActor`. The patch registers the mod on that branch too. Keep it across any
+BPModLoaderMod update, and re-check it if a LogicMods mod ever reports loading but does
+nothing.
 
 ### 7. Backups: check, don't assume
 
