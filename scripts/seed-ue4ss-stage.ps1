@@ -45,11 +45,15 @@ $enableLine = (Test-Path $modsTxt) -and `
 # intended. Only mods that are supposed to be live belong in a completeness check.
 #
 # Test-Path is the WRONG check for this one file: the stock BPModLoaderMod main.lua also
-# exists, and shipping it is precisely the failure - stock races the map load on dedicated
-# servers, so every LogicMods pak silently fails to mount while the stage looks complete.
-# Match Okaetsu's fix header instead, the only thing that distinguishes the two files.
+# exists as main.lua.stock, and shipping stock is precisely the failure - it races the map
+# load on dedicated servers, so every LogicMods pak silently fails to mount while the stage
+# looks complete.
+# Match OUR patch marker, not the upstream header. Upstream owns its header line and can
+# rewrite it in any release, which would let the stock file pass this check and ship a
+# stage whose LogicMods silently never mount. 'LOCAL PATCH (palworld-server' exists in
+# neither the stock file nor Okaetsu's, so it cannot be reintroduced by an update.
 $bpmlFixed = (Test-Path $bpmlMain) -and `
-  (Select-String -Path $bpmlMain -Pattern 'TEMPORARY FIX FOR LOGICMODS' -Quiet)
+  (Select-String -Path $bpmlMain -Pattern 'LOCAL PATCH \(palworld-server' -Quiet)
 $ok = (Test-Path "$win64\dwmapi.dll") -and `
       (Test-Path "$win64\ue4ss\UE4SS.dll") -and `
       (Test-Path "$modDir\dlls\main.dll") -and `
@@ -60,7 +64,7 @@ $ok = (Test-Path "$win64\dwmapi.dll") -and `
       $bpmlFixed
 if (-not $ok) {
   Write-Output "REFUSING: '$win64' is missing load-bearing UE4SS/mod files - not publishing a broken baseline."
-  Write-Output "  need: Win64\dwmapi.dll, Win64\ue4ss\UE4SS.dll, ...\BuildingRestrictionsDisabler\dlls\main.dll + enabled.txt, 'BuildingRestrictionsDisabler : 1' in mods.txt, ...\MaxStackCount\enabled.txt + Scripts\main.lua, and the LogicMods-fix ...\BPModLoaderMod\Scripts\main.lua"
+  Write-Output "  need: Win64\dwmapi.dll, Win64\ue4ss\UE4SS.dll, ...\BuildingRestrictionsDisabler\dlls\main.dll + enabled.txt, 'BuildingRestrictionsDisabler : 1' in mods.txt, ...\MaxStackCount\enabled.txt + Scripts\main.lua, and the locally-patched ...\BPModLoaderMod\Scripts\main.lua (see reference/README.md)"
   exit 1
 }
 
