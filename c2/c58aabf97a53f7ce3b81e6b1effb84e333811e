@@ -1,0 +1,19 @@
+scripts/seed-ue4ss-stage.ps1
+  s_29a076f0caae7f::t_b7491ad776d2ab 48-54,56,67
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "c2c58aabf97a53f7ce3b81e6b1effb84e333811e",
+  "prompts": {},
+  "sessions": {
+    "s_29a076f0caae7f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "eefa28da-f6f4-43ee-b96d-e29d05051c64",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    }
+  }
+}
