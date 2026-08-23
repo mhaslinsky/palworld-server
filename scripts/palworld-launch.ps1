@@ -60,7 +60,9 @@ if (-not $updateLive) {
   }
 }
 
-# Mirrors one D: pak stage into its live folder on C:, treating the stage as the master.
+# Reconciles one live pak folder on C: against its D: stage, treating the stage as the
+# master: restores what is staged, sweeps what is not, and clears the folder outright when
+# the UE4SS loader is absent (vanilla mode).
 # Writes NOTHING to the success stream, for the reason spelled out on
 # Start-ServerIfAbsent below: that function's exit code IS its whole output stream.
 function Restore-StagedPaks {
