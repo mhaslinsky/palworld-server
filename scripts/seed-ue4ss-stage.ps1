@@ -37,18 +37,30 @@ if (-not $bucket) { Write-Output "REFUSING: no BackupBucket in idle.conf.json"; 
 $modDir = "$win64\ue4ss\Mods\BuildingRestrictionsDisabler"
 $modsTxt = "$win64\ue4ss\Mods\mods.txt"
 $maxStackDir = "$win64\ue4ss\Mods\MaxStackCount"
+$autoHatchDir = "$win64\ue4ss\Mods\AutoHatch"
+$bpmlMain = "$win64\ue4ss\Mods\BPModLoaderMod\Scripts\main.lua"
 $enableLine = (Test-Path $modsTxt) -and `
   (Select-String -Path $modsTxt -Pattern 'BuildingRestrictionsDisabler\s*:\s*1' -Quiet)
+# Test-Path is the WRONG check for this one file: the stock BPModLoaderMod main.lua also
+# exists, and shipping it is precisely the failure - stock races the map load on dedicated
+# servers, so every LogicMods pak silently fails to mount while the stage looks complete.
+# Match Okaetsu's fix header instead, the only thing that distinguishes the two files.
+$bpmlFixed = (Test-Path $bpmlMain) -and `
+  (Select-String -Path $bpmlMain -Pattern 'TEMPORARY FIX FOR LOGICMODS' -Quiet)
 $ok = (Test-Path "$win64\dwmapi.dll") -and `
       (Test-Path "$win64\ue4ss\UE4SS.dll") -and `
       (Test-Path "$modDir\dlls\main.dll") -and `
       (Test-Path "$modDir\enabled.txt") -and `
       $enableLine -and `
       (Test-Path "$maxStackDir\enabled.txt") -and `
-      (Test-Path "$maxStackDir\Scripts\main.lua")
+      (Test-Path "$maxStackDir\Scripts\main.lua") -and `
+      (Test-Path "$autoHatchDir\enabled.txt") -and `
+      (Test-Path "$autoHatchDir\Scripts\main.lua") -and `
+      (Test-Path "$autoHatchDir\Scripts\utils.lua") -and `
+      $bpmlFixed
 if (-not $ok) {
   Write-Output "REFUSING: '$win64' is missing load-bearing UE4SS/mod files - not publishing a broken baseline."
-  Write-Output "  need: Win64\dwmapi.dll, Win64\ue4ss\UE4SS.dll, ...\BuildingRestrictionsDisabler\dlls\main.dll + enabled.txt, 'BuildingRestrictionsDisabler : 1' in mods.txt, and ...\MaxStackCount\enabled.txt + Scripts\main.lua"
+  Write-Output "  need: Win64\dwmapi.dll, Win64\ue4ss\UE4SS.dll, ...\BuildingRestrictionsDisabler\dlls\main.dll + enabled.txt, 'BuildingRestrictionsDisabler : 1' in mods.txt, ...\MaxStackCount\enabled.txt + Scripts\main.lua, ...\AutoHatch\enabled.txt + Scripts\main.lua + Scripts\utils.lua, and the LogicMods-fix ...\BPModLoaderMod\Scripts\main.lua"
   exit 1
 }
 

@@ -105,13 +105,31 @@ as deployed on the strength of a green `terraform apply`.
 Not affected: `update-server.ps1`, `seed-ue4ss-stage.ps1` and `seed-paks-stage.ps1` are
 pulled fresh from S3 by whoever runs them, so they are always current.
 
-Pak mods (anything in `Pal\Content\Paks\~mods`) are outside the UE4SS stage, which
-overlays `Win64` only. They live on `D:\PalServer\paks-stage`, and `palworld-launch.ps1`
-mirrors that into `~mods` before every launch, treating D: as the master - an unstaged
-pak is swept out. `seed-paks-stage.ps1` publishes that stage to
-`s3://<bucket>/paks-stage/` and restores it with `-Restore`; it refuses to publish an
-empty stage, because an empty baseline restores cleanly and leaves the server with no
-pak mods while every check passes.
+Pak mods are outside the UE4SS stage, which overlays `Win64` only. There are **two** pak
+folders and they are not interchangeable - a pak in the wrong one is inert, loads nothing,
+and reports no error:
+
+| Live folder | Durable stage | Holds |
+|---|---|---|
+| `Pal\Content\Paks\~mods` | `D:\PalServer\paks-stage` | plain content paks (`CreativeMenu_P.pak`) |
+| `Pal\Content\Paks\LogicMods` | `D:\PalServer\logicmods-stage` | Blueprint mods UE4SS's `BPModLoaderMod` mounts by scanning that exact path (`AutoHatch.pak`) |
+
+`palworld-launch.ps1` mirrors each stage into its own live folder before every launch,
+treating D: as the master - an unstaged pak is swept out. Each stage is authoritative for
+its own folder only, which is why they are separate: nesting one inside the other would
+make each one's sweep delete the other's mods.
+
+`seed-paks-stage.ps1` publishes a stage to `s3://<bucket>/<stage>/` and restores it with
+`-Restore`; pick the stage with `-Stage paks` (default) or `-Stage logicmods`. It refuses
+to publish an empty stage, because an empty baseline restores cleanly and leaves the
+server with no pak mods while every check passes.
+
+A LogicMods pak additionally needs Okaetsu's `BPModLoaderMod` fix at
+`Win64\ue4ss\Mods\BPModLoaderMod\Scripts\main.lua`. Stock UE4SS races the map load on
+dedicated servers and silently fails to mount LogicMods - the server is joinable, the pak
+is present, and the mod simply does not exist. The stock file is kept beside it as
+`main.lua.stock`, and `seed-ue4ss-stage.ps1` matches the fix's header rather than testing
+for the file, because both files exist and only one works.
 
 ### 7. Backups: check, don't assume
 

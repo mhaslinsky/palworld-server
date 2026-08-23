@@ -29,6 +29,19 @@ Target folder: `...\Palworld\Pal\Binaries\Win64\ue4ss\Mods\`
 | **FSS – Full Sphere Summon** | [3620](https://www.nexusmods.com/palworld/mods/3620) | 0.7.0 (UE4SS Lua) | Optional | Folder `FullSphereSummon\` (has `enabled.txt` + `Scripts\main.lua`). Client-only; restores throw-to-summon. |
 | **Max Stack Count** | [376](https://www.nexusmods.com/palworld/mods/376) | 1.3 (UE4SS Lua) | **Required for raised stacks** | Folder `MaxStackCount\` (has `enabled.txt` + `Scripts\main.lua`). Raises item stack caps from 9999 to 999,999,999. Must be on both sides (the server already has it): a vanilla client stays capped at 9999 even though the server allows more. Confirmed in-game by multiple players. |
 
+### Server-only mods (nothing for you to install)
+
+**Auto Hatch** ([1959](https://www.nexusmods.com/palworld/mods/1959)) runs entirely on the
+server. Eggs from the Breeding Farm are collected, incubated and hatched automatically,
+and the hatched Pal goes to whoever owns the Pal in the **leftmost** Breeding Farm slot.
+Type `!autohatch off` in chat to opt out (`!autohatch on` to come back); the setting is
+per-player and survives a restart. You need a free inventory slot for the egg pickup, and
+a full Palbox drops the Pals on the ground.
+
+One quirk worth knowing: with a **multi-egg incubator**, somebody has to press "Collect
+all Hatched Pals" by hand once after each server start before auto-hatching works through
+it. The mod says so in chat when it hits that case.
+
 After copying, confirm the paths exist with **no extra nested folder**, e.g.
 `...\ue4ss\Mods\BuildingRestrictionsDisabler\dlls\main.dll`.
 

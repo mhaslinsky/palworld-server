@@ -1,13 +1,21 @@
-﻿# Publish the box's CURRENT pak stage (D:\PalServer\paks-stage) up to S3, and pull it
-# back down when D: is empty. The sibling of seed-ue4ss-stage.ps1, for the pak mods that
-# the UE4SS stage does not cover (that one overlays Win64 only).
+﻿# Publish one of the box's CURRENT pak stages up to S3, and pull it back down when D: is
+# empty. The sibling of seed-ue4ss-stage.ps1, for the pak mods that the UE4SS stage does
+# not cover (that one overlays Win64 only).
 #
-# Why this exists: palworld-launch.ps1 restores paks from D:\PalServer\paks-stage before
-# every launch, and D: survives instance replacement - so the launcher alone covers the
-# rebuild case. What it does NOT cover is the stage itself being lost: a recreated or
-# restored EBS volume comes up with no paks-stage at all, and the launcher then quietly
-# starts a server with no pak mods. Nothing anywhere reports that, which is the same
-# shape as the empty-world restore. S3 is the off-volume baseline for exactly that.
+#   -Stage paks      (default)  D:\PalServer\paks-stage      -> Pal\Content\Paks\~mods
+#   -Stage logicmods            D:\PalServer\logicmods-stage -> Pal\Content\Paks\LogicMods
+#
+# Two stages because the game mounts the two folders differently and a pak in the wrong
+# one is inert: ~mods takes plain content paks, LogicMods takes the Blueprint mods that
+# UE4SS's BPModLoaderMod finds by scanning that exact path. Each stage is authoritative
+# for its own folder, so they must not be merged into one.
+#
+# Why this exists: palworld-launch.ps1 restores both stages before every launch, and D:
+# survives instance replacement - so the launcher alone covers the rebuild case. What it
+# does NOT cover is a stage itself being lost: a recreated or restored EBS volume comes up
+# with no stage at all, and the launcher then quietly starts a server with no pak mods.
+# Nothing anywhere reports that, which is the same shape as the empty-world restore.
+# S3 is the off-volume baseline for exactly that.
 #
 # Run on the box via SSM Run Command (no RDP). Two directions:
 #   (default)  publish  - D: -> S3, after verifying D: is worth publishing
@@ -37,6 +45,8 @@
 # future non-ASCII edit cannot silently break the PowerShell 5.1 parse.
 
 param(
+  [ValidateSet('paks', 'logicmods')]
+  [string]$Stage = 'paks',
   [switch]$Restore
 )
 
@@ -46,7 +56,12 @@ $conf = Get-Content "C:\PalServer\idle.conf.json" -Raw | ConvertFrom-Json
 $bucket = $conf.BackupBucket
 $region = $conf.AwsRegion
 $saveQualifier = Split-Path -Qualifier $conf.SaveRoot   # e.g. "D:"
-$stageRoot = "$saveQualifier\PalServer\paks-stage"
+# The stage name is both the folder under D:\PalServer and the S3 prefix, deliberately:
+# one string to get wrong instead of two, and a restore that reads from the prefix its
+# publish wrote to. $liveDir appears in output only; the launcher does the copying.
+$stageName = if ($Stage -eq 'logicmods') { "logicmods-stage" } else { "paks-stage" }
+$liveDir = if ($Stage -eq 'logicmods') { "Pal\Content\Paks\LogicMods" } else { "Pal\Content\Paks\~mods" }
+$stageRoot = "$saveQualifier\PalServer\$stageName"
 
 $awsExe = "C:\Program Files\Amazon\AWSCLIV2\aws.exe"
 if (-not (Test-Path $awsExe)) {
@@ -61,9 +76,9 @@ if ($Restore) {
   # Check the REMOTE has something first. `s3 sync` from an empty prefix exits 0 having
   # transferred nothing, after which "restored" would describe a stage that is still
   # empty - the failure reporting success, which this file exists to avoid.
-  $remote = & $awsExe s3 ls "s3://$bucket/paks-stage/" --region $region 2>$null
+  $remote = & $awsExe s3 ls "s3://$bucket/$stageName/" --region $region 2>$null
   if (-not $remote) {
-    Write-Output "REFUSING: s3://$bucket/paks-stage/ is empty - nothing to restore. Publish a baseline first."
+    Write-Output "REFUSING: s3://$bucket/$stageName/ is empty - nothing to restore. Publish a baseline first."
     exit 1
   }
 
@@ -81,7 +96,7 @@ if ($Restore) {
   # count. That exact trap cost a silent no-op restage on 2026-07-30 (see docs). Into an
   # empty scratch dir every object transfers anyway; it is kept so this stays correct if
   # the scratch is ever reused.
-  & $awsExe s3 sync "s3://$bucket/paks-stage/" "$scratch" `
+  & $awsExe s3 sync "s3://$bucket/$stageName/" "$scratch" `
     --region $region --exact-timestamps --only-show-errors
   if ($LASTEXITCODE -ne 0) {
     Write-Output "FAILED: s3 sync exit $LASTEXITCODE - stage left untouched"
@@ -91,7 +106,7 @@ if ($Restore) {
 
   # Completeness, not "at least one". Compare against what S3 actually holds, so an
   # interrupted transfer is caught rather than rounded up to success.
-  $remoteNames = @(& $awsExe s3 ls "s3://$bucket/paks-stage/" --region $region 2>$null |
+  $remoteNames = @(& $awsExe s3 ls "s3://$bucket/$stageName/" --region $region 2>$null |
     ForEach-Object { ($_ -split '\s+', 4)[-1] } |
     Where-Object { $_ -like "*.pak" })
   $localNames = @(Get-ChildItem $scratch -Filter *.pak -ErrorAction SilentlyContinue |
@@ -165,7 +180,7 @@ if ($Restore) {
   $restored | ForEach-Object {
     Write-Output ("  " + $_.Name + "  " + $_.Length + " bytes  sha256 " + (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower())
   }
-  Write-Output "They go live at the next server start; palworld-launch.ps1 copies them into ~mods."
+  Write-Output "They go live at the next server start; palworld-launch.ps1 copies them into $liveDir."
   exit 0
 }
 
@@ -174,15 +189,15 @@ $staged = @(Get-ChildItem $stageRoot -Filter *.pak -ErrorAction SilentlyContinue
 if ($staged.Count -eq 0) {
   Write-Output "REFUSING: '$stageRoot' holds no .pak - not publishing an empty baseline."
   Write-Output "  An empty baseline restores cleanly and leaves the server with NO pak mods, silently."
-  Write-Output "  If you meant to clear the stage, delete s3://$bucket/paks-stage/ by hand."
+  Write-Output "  If you meant to clear the stage, delete s3://$bucket/$stageName/ by hand."
   exit 1
 }
 
-Write-Output "Publishing $($staged.Count) pak(s) from '$stageRoot' -> s3://$bucket/paks-stage/ ..."
+Write-Output "Publishing $($staged.Count) pak(s) from '$stageRoot' -> s3://$bucket/$stageName/ ..."
 $staged | ForEach-Object {
   Write-Output ("  " + $_.Name + "  " + $_.Length + " bytes  sha256 " + (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower())
 }
-& $awsExe s3 sync "$stageRoot" "s3://$bucket/paks-stage/" --region $region --only-show-errors
+& $awsExe s3 sync "$stageRoot" "s3://$bucket/$stageName/" --region $region --only-show-errors
 if ($LASTEXITCODE -ne 0) { Write-Output "FAILED: s3 sync exit $LASTEXITCODE"; exit 1 }
 
 # --- Verify on S3 by CONTENT, not by key existence (AGENTS.md rule 8) ---------------
@@ -193,7 +208,7 @@ if ($LASTEXITCODE -ne 0) { Write-Output "FAILED: s3 sync exit $LASTEXITCODE"; ex
 # which is what sync-scripts.ps1 already does for the bootstrap scripts.
 $stale = @()
 foreach ($pak in $staged) {
-  $etag = & $awsExe s3api head-object --bucket $bucket --key "paks-stage/$($pak.Name)" `
+  $etag = & $awsExe s3api head-object --bucket $bucket --key "$stageName/$($pak.Name)" `
     --region $region --query ETag --output text 2>$null
   if (-not $etag) { $stale += ($pak.Name + " (absent from S3)"); continue }
   $etag = $etag.Trim('"')
@@ -207,7 +222,7 @@ foreach ($pak in $staged) {
     Write-Output ("  $($pak.Name): multipart ETag, verifying by download ...")
     $probe = Join-Path $env:TEMP ("pakverify-" + $pak.Name)
     Remove-Item $probe -Force -ErrorAction SilentlyContinue
-    & $awsExe s3 cp "s3://$bucket/paks-stage/$($pak.Name)" $probe --region $region --only-show-errors
+    & $awsExe s3 cp "s3://$bucket/$stageName/$($pak.Name)" $probe --region $region --only-show-errors
     if ($LASTEXITCODE -ne 0 -or -not (Test-Path $probe)) {
       $stale += ($pak.Name + " (could not download to verify)")
       continue
@@ -234,7 +249,7 @@ if ($stale.Count -gt 0) {
 # that resurrected pak would then be pushed live. Deleting automatically is worse: it is
 # the one action that can destroy the last copy of a mod that needs a Nexus login to
 # re-download. So surface it loudly and let a human decide.
-$remoteOnly = @(& $awsExe s3 ls "s3://$bucket/paks-stage/" --region $region 2>$null |
+$remoteOnly = @(& $awsExe s3 ls "s3://$bucket/$stageName/" --region $region 2>$null |
   ForEach-Object { ($_ -split '\s+', 4)[-1] } |
   Where-Object { $_ -like "*.pak" -and ($staged.Name -notcontains $_) })
 if ($remoteOnly.Count -gt 0) {
@@ -243,7 +258,7 @@ if ($remoteOnly.Count -gt 0) {
   $remoteOnly | ForEach-Object { Write-Output ("  " + $_) }
   Write-Output "  A later -Restore WOULD bring these back, and the launcher would then make them live."
   Write-Output "  If they were removed deliberately, delete them from S3 too:"
-  $remoteOnly | ForEach-Object { Write-Output ("    aws s3 rm s3://$bucket/paks-stage/$_") }
+  $remoteOnly | ForEach-Object { Write-Output ("    aws s3 rm s3://$bucket/$stageName/$_") }
   Write-Output ""
 }
 
@@ -253,10 +268,10 @@ if ($remoteOnly.Count -gt 0) {
   # under "published cleanly" and never see the warning above. Make the two outcomes
   # structurally distinguishable rather than leaving the difference in a log line.
   Write-Output "PUBLISHED WITH DIVERGENCE (exit 2): all $($staged.Count) local pak(s) verified in S3, but the baseline holds $($remoteOnly.Count) extra listed above."
-  Write-Output "Recover a lost stage with: seed-paks-stage.ps1 -Restore"
+  Write-Output "Recover a lost stage with: seed-paks-stage.ps1 -Stage $Stage -Restore"
   exit 2
 }
 
-Write-Output "OK: pak stage published to s3://$bucket/paks-stage/ (all $($staged.Count) verified by content)."
-Write-Output "Recover a lost stage with: seed-paks-stage.ps1 -Restore"
+Write-Output "OK: pak stage published to s3://$bucket/$stageName/ (all $($staged.Count) verified by content)."
+Write-Output "Recover a lost stage with: seed-paks-stage.ps1 -Stage $Stage -Restore"
 exit 0
