@@ -63,3 +63,25 @@ nothing. Search this file for `LOCAL PATCH` to find it.
 Two upstream sources to diff against when UE4SS updates:
 <https://github.com/Okaetsu/RE-UE4SS/blob/logicmod-temp-fix/assets/Mods/BPModLoaderMod/Scripts/main.lua>
 is the fix, and the stock file sits on the box as `main.lua.stock`.
+
+## `AutoHatch-main.lua`
+
+A hardened `AutoHatch\Scripts\main.lua` for Nexus mod 1959 v0.9.9.6, **not yet proven**.
+Auto Hatch crashed the server twice on 2026-08-22 with `EXCEPTION_ACCESS_VIOLATION`
+reading `0x1` once it genuinely loaded, and this is the candidate fix for a controlled
+retry. The mod is disabled until that retry happens (AGENTS.md rule 6).
+
+sha256 `ba7401f61341d50ba76bead61d44b84be72850d8b7e04ff035b88b666585c33a`.
+
+Every change is a guard or a breadcrumb; no gameplay logic is altered. The substantive one
+is in the `OnCompleteInitializeParameter` hook: stock compares against a module-level
+`playerState` holding a raw pointer to the last `PalPlayerState` created **server-wide**,
+which dangles as soon as that player disconnects and is simply wrong with two players
+online. It now takes the state from the character's own controller, which cannot be stale.
+The rest guards each dereference, fixes `SenderPlayerUId` casing (stock reads a lower-case
+name that does not exist, so `!autohatch on/off` never worked), and traces hook entry so
+the last `[AutoHatch/guard]` line in `UE4SS.log` names whatever was running if it crashes
+again.
+
+Full analysis, test protocol and rollback:
+`~/Developer/AIDB/_global/personal/palworld-server/2026-08-22-autohatch-crash-investigation.md`
