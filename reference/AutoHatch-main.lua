@@ -49,8 +49,12 @@ local function guidToString(guid)
 end
 
 -- Stock sends a hatched character's archive to the blueprint once per server lifetime and
--- returns early thereafter. Flip to false to restore that behavior if per-hatch sends duplicate Pals.
-local SEND_BYTES_EVERY_HATCH = true
+-- returns early thereafter. Setting this true wedged the live server on 2026-08-28: the
+-- archive DOUBLED every hatch (6.8 MB, 13.7 MB, 27.5 MB over hatches 21-23) and the loop
+-- below makes one call per byte, so each hatch took twice as long as the last until the
+-- game thread stopped answering the REST API entirely. It did not fix the misrouting it
+-- was testing; every hatch still logged one recipient. Do not set it true again.
+local SEND_BYTES_EVERY_HATCH = false
 local hatchCount = 0
 
 -- The recipient arrives as an FGuid on some paths and a plain ID on others. Because this only

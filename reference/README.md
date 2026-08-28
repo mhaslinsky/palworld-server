@@ -86,7 +86,7 @@ also derives the player state from the character's own controller rather than a
 module-level `playerState` that holds whichever state was created last server-wide; that
 dangling pointer was real, and is simply not what was crashing us.
 
-sha256 `d28ff3a092917db9a8585e7cb86f188747469b1797bdcca2687103dc6757095d`.
+sha256 `464843fbdc93262053a6ccc701959e1047d6d3c8fd64e6a0a20e20dc232ecd1f`.
 
 Every change is a guard or a breadcrumb; no gameplay logic is altered. The substantive one
 is in the `OnCompleteInitializeParameter` hook: stock compares against a module-level
@@ -117,15 +117,40 @@ Every ownership failure we have seen follows from that one rule.
 Before concluding a Pal was destroyed, check the first breeder's Palbox and the ground around
 the incubators. Both are ordinary outcomes of the rule above.
 
-### The `sentBytes` latch
+### The `sentBytes` latch: tested, and it wedges the server
 
 Stock returns early from the hatch hook after the first hatch of a server's lifetime, so the
 blueprint receives one character archive per server start and none after.
-`SEND_BYTES_EVERY_HATCH` at the top of the file defaults to sending every hatch instead. The
-reason to suspect it: the misrouting bug above is also described as latching per server start,
-and this is the only per-hatch data the Lua sends. Because the blueprint half is compiled,
-this remains a correlation. Set the flag to `false` to restore stock behavior if per-hatch
-sends duplicate Pals.
+`SEND_BYTES_EVERY_HATCH` was set true on 2026-08-28 to test whether that latch was what made
+every player's eggs route to one recipient. **It is now `false` and must stay there.**
+
+The test failed twice over, and both results are worth keeping.
+
+It did not fix the routing. Every one of the 24 hatches that ran under the flag logged
+`hatch:recipient 0`, and the mod's own line read
+`Sending Pals to: 084390E6000000000000000000000000 (Player ID: 0)`. One recipient, exactly as
+before. The routing decision lives entirely in the compiled blueprint, so the Lua cannot
+reach it.
+
+It also wedged the live server. The archive handed to the hook doubled on every hatch, and
+because the send loop makes one `GetBytes` call per byte, so did the work:
+
+| Hatch | Bytes sent | Wall time |
+|---|---|---|
+| 21 | 6,881,280 | baseline |
+| 22 | 13,762,560 | 99s |
+| 23 | 27,525,120 | 199s |
+| 24 | ~55,050,240 | never finished |
+
+The game thread never returned from hatch 24. The process stayed alive at a full core with a
+12.8 GB working set, so the REST API stopped answering, the roster publish froze, and the
+watchdog stood down because it looks for a missing process and found a running one. No crash
+dump was written, which is why this reads as a crash to a player and as healthy to every
+automated check. Recovery was a force-kill plus this flag.
+
+Why doubling: unproven, and the blueprint half is compiled, so it may stay that way. The
+shape fits the blueprint accumulating each archive into a buffer that is then handed back as
+the next hatch's archive. What is certain is the measurement above.
 
 The hook now also logs the recipient the game passed in and the egg object it came from. The
 mod recorded neither, so misroutes previously had to be inferred from missing deliveries
