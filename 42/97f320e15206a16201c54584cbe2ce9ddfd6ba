@@ -1,0 +1,24 @@
+scripts/tests/Test-EnableByRename.ps1
+  s_0599287d40f39c::t_be088658de68c5 1
+  s_0599287d40f39c::t_52b16d1ec45e73 19-20
+  s_0599287d40f39c::t_549afc8728be0a 2-18,21-80
+scripts/deploy-autohatch.ps1
+  s_0599287d40f39c::t_c0c42b5292b8b4 112-117
+  s_0599287d40f39c::t_c459fa1a642cf1 137
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "4297f320e15206a16201c54584cbe2ce9ddfd6ba",
+  "prompts": {},
+  "sessions": {
+    "s_0599287d40f39c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7cd84ff7-c81e-4c9b-bffb-ab5cae2cffae",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    }
+  }
+}
