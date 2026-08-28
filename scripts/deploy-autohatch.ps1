@@ -109,11 +109,15 @@ if ($VanillaOnly) {
 # --- Re-enable: every rename verified, never announced ----------------------------
 function Enable-ByRename {
   param([string]$DisabledPath, [string]$EnabledPath, [string]$Label)
-  if (Test-Path $EnabledPath) { Write-Output "OK: $Label already enabled"; return $null }
+  # Returns a problem string, or $null. Nothing else may be written here: PowerShell
+  # collects a function's whole output stream, so a Write-Output success line comes
+  # back alongside the $null as a two-element array, and the caller's truthiness test
+  # then reads a clean rename as a failure. Observed 2026-08-28, on a run where all
+  # three renames worked and the script reported six problems.
+  if (Test-Path $EnabledPath) { return $null }
   if (-not (Test-Path $DisabledPath)) { return "$Label - neither '$EnabledPath' nor '$DisabledPath' exists" }
   Move-Item -Path $DisabledPath -Destination $EnabledPath -Force -ErrorAction SilentlyContinue
   if (-not (Test-Path $EnabledPath)) { return "$Label - rename FAILED, '$EnabledPath' still absent (a running server holds a mounted pak locked)" }
-  Write-Output "OK: $Label enabled"
   return $null
 }
 
@@ -130,7 +134,7 @@ $renames = @(
 )
 foreach ($rename in $renames) {
   $problem = Enable-ByRename -DisabledPath $rename.Disabled -EnabledPath $rename.Enabled -Label $rename.Label
-  if ($problem) { $problems += $problem }
+  if ($problem) { $problems += $problem } else { Write-Output "OK: $($rename.Label) enabled" }
 }
 
 # The launcher mirrors the stage into LogicMods before every launch, so the live pak
