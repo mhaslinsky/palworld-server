@@ -1,4 +1,4 @@
-# Palworld item IDs — display name is NOT the internal ID
+# Palworld item IDs: display name is NOT the internal ID
 
 `palworld-item-ids.tsv` maps every in-game English display name to the internal
 item ID the save file actually stores. 2,372 items, sorted by display name.
@@ -11,13 +11,13 @@ plausible-looking wrong item and nobody notices until they try to craft with it.
 
 | Someone says | Internal ID | Trap |
 |---|---|---|
-| "Ingot" (the base one) | `CopperIngot` | **NOT `IronIngot`** — that one displays as *"Refined Ingot"*, the tier ABOVE. Grabbing the obvious-looking ID gives the wrong tier. |
+| "Ingot" (the base one) | `CopperIngot` | **NOT `IronIngot`**: that one displays as *"Refined Ingot"*, the tier ABOVE. Grabbing the obvious-looking ID gives the wrong tier. |
 | "Circuit Board" | `MachineParts2` | The ID contains no form of "circuit" or "board". Searching IDs finds nothing and you conclude, wrongly, that the item does not exist. |
 | "High Quality Pal Oil" | `PalOil` | The ID drops the qualifier entirely. There is no separate low-quality oil. |
 | "Hyper Sphere" | `PalSphere_Tera` | Tiers are Pal / Mega / Giga / **Tera=Hyper** / Master=Ultra. The ID ladder and the display ladder use different words at the same rank. |
 | "Flame Organ" | `FireOrgan` | Flame vs Fire. |
 | "Water organ" | *does not exist* | Palworld has exactly three organs: Electric, Flame, Ice. A confident-sounding request can still name something that was never in the game. |
-| "Medical Supplies" | `Medicines` | And *"Low Grade Medical Supplies"* is `Herbs` — the word "medicine" appears in neither ID. |
+| "Medical Supplies" | `Medicines` | And *"Low Grade Medical Supplies"* is `Herbs`, and the word "medicine" appears in neither ID. |
 
 ## How to look something up
 
@@ -28,7 +28,7 @@ grep -i 'circuit' reference/palworld-item-ids.tsv
 grep -iP '^\s*Ingot\t' reference/palworld-item-ids.tsv    # exact display name
 ```
 
-If a search of the item IDs finds nothing, that means nothing — check the names
+If a search of the item IDs finds nothing, that means nothing: check the names
 before concluding an item is absent.
 
 ## Regenerating
@@ -42,7 +42,7 @@ cd ~/Developer/palworld-save-pal && git pull
 # then re-run the generator (see the palworld-server session notes / AIDB)
 ```
 
-The same name-vs-ID split applies to Pals (`pals.json` + `l10n/en/pals.json`) —
+The same name-vs-ID split applies to Pals (`pals.json` + `l10n/en/pals.json`), so
 extend this file if a Pal grant ever needs it.
 
 ## `BPModLoaderMod-main.lua`
@@ -86,7 +86,7 @@ also derives the player state from the character's own controller rather than a
 module-level `playerState` that holds whichever state was created last server-wide; that
 dangling pointer was real, and is simply not what was crashing us.
 
-sha256 `ba7401f61341d50ba76bead61d44b84be72850d8b7e04ff035b88b666585c33a`.
+sha256 `d28ff3a092917db9a8585e7cb86f188747469b1797bdcca2687103dc6757095d`.
 
 Every change is a guard or a breadcrumb; no gameplay logic is altered. The substantive one
 is in the `OnCompleteInitializeParameter` hook: stock compares against a module-level
@@ -97,6 +97,39 @@ The rest guards each dereference, fixes `SenderPlayerUId` casing (stock reads a 
 name that does not exist, so `!autohatch on/off` never worked), and traces hook entry so
 the last `[AutoHatch/guard]` line in `UE4SS.log` names whatever was running if it crashes
 again.
+
+### Who an auto-hatched Pal belongs to
+
+Palworld assigns no owner to an egg laid in a Breeding Farm. The mod invents one, and the
+author's FAQ explains how: it takes the owner of the Pal in the **first position** of the
+Breeding Farm, saves that player ID when the egg is laid, and delivers to it at hatch time.
+Every ownership failure we have seen follows from that one rule.
+
+- **Put a regular Pal owned by the intended recipient in slot 1.** A Global Palbox Pal there
+  is a documented known issue: the eggs simply do not auto-hatch.
+- **Keep Palbox space free.** On a full Palbox, the mod drops the Pal on the ground. The
+  author states outright that he cannot detect a full Palbox, so nothing warns you.
+- **Everyone's eggs landing on one player is an open upstream bug**, reported as "All Guild
+  Members eggs are hatching to me" and independently described as the first person to breed
+  after a server start collecting everyone's Pals. Our own logs show 35 hatches addressed to
+  a single UId, matching that pattern.
+
+Before concluding a Pal was destroyed, check the first breeder's Palbox and the ground around
+the incubators. Both are ordinary outcomes of the rule above.
+
+### The `sentBytes` latch
+
+Stock returns early from the hatch hook after the first hatch of a server's lifetime, so the
+blueprint receives one character archive per server start and none after.
+`SEND_BYTES_EVERY_HATCH` at the top of the file defaults to sending every hatch instead. The
+reason to suspect it: the misrouting bug above is also described as latching per server start,
+and this is the only per-hatch data the Lua sends. Because the blueprint half is compiled,
+this remains a correlation. Set the flag to `false` to restore stock behavior if per-hatch
+sends duplicate Pals.
+
+The hook now also logs the recipient the game passed in and the egg object it came from. The
+mod recorded neither, so misroutes previously had to be inferred from missing deliveries
+instead of spotted in a log line.
 
 Full analysis, test protocol and rollback:
 `~/Developer/AIDB/_global/personal/palworld-server/2026-08-22-autohatch-crash-investigation.md`

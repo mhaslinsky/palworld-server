@@ -48,6 +48,20 @@ local function guidToString(guid)
         guid.D & 0xffffffff)
 end
 
+-- Stock sends a hatched character's archive to the blueprint once per server lifetime and
+-- returns early thereafter. Flip to false to restore that behavior if per-hatch sends duplicate Pals.
+local SEND_BYTES_EVERY_HATCH = true
+local hatchCount = 0
+
+-- The recipient arrives as an FGuid on some paths and a plain ID on others. Because this only
+-- feeds a log line, a wrong guess must degrade to text rather than throw.
+local function describeId(value)
+    if value == nil then return "nil" end
+    local ok, text = pcall(guidToString, value)
+    if ok and text ~= nil then return text end
+    return tostring(value)
+end
+
 local function loadJson(file)
     if file ~= nil then
         local json_data = decodeJSONFromFile(file)
@@ -159,15 +173,24 @@ local function RegisterHooks()
     end))
 
     RegisterHook("/Script/Pal.PalMapObjectHatchingEggModelBase:ObtainHatchedCharacter_ServerInternal", guarded("hatch", function(self, playerId, archive)
-        trace("hatch:enter")
-        if sentBytes then return end
+        hatchCount = hatchCount + 1
+        trace("hatch:enter #" .. tostring(hatchCount))
+
+        -- The game names the recipient right here, and the mod records it nowhere.
+        -- A misroute can only be inferred from a Pal that failed to arrive.
+        local ok, rawRecipient = pcall(function() return playerId:get() end)
+        trace("hatch:recipient " .. (ok and describeId(rawRecipient) or "unreadable"))
+        local egg = self:get()
+        if alive(egg) then trace("hatch:egg " .. egg:GetFullName()) end
+
+        if sentBytes and not SEND_BYTES_EVERY_HATCH then trace("hatch:bytes already sent") return end
         if not alive(_ModActor) then trace("hatch:no ModActor") return end
         local ar = archive:get()
         if ar == nil then trace("hatch:no archive") return end
         local bytes = ar.Bytes
         if bytes == nil then trace("hatch:no bytes") return end
-        for i = 1, #bytes do
-            _ModActor:GetBytes(bytes[i])
+        for byteIndex = 1, #bytes do
+            _ModActor:GetBytes(bytes[byteIndex])
         end
         sentBytes = true
         trace("hatch:sent " .. tostring(#bytes) .. " bytes")
