@@ -162,6 +162,40 @@ hook and read as the blueprint's behaviour. That produced two separate false cle
 `GetLoggedInPlayerUId`. Tagged, the truth is stark: the blueprint never calls that function
 during a hatch at all. Every `bp:` line now carries `src=probe` or `src=BLUEPRINT`.
 
+### Replacing this mod with pure Lua: what is proven
+
+The blueprint's routing cannot be intercepted, so the practical path is to stop using it.
+Everything Auto Hatch does has a reflected equivalent, and the collection itself,
+`ObtainHatchedCharacter_ServerInternal`, belongs to the GAME rather than the mod.
+
+Proven on the live server 2026-08-29, via the manual `!hatchtest` command:
+
+| Capability | Status |
+|---|---|
+| Enumerate every incubator in the world | **works**, `FindAllOf` returns 13, no join-time map |
+| Resolve each one's owner, INCLUDING offline players | **works**, 29,237 of 29,237 map objects yield a builder |
+| Group incubators by base camp | **works**, `GetBaseCampIdBelongTo()` |
+| Detect a ready egg | open. `IsWorkable` is NOT it |
+| Deliver to the named owner | open, needs one ready egg |
+
+**Ownership is a two-step join, and the first step is the one that catches people.** An egg
+is a CONCRETE model (`UPalMapObjectConcreteModelBase` -> `...HatchingEggModelBase` ->
+`...MultiHatchingEggModel`), while `BuildPlayerUId` is declared on `UPalMapObjectModel`, a
+different object. Reading `BuildPlayerUId` off the egg returns a `TrivialObject`, which is
+NOT a missing value: UE4SS answers any unknown name that way, so a wrong-object read looks
+exactly like an unreadable field. Join with `egg:GetModelInstanceId()` against the map
+object's `InstanceId`, then read `BuildPlayerUId` there.
+
+This resolves owners for players who have never connected this server lifetime, which is
+precisely what the mod's `PlayerEggIncubators` cannot do: that map is filled at player JOIN,
+so an offline owner has no entry and his eggs are invisible to the sweep. That is the
+mechanism behind "his eggs stop auto-hatching when he logs off".
+
+**`IsWorkable` returned false on all 13 incubators**, including ones that had been
+auto-hatching an hour earlier, so it reports whether the structure is operable rather than
+whether an egg is ready. Use `GetWorkProgress(SlotIndex)` or `GetPalEggRankInfo(SlotIndex,
+Out)` on `UPalMapObjectHatchingEggModelBase` instead.
+
 ### The `sentBytes` latch: tested, and it wedges the server
 
 Stock returns early from the hatch hook after the first hatch of a server's lifetime, so the
