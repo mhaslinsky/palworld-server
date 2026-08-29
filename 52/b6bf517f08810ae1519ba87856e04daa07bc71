@@ -1,0 +1,22 @@
+reference/AutoHatch-main.lua
+  s_2545e887ad9c5b::t_3519b249fce467 951-954,956-969,993-1000,1024-1027
+  s_2545e887ad9c5b::t_4ff1a153a5210e 970-992,1001-1007,1009-1023,1034-1036
+  s_2545e887ad9c5b::t_94ec398dddae42 1008,1028-1033,1037-1072
+  s_2545e887ad9c5b::t_29145c9822b8f7 914-950,955,1073-1134,1239-1241
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "52b6bf517f08810ae1519ba87856e04daa07bc71",
+  "prompts": {},
+  "sessions": {
+    "s_2545e887ad9c5b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c67a37fa-88b0-414f-8944-808d5d579ec3",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    }
+  }
+}
