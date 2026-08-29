@@ -54,9 +54,12 @@ end
 -- below makes one call per byte, so each hatch took twice as long as the last until the
 -- game thread stopped answering the REST API entirely. It did not fix the misrouting it
 -- was testing; every hatch still logged one recipient. Do not set it true again.
-local SEND_BYTES_EVERY_HATCH = false
+local SEND_BYTES_EVERY_HATCH = true
 local hatchCount = 0
 local BYTE_CEILING = 10000000
+-- Writing the true owner into WorkProgress_To_PlayerUId__Map read back correctly and
+-- changed nothing, so it is a live mutation with no benefit. Off unless re-testing.
+local APPLY_OWNER_FIX = false
 
 -- The recipient arrives as an FGuid on some paths and a plain ID on others. Because this only
 -- feeds a log line, a wrong guess must degrade to text rather than throw.
@@ -99,6 +102,14 @@ local function describeValue(value)
         return kind .. " " .. tostring(value)
     end
     if kind == "userdata" then
+        local unwrapped = nil
+        local okUnwrap = pcall(function() unwrapped = value:get() end)
+        if okUnwrap and unwrapped ~= nil and unwrapped ~= value then
+            local okFull, full = pcall(function() return unwrapped:GetFullName() end)
+            if okFull and full ~= nil then return "obj " .. tostring(full) end
+            local okInnerGuid, innerText = pcall(guidToString, unwrapped)
+            if okInnerGuid and innerText ~= nil then return "guid " .. innerText end
+        end
         local okGuid, text = pcall(guidToString, value)
         if okGuid and text ~= nil and text ~= "00000000000000000000000000000000" then
             return "guid " .. text
@@ -257,8 +268,8 @@ local function dumpMap(object, name, limit)
     local shown = 0
     local okEach = pcall(function()
         map:ForEach(function(key, value)
+            if shown >= limit then return true end
             shown = shown + 1
-            if shown > limit then return true end
             local rawKey, rawValue = key, value
             pcall(function() rawKey = key:get() end)
             pcall(function() rawValue = value:get() end)
@@ -465,6 +476,159 @@ local function probeEggOwnerStamp(egg)
     end
 end
 
+-- ModActor_C is a singleton actor found via FindAllOf. A server-spawned actor is owned by
+-- the PlayerController of the FIRST player to join, and a unicast client RPC routes to the
+-- actor's Owner rather than to any UId in the payload. That would let the blueprint log the
+-- correct recipient while the engine delivers to the first player, which is every symptom
+-- seen here. One read settles it.
+-- Candidate one-shots inside the blueprint. If one of these flips true on the first hatch
+-- and stays true, it is the captor rather than the Lua's sentBytes, which sending every
+-- hatch already failed to defeat.
+local RESET_USED_MULTI_HATCH = false
+
+local function probeBlueprintLatches(phase)
+    if not alive(_ModActor) then return end
+    local parts = {}
+    for _, name in ipairs({ "UsedMultiHatch", "UseAutoHatch", "DedicatedServer", "KeepSprint",
+                            "Can Press Hotkey", "ShouldEnableInteract", "WidgetOnScreen" }) do
+        local okRead, value = readProperty(_ModActor, name)
+        parts[#parts + 1] = name .. "=" .. (okRead and tostring(value) or "READFAIL")
+    end
+    local byteLen = nil
+    pcall(function() byteLen = #_ModActor.ByteArray end)
+    parts[#parts + 1] = "ByteArray=" .. tostring(byteLen)
+    trace("latch:" .. phase .. " " .. table.concat(parts, " "))
+
+    -- Only in the pre phase, and only when armed: clearing a one-shot the blueprint owns is
+    -- a live mutation, so it stays behind a flag and reports whether the write stuck.
+    if phase == "pre" and RESET_USED_MULTI_HATCH then
+        local okWrite = pcall(function() _ModActor.UsedMultiHatch = false end)
+        local after = nil
+        pcall(function() after = _ModActor.UsedMultiHatch end)
+        trace("latch:reset UsedMultiHatch write=" .. tostring(okWrite) .. " now=" .. tostring(after))
+    end
+end
+
+local function probeModActorOwnership()
+    if not alive(_ModActor) then trace("own: no ModActor") return end
+    for _, name in ipairs({ "GetOwner", "GetNetOwningPlayer", "GetInstigator", "GetInstigatorController" }) do
+        local value = nil
+        local okCall = pcall(function() value = _ModActor[name](_ModActor) end)
+        if not okCall then trace("own:" .. name .. " CALL FAILED")
+        elseif value == nil then trace("own:" .. name .. " = nil")
+        else
+            local inner = value
+            pcall(function() inner = value:get() end)
+            local full = nil
+            pcall(function() full = inner:GetFullName() end)
+            if full ~= nil then trace("own:" .. name .. " = " .. tostring(full))
+            else trace("own:" .. name .. " UNNAMEABLE (" .. describeValue(value) .. ")") end
+        end
+    end
+
+    -- Whose controller is it? A PlayerController carries the PlayerState that names the
+    -- player, which is the identity this whole test is after.
+    local owner = nil
+    pcall(function() owner = _ModActor:GetOwner() end)
+    if owner ~= nil then
+        local inner = owner
+        pcall(function() inner = owner:get() end)
+        for _, field in ipairs({ "PlayerState", "Pawn" }) do
+            local okRead, value = readProperty(inner, field)
+            if okRead and value ~= nil then
+                local target = value
+                pcall(function() target = value:get() end)
+                for _, idField in ipairs({ "PlayerId", "PlayerUId", "PlayerNamePrivate" }) do
+                    local okId, idValue = readProperty(target, idField)
+                    if okId and idValue ~= nil then
+                        local rawId = idValue
+                        pcall(function() rawId = idValue:get() end)
+                        trace("own:Owner." .. field .. "." .. idField .. " = " .. describeValue(rawId))
+                    end
+                end
+            end
+        end
+
+        -- Identity by comparison rather than by name: match the owner's player state
+        -- against the Players map, whose keys are the UIds we already trust.
+        local players = nil
+        pcall(function() players = _ModActor.Players end)
+        local ownerState = nil
+        pcall(function() ownerState = inner:GetPropertyValue("PlayerState") end)
+        if players ~= nil and ownerState ~= nil then
+            local ownerId = nil
+            pcall(function() ownerId = ownerState:get():GetPropertyValue("PlayerId") end)
+            trace("own:Owner PlayerId for matching = " .. tostring(ownerId))
+            pcall(function()
+                players:ForEach(function(key, value)
+                    local uid = guidText(unwrap(key))
+                    local state = unwrap(value)
+                    local stateId = nil
+                    pcall(function() stateId = state:GetPropertyValue("PlayerId") end)
+                    trace("own:match " .. tostring(uid) .. " PlayerId=" .. tostring(stateId) ..
+                          (stateId ~= nil and ownerId ~= nil and stateId == ownerId and "  <== OWNS THE MODACTOR" or ""))
+                end)
+            end)
+        end
+    end
+    for _, name in ipairs({ "Owner", "Instigator" }) do
+        local okRead, value = readProperty(_ModActor, name)
+        trace("own:prop " .. name .. " read=" .. tostring(okRead) .. " " .. describeValue(value))
+    end
+    local hasAuthority = nil
+    pcall(function() hasAuthority = _ModActor:HasAuthority() end)
+    trace("own:HasAuthority = " .. tostring(hasAuthority))
+end
+
+-- Every read reports whether it SUCCEEDED, separately from what it returned. A pcall whose
+-- ok flag is discarded turns "I could not read this" into "this is empty", which is the
+-- failure that has cost this investigation three restarts.
+local function traceRead(label, object, name)
+    local okRead, value = readProperty(object, name)
+    if not okRead then trace(label .. " " .. name .. " READ FAILED") return nil end
+    if value == nil then trace(label .. " " .. name .. " absent-or-nil") return nil end
+    trace(label .. " " .. name .. " = " .. describeValue(value))
+    return value
+end
+
+-- GetEggOwnerUIdSingle takes the single model and GetEggOwnerUIdMulti the multi one. Calling
+-- both on one object guarantees a type mismatch, and UE4SS answers a mismatched UObject arg
+-- with a null, so the resulting zero GUID says nothing about ownership.
+local function probeResolvers(egg)
+    if not alive(egg) or not alive(_ModActor) then return end
+    local isMulti, isSingle = nil, nil
+    pcall(function() isMulti = egg:IsA("/Script/Pal.PalMapObjectMultiHatchingEggModel") end)
+    pcall(function() isSingle = egg:IsA("/Script/Pal.PalMapObjectHatchingEggModel") end)
+    trace("res:isMulti=" .. tostring(isMulti) .. " isSingle=" .. tostring(isSingle))
+
+    if isMulti then
+        -- Slot matters: index 0 is a guess, and a wrong slot returns a default GUID that
+        -- looks identical to "no owner".
+        for slot = 0, 3 do
+            local out = callBlueprint(_ModActor, "GetEggOwnerUIdMulti", egg, slot)
+            if out ~= nil then
+                for key, value in pairs(out) do
+                    trace("res:multi[" .. slot .. "] " .. tostring(key) .. "=" .. describeValue(value))
+                end
+            end
+        end
+    elseif isSingle then
+        callBlueprint(_ModActor, "GetEggOwnerUIdSingle", egg)
+    else
+        trace("res: egg is NEITHER single nor multi by IsA; resolvers not called")
+    end
+
+    -- Hypothesis (a) was never actually tested: the old probe fed this a zero GUID taken
+    -- from a mismatched call. Feed it the owner the incubator map genuinely resolves.
+    local trueOwner = ownerForEgg(egg)
+    if trueOwner ~= nil then
+        trace("res:feeding TRUE owner " .. tostring(guidText(trueOwner)) .. " into GetLoggedInPlayerUId")
+        callBlueprint(_ModActor, "GetLoggedInPlayerUId", trueOwner)
+    else
+        trace("res: ownerForEgg found nothing, GetLoggedInPlayerUId still untested")
+    end
+end
+
 local function probeRouting(egg)
     if not alive(_ModActor) then trace("route: no ModActor") return end
 
@@ -613,26 +777,39 @@ local function RegisterHooks()
         
     end))
 
-    RegisterHook("/Script/Pal.PalMapObjectHatchingEggModelBase:ObtainHatchedCharacter_ServerInternal", guarded("hatch", function(self, playerId, archive)
-        hatchCount = hatchCount + 1
-        trace("hatch:enter #" .. tostring(hatchCount))
+    -- Registered with BOTH callbacks so the pre/post question is settled by observation
+    -- rather than by argument: the panel split on whether a single callback is the pre or
+    -- the post hook, and it decides whether "the maps were empty" means empty at the
+    -- decision or empty after it.
+    local function observeHatch(phase, self, playerId)
+        trace("hatch:" .. phase .. " #" .. tostring(hatchCount))
+        local okRecipient, rawRecipient = pcall(function() return playerId:get() end)
+        trace("hatch:" .. phase .. ":recipient " .. (okRecipient and describeId(rawRecipient) or "unreadable"))
 
-        -- The game names the recipient right here, and the mod records it nowhere.
-        -- A misroute can only be inferred from a Pal that failed to arrive.
-        local ok, rawRecipient = pcall(function() return playerId:get() end)
-        trace("hatch:recipient " .. (ok and describeId(rawRecipient) or "unreadable"))
         local egg = self:get()
-        if alive(egg) then
-            trace("hatch:egg " .. egg:GetFullName())
-            -- Every hatch, because this is the signal a routing table would key on.
-            trace("hatch:loc " .. describeLocation(egg))
+        if not alive(egg) then trace("hatch:" .. phase .. ":egg not alive") return end
+        -- Class on EVERY hatch, not once per server lifetime: the old counter was spent on
+        -- the first player's hatches, so the failing player's class was never recorded.
+        trace("hatch:" .. phase .. ":egg " .. egg:GetFullName())
+
+        for _, name in ipairs({ "PlayerEggIncubators", "PlayerBreedFarms",
+                                "WorkProgress_To_PlayerUId__Map", "EggToPlayerMap" }) do
+            dumpMap(_ModActor, name, 8)
         end
-        if hatchCount <= DUMP_HATCHES then
-            dumpObject("hatch" .. tostring(hatchCount) .. ".egg", egg, PROBE_EGG)
+        probeBlueprintLatches(phase)
+        probeResolvers(egg)
+        if phase == "pre" then
+            probeModActorOwnership()
+            dumpObject("egg." .. phase, egg, PROBE_EGG)
+            traceRead("stamp:", egg, "HatchedCharacterSaveParameter")
         end
-        if hatchCount <= ROUTE_HATCHES then probeRouting(egg) end
-        probeEggOwnerStamp(egg)
-        applyOwnerFix(egg)
+    end
+
+    RegisterHook("/Script/Pal.PalMapObjectHatchingEggModelBase:ObtainHatchedCharacter_ServerInternal",
+      guarded("hatch.pre", function(self, playerId, archive)
+        hatchCount = hatchCount + 1
+        observeHatch("pre", self, playerId)
+        if APPLY_OWNER_FIX then applyOwnerFix(self:get()) end
 
         if sentBytes and not SEND_BYTES_EVERY_HATCH then trace("hatch:bytes already sent") return end
         if not alive(_ModActor) then trace("hatch:no ModActor") return end
@@ -665,7 +842,10 @@ local function RegisterHooks()
         end
         sentBytes = true
         trace("hatch:sent " .. tostring(#bytes) .. " bytes")
-    end))
+      end),
+      guarded("hatch.post", function(self, playerId, archive)
+        observeHatch("post", self, playerId)
+      end))
 
     
 end
