@@ -74,7 +74,12 @@ end
 -- ModActor blueprint and the pak is Oodle-compressed, so it cannot be read statically
 -- without a decompressor. It is decompressed in memory here, so ask it directly.
 -- Remove once the recipient is identified.
-local DUMP_HATCHES = 1
+--
+-- There is deliberately no "dump only the first N hatches" budget here. That gate existed,
+-- keyed on a server-wide hatch counter, and it is what invalidated three findings: with two
+-- players hatching, the budget was spent on whoever hatched first, so the misrouting hatch
+-- ran with the probes already exhausted. Reads that never happened were recorded as reads
+-- that came back empty. Probes are cheap; a wrong negative costs a live test round.
 local RAN_GLOBAL_DUMPERS = false
 
 -- A cached recipient on the ModActor would live under one of these.
@@ -225,7 +230,6 @@ end
 -- chain: GetEggOwnerUId* resolves the true owner, GetLoggedInPlayerUId then maps it to a
 -- logged-in player, and AutoHatch delivers. If step two collapses every owner onto one
 -- player, that is the misrouting bug. This calls each step and logs what it returns.
-local ROUTE_HATCHES = 3
 
 -- UE4SS writes an 'Out' parameter into a table passed in that slot and returns nothing,
 -- so the answer is read back out of the table rather than from a return value. Proved by
@@ -487,11 +491,21 @@ end
 local RESET_USED_MULTI_HATCH = false
 
 -- GROUND TRUTH. Every probe so far reads what the mod INTENDS; none reads where the Pal
--- actually lands. UPalIndividualCharacterContainer::FindEmptySlot is reflected and runs on
--- the DESTINATION container when a Pal is inserted, so hooking it names the receiver
--- directly, without depending on the actor-owner read that has failed four times.
+-- actually lands. Two hooks bracket the decision.
 --
--- Gated to the hatch window: FindEmptySlot fires for ordinary container work too, and an
+-- ModActor_C:GivePlayerID is the blueprint's own routing call, taken from the live object
+-- dump's function list. It was never hooked because the branch was reading the mod's Lua
+-- half and this half is compiled.
+--
+-- PalCharacterContainerManager:TryGetContainer is the game-side chokepoint: a delivery has
+-- to resolve a destination FPalContainerId through it, so it names the receiving container
+-- even when the mod's own intent is already wrong.
+--
+-- FindEmptySlot was hooked here first and is a settled NEGATIVE: it registered and never
+-- fired inside a hatch window, so insertion does not go through a slot search. Recorded
+-- rather than deleted, because the next reader will otherwise reach for it again.
+--
+-- Both are gated to the hatch window; each fires for ordinary container work too, and an
 -- ungated hook would bury the one call that matters.
 local inHatchWindow = false
 local hatchWindowLabel = "none"
@@ -562,14 +576,43 @@ local function dumpPlayerContainers()
 end
 
 local function RegisterContainerHook()
-    local ok = pcall(function()
-        RegisterHook("/Script/Pal.PalIndividualCharacterContainer:FindEmptySlot",
-          guarded("container.pre", function(self)
+    -- A registration that throws and a hook that never fires look identical in the log, so
+    -- each registration reports its own result before any hatch is attempted.
+    local okContainer = pcall(function()
+        RegisterHook("/Script/Pal.PalCharacterContainerManager:TryGetContainer",
+          guarded("container.pre", function(self, containerId, outContainer)
             if not inHatchWindow then return end
-            trace("cont:FindEmptySlot during " .. hatchWindowLabel .. " -> " .. describeContainer(self:get()))
+            local idText = "unread"
+            local okId = pcall(function() idText = describeValue(containerId:get()) end)
+            trace("cont:TryGetContainer during " .. hatchWindowLabel
+                  .. " id_ok=" .. tostring(okId) .. " id=" .. tostring(idText))
+          end,
+          function(self, containerId, outContainer)
+            if not inHatchWindow then return end
+            local resolved = nil
+            local okOut = pcall(function() resolved = outContainer:get() end)
+            trace("cont:TryGetContainer resolved out_ok=" .. tostring(okOut)
+                  .. " -> " .. (okOut and describeContainer(resolved) or "unreadable"))
           end))
     end)
-    trace("cont: FindEmptySlot hook registered=" .. tostring(ok))
+    trace("cont: TryGetContainer hook registered=" .. tostring(okContainer))
+
+    -- The blueprint half, by full object path rather than a /Script/ class path: this is a
+    -- Blueprint-generated UFunction, so it lives under /Game and has no native class name.
+    local okGive = pcall(function()
+        RegisterHook("/Game/Mods/AutoHatch/ModActor.ModActor_C:GivePlayerID",
+          guarded("give.pre", function(self, ...)
+            local args = table.pack(...)
+            local parts = {}
+            for index = 1, args.n do
+                local value = "unread"
+                local okArg = pcall(function() value = describeValue(unwrap(args[index])) end)
+                parts[#parts + 1] = index .. "=" .. tostring(value) .. "(ok=" .. tostring(okArg) .. ")"
+            end
+            trace("give:GivePlayerID during " .. hatchWindowLabel .. " args " .. table.concat(parts, " "))
+          end))
+    end)
+    trace("cont: GivePlayerID hook registered=" .. tostring(okGive))
 end
 
 local function probeBlueprintLatches(phase)

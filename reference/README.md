@@ -86,7 +86,8 @@ also derives the player state from the character's own controller rather than a
 module-level `playerState` that holds whichever state was created last server-wide; that
 dangling pointer was real, and is simply not what was crashing us.
 
-sha256 `464843fbdc93262053a6ccc701959e1047d6d3c8fd64e6a0a20e20dc232ecd1f`.
+sha256 `7c2efee4dcefdf50be7b68a683ebe25178846cfa7324762decd6d0caaddd5ad9`, verified
+on the live box and required verbatim by `scripts/deploy-autohatch.ps1 -ExpectedSha256`.
 
 Every change is a guard or a breadcrumb; no gameplay logic is altered. The substantive one
 is in the `OnCompleteInitializeParameter` hook: stock compares against a module-level
@@ -152,9 +153,14 @@ Why doubling: unproven, and the blueprint half is compiled, so it may stay that 
 shape fits the blueprint accumulating each archive into a buffer that is then handed back as
 the next hatch's archive. What is certain is the measurement above.
 
-The hook now also logs the recipient the game passed in and the egg object it came from. The
+The hook now also logs the player id the game passed in and the egg object it came from. The
 mod recorded neither, so misroutes previously had to be inferred from missing deliveries
 instead of spotted in a log line.
+
+That id is the blueprint's `RequestPlayerId`, which names who ASKED for the hatch, not who
+the Pal was granted to. The two are the same for a normal hatch and diverge for exactly the
+bug being chased, so reading it as the recipient hid the misroute in the one case that
+mattered. Keep it and the observed destination container as separate signals.
 
 Full analysis, test protocol and rollback:
 `~/Developer/AIDB/_global/personal/palworld-server/2026-08-22-autohatch-crash-investigation.md`
