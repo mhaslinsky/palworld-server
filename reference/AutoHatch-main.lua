@@ -613,6 +613,47 @@ local function RegisterContainerHook()
           end))
     end)
     trace("cont: GivePlayerID hook registered=" .. tostring(okGive))
+
+    -- The rest of the blueprint's hatch path, hooked rather than called. Every earlier
+    -- attempt INVOKED these with arguments chosen here, which is how GetLoggedInPlayerUId
+    -- came to be judged on a zero that a mismatched call had produced. Hooking reports what
+    -- the blueprint itself passes and what it hands back, on the real hatch.
+    --
+    -- All of them are observations. None mutates state, so they compose: one restart
+    -- answers every question at once instead of one question per restart. Interventions
+    -- still do not compose and still go one at a time, which is why APPLY_OWNER_FIX is off.
+    for _, name in ipairs({ "GetEggOwnerUIdSingle", "GetEggOwnerUIdMulti", "GetLoggedInPlayerUId",
+                            "FindBreedFarmBelongTo", "AutoPickUpEgg", "EggCleanUp",
+                            "OnUpdateHatchedCharacterDelegate_Event", "PickUpAllEggs" }) do
+        local okHook = pcall(function()
+            RegisterHook("/Game/Mods/AutoHatch/ModActor.ModActor_C:" .. name,
+              guarded("bp." .. name, function(self, ...)
+                if not inHatchWindow then return end
+                local args = table.pack(...)
+                local parts = {}
+                for index = 1, args.n do
+                    local value = "unread"
+                    local okArg = pcall(function() value = describeValue(unwrap(args[index])) end)
+                    parts[#parts + 1] = index .. "=" .. tostring(value) .. "(ok=" .. tostring(okArg) .. ")"
+                end
+                trace("bp:" .. name .. " pre " .. hatchWindowLabel .. " " .. table.concat(parts, " "))
+              end,
+              function(self, ...)
+                if not inHatchWindow then return end
+                local args = table.pack(...)
+                local parts = {}
+                for index = 1, args.n do
+                    local value = "unread"
+                    local okArg = pcall(function() value = describeValue(unwrap(args[index])) end)
+                    parts[#parts + 1] = index .. "=" .. tostring(value) .. "(ok=" .. tostring(okArg) .. ")"
+                end
+                trace("bp:" .. name .. " post " .. hatchWindowLabel .. " " .. table.concat(parts, " "))
+              end))
+        end)
+        -- Registration is reported per function. A blueprint function that cannot be hooked
+        -- and one that is never called produce the same silence in the log otherwise.
+        trace("cont: bp hook " .. name .. " registered=" .. tostring(okHook))
+    end
 end
 
 local function probeBlueprintLatches(phase)

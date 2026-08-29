@@ -86,7 +86,7 @@ also derives the player state from the character's own controller rather than a
 module-level `playerState` that holds whichever state was created last server-wide; that
 dangling pointer was real, and is simply not what was crashing us.
 
-sha256 `7c2efee4dcefdf50be7b68a683ebe25178846cfa7324762decd6d0caaddd5ad9`, verified
+sha256 `28df5db6a26097cd9ceba9812a1052394c3f47037f53b32186b023fc9efa81bf`, verified
 on the live box and required verbatim by `scripts/deploy-autohatch.ps1 -ExpectedSha256`.
 
 Every change is a guard or a breadcrumb; no gameplay logic is altered. The substantive one
