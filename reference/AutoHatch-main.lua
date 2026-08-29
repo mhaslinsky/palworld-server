@@ -911,6 +911,227 @@ local function probeRouting(egg)
     end
 end
 
+-- GO / NO-GO for rewriting this mod in pure Lua.
+--
+-- Everything Auto Hatch does has a reflected equivalent: PlayerEggIncubators already
+-- attributes each incubator to its true owner, the egg model exposes its own readiness, and
+-- the collection itself is ObtainHatchedCharacter_ServerInternal, which belongs to the GAME
+-- (/Script/Pal.PalMapObjectHatchingEggModelBase), not to the mod. This branch has spent the
+-- night HOOKING that function. Nothing stops it CALLING it.
+--
+-- The single unknown is whether an explicit RequestPlayerId decides the destination. The
+-- night's evidence is contradictory: the mod passed 257 and the Pal reached 256, yet with
+-- 256 logged out the same incubators delivered to 257 correctly. Hooking cannot separate
+-- "the game ignores the parameter" from "the mod does not pass what the hook shows", because
+-- both produce identical hook output. Invoking it directly can, in one call.
+--
+-- Deliberately manual, and deliberately one egg. This MUTATES live player inventories, so it
+-- runs only when a player types the command, never on a timer.
+local function hatchTest(senderUId)
+    if not alive(_ModActor) then trace("test: no ModActor") return end
+
+    local incubators = nil
+    local okMap = pcall(function() incubators = _ModActor.PlayerEggIncubators end)
+    if not okMap or incubators == nil then trace("test: PlayerEggIncubators read_ok=" .. tostring(okMap)) return end
+
+    -- Target an incubator belonging to somebody OTHER than the sender. A Pal reaching that
+    -- other player is the whole result; one reaching the sender means the parameter is
+    -- ignored and no rewrite can fix this either. Both outcomes are decisive.
+    local targetModel, targetOwner = nil, nil
+    pcall(function()
+        incubators:ForEach(function(key, value)
+            local model = unwrap(key)
+            local owner = guidText(unwrap(value))
+            if owner ~= nil and owner ~= senderUId and targetModel == nil then
+                targetModel, targetOwner = model, owner
+                return true
+            end
+        end)
+    end)
+    -- PlayerEggIncubators is filled when a player JOINS, not from the world, so an offline
+    -- player's incubators are absent from it entirely. That is why his eggs stop
+    -- auto-hatching the moment he logs off, and it is why the mod can never serve an offline
+    -- owner. A rewrite must not inherit that: enumerate the world instead.
+    if targetModel == nil then
+        trace("test: mod map holds no incubator but the sender's. Enumerating the WORLD instead.")
+        local found = nil
+        local okFind = pcall(function() found = FindAllOf("PalMapObjectHatchingEggModelBase") end)
+        if not okFind or found == nil then
+            -- The base class may be abstract in this build, so the concrete multi model is
+            -- worth trying before concluding the world holds nothing.
+            okFind = pcall(function() found = FindAllOf("PalMapObjectMultiHatchingEggModel") end)
+        end
+        if not okFind or found == nil then
+            trace("test: world enumeration find_ok=" .. tostring(okFind) .. " result=nil")
+            return
+        end
+        trace("test: world holds " .. tostring(#found) .. " hatching-egg models")
+
+        -- One pass over the map object models builds InstanceId -> builder. Enumerating the
+        -- models rather than reading each egg's parent avoids a lookup per egg, and it makes
+        -- an unresolvable egg visible as a missing key instead of a silent nil.
+        local ownerByModelId = {}
+        local models = nil
+        local okModels = pcall(function() models = FindAllOf("PalMapObjectModel") end)
+        if not okModels or models == nil then
+            trace("test: FindAllOf PalMapObjectModel ok=" .. tostring(okModels) .. " result=nil")
+        else
+            local mapped = 0
+            for index = 1, #models do
+                local mapObject = models[index]
+                local instanceId, builder = nil, nil
+                pcall(function() instanceId = guidText(mapObject.InstanceId) end)
+                pcall(function() builder = guidText(mapObject.BuildPlayerUId) end)
+                if instanceId ~= nil and builder ~= nil then
+                    ownerByModelId[instanceId] = builder
+                    mapped = mapped + 1
+                end
+            end
+            trace("test: map objects=" .. tostring(#models) .. " with a readable builder=" .. tostring(mapped))
+        end
+
+        -- Dump each model's own identity and every property that could name an owner. The
+        -- rewrite needs ONE reliable owner field; this is what finds it, and reporting each
+        -- read's success separately keeps an unreadable field distinct from an absent one.
+        for index = 1, math.min(#found, 12) do
+            local model = found[index]
+            local full = "unnameable"
+            pcall(function() full = model:GetFullName() end)
+            trace("test: world[" .. index .. "] " .. tostring(full))
+            -- OWNERSHIP LIVES ONE LEVEL UP, and that is why every owner field read here as a
+            -- TrivialObject. The class chain is
+            --   UPalMapObjectConcreteModelBase -> ...HatchingEggModelBase -> ...MultiHatchingEggModel
+            -- so an egg is a CONCRETE model, while BuildPlayerUId is declared on
+            -- UPalMapObjectModel, a different object entirely. UE4SS answers any missing name
+            -- with a TrivialObject, so asking the egg for BuildPlayerUId looked like a
+            -- successful read of an unreadable value rather than the wrong object.
+            --
+            -- The join is GetModelInstanceId(), the egg's back-reference to its owning map
+            -- object, matched against that model's InstanceId. This is the same object the
+            -- mod keys PlayerEggIncubators on, so the owner read here is the owner it
+            -- resolves, and it is readable whether or not that player is connected.
+            local modelInstanceId = nil
+            local okBack = pcall(function() modelInstanceId = guidText(model:GetModelInstanceId()) end)
+            trace("test:   GetModelInstanceId ok=" .. tostring(okBack) .. " = " .. tostring(modelInstanceId))
+
+            local owner = modelInstanceId ~= nil and ownerByModelId[modelInstanceId] or nil
+            trace("test:   OWNER = " .. tostring(owner or "unresolved"))
+
+            local baseCamp = nil
+            local okCamp = pcall(function() baseCamp = guidText(model:GetBaseCampIdBelongTo()) end)
+            trace("test:   BaseCamp ok=" .. tostring(okCamp) .. " = " .. tostring(baseCamp))
+
+            local workable = nil
+            local okWorkable = pcall(function() workable = model:IsWorkable() end)
+            trace("test:   IsWorkable ok=" .. tostring(okWorkable) .. " value=" .. tostring(workable))
+        end
+        -- GO / NO-GO. Pick a workable incubator built by someone other than the sender and
+        -- call the game's obtain function with THAT owner's PlayerId. Where the Pal lands
+        -- decides whether a pure-Lua rewrite is possible at all.
+        local pick, pickOwner = nil, nil
+        for index = 1, #found do
+            local model = found[index]
+            local backId = nil
+            pcall(function() backId = guidText(model:GetModelInstanceId()) end)
+            local owner = backId ~= nil and ownerByModelId[backId] or nil
+            local workable = nil
+            pcall(function() workable = model:IsWorkable() end)
+            if owner ~= nil and owner ~= senderUId and workable == true and pick == nil then
+                pick, pickOwner = model, owner
+            end
+        end
+        if pick == nil then
+            trace("test: no WORKABLE incubator built by another player right now. "
+                  .. "Enumeration succeeded; the obtain call needs a ready egg in his hatchery.")
+            return
+        end
+
+        local ownerPlayerId = nil
+        for index = 1, count do
+            local entry = nil
+            if pcall(function() entry = array[index] end) and entry ~= nil then
+                local state = unwrap(entry)
+                local uid = nil
+                pcall(function() uid = guidText(state.PlayerUId) end)
+                if uid == pickOwner then
+                    local okId, playerId = readProperty(state, "PlayerId")
+                    if okId then ownerPlayerId = playerId end
+                end
+            end
+        end
+        trace("test: GO/NO-GO target owner=" .. tostring(pickOwner)
+              .. " PlayerId=" .. tostring(ownerPlayerId))
+        if ownerPlayerId == nil then
+            trace("test: that owner is OFFLINE, so he has no PlayerId. Calling anyway is the "
+                  .. "only way to learn whether the parameter must name a connected player.")
+        end
+        local okCall, err = pcall(function()
+            pick:ObtainHatchedCharacter_ServerInternal(ownerPlayerId or 0)
+        end)
+        trace("test: obtain call_ok=" .. tostring(okCall) .. (okCall and "" or (" err=" .. tostring(err))))
+        trace("test: DONE. Check whether the Pal reached " .. tostring(pickOwner) .. " or the sender.")
+        return
+    end
+    trace("test: target owner=" .. tostring(targetOwner) .. " model=" .. tostring(describeValue(targetModel)))
+
+    -- The int32 the game wants is the owner's PlayerId, read from the authoritative
+    -- PlayerArray rather than assumed. An owner who is offline has no PlayerState and no
+    -- PlayerId, which is itself the answer to whether offline delivery is possible.
+    local gameState = nil
+    pcall(function() gameState = _ModActor["Game State"] end)
+    if gameState == nil then pcall(function() gameState = _ModActor:GetGameStateFromLua() end) end
+    if gameState == nil then trace("test: GameState unreadable") return end
+
+    local okArray, array = readProperty(gameState, "PlayerArray")
+    if not okArray or array == nil then trace("test: PlayerArray read_ok=" .. tostring(okArray)) return end
+    local count = nil
+    local okCount = pcall(function() count = #array end)
+    if not okCount or count == nil then trace("test: PlayerArray count_ok=false") return end
+
+    local targetPlayerId = nil
+    for index = 1, count do
+        local entry = nil
+        if pcall(function() entry = array[index] end) and entry ~= nil then
+            local state = unwrap(entry)
+            local uid = nil
+            pcall(function() uid = guidText(state.PlayerUId) end)
+            if uid == targetOwner then
+                local okId, playerId = readProperty(state, "PlayerId")
+                if okId then targetPlayerId = playerId end
+            end
+        end
+    end
+    if targetPlayerId == nil then
+        trace("test: owner " .. tostring(targetOwner) .. " has no PlayerState, so no PlayerId. "
+              .. "Offline delivery cannot be addressed by this parameter.")
+        return
+    end
+    trace("test: resolved PlayerId=" .. tostring(targetPlayerId) .. " for owner " .. tostring(targetOwner))
+
+    -- The incubator map's key is the map object MODEL. The obtain function lives on the
+    -- hatching-egg model, so the target must actually be one before it is called; passing a
+    -- mismatched UObject gets a null argument and a meaningless result, which is how this
+    -- branch previously recorded a wrong-slot call as "the mod cannot resolve the owner".
+    local isEggModel = nil
+    pcall(function() isEggModel = targetModel:IsA("/Script/Pal.PalMapObjectHatchingEggModelBase") end)
+    trace("test: target IsA hatching-egg model = " .. tostring(isEggModel))
+    if isEggModel ~= true then
+        trace("test: STOPPING. The incubator key is not a hatching-egg model, so obtain cannot be called on it.")
+        return
+    end
+
+    local workable = nil
+    local okWorkable = pcall(function() workable = targetModel:IsWorkable() end)
+    trace("test: IsWorkable read_ok=" .. tostring(okWorkable) .. " value=" .. tostring(workable))
+
+    local okCall, err = pcall(function()
+        targetModel:ObtainHatchedCharacter_ServerInternal(targetPlayerId)
+    end)
+    trace("test: obtain call_ok=" .. tostring(okCall) .. (okCall and "" or (" err=" .. tostring(err))))
+    trace("test: DONE. Check whether the Pal reached " .. tostring(targetOwner)
+          .. " or the player who typed the command.")
+end
+
 local function loadJson(file)
     if file ~= nil then
         local json_data = decodeJSONFromFile(file)
@@ -1015,6 +1236,9 @@ local function RegisterHooks()
                     saveToJson({ senderUId, false })
                 elseif string.find(text, "!autohatch on") then
                     saveToJson({ senderUId, true })
+                elseif string.find(text, "!hatchtest") then
+                    trace("test: !hatchtest from " .. tostring(senderUId))
+                    hatchTest(senderUId)
                 end
             end
         end
