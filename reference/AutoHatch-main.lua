@@ -56,6 +56,7 @@ end
 -- was testing; every hatch still logged one recipient. Do not set it true again.
 local SEND_BYTES_EVERY_HATCH = false
 local hatchCount = 0
+local BYTE_CEILING = 10000000
 
 -- The recipient arrives as an FGuid on some paths and a plain ID on others. Because this only
 -- feeds a log line, a wrong guess must degrade to text rather than throw.
@@ -64,6 +65,442 @@ local function describeId(value)
     local ok, text = pcall(guidToString, value)
     if ok and text ~= nil then return text end
     return tostring(value)
+end
+
+-- INTROSPECTION, temporary (2026-08-28). The routing decision lives in the compiled
+-- ModActor blueprint and the pak is Oodle-compressed, so it cannot be read statically
+-- without a decompressor. It is decompressed in memory here, so ask it directly.
+-- Remove once the recipient is identified.
+local DUMP_HATCHES = 1
+local RAN_GLOBAL_DUMPERS = false
+
+-- A cached recipient on the ModActor would live under one of these.
+local PROBE_MODACTOR = {
+    "PlayerState", "PlayerStates", "PlayerStateMap", "PlayerStateArray",
+    "TargetPlayer", "TargetPlayerState", "TargetPlayerUId", "CurrentPlayer",
+    "Owner", "OwnerPlayerUId", "PlayerUId", "PlayerUID", "LastPlayer",
+    "PlayerManager", "ObjectManager", "GameState",
+    "EggArray", "PalEggArray", "Eggs", "Incubators", "BreedFarms", "Bytes",
+}
+
+-- The egg map object is the better routing signal: the mod prints a correct per-incubator
+-- PlayerUId at discovery, so the truth is carried somewhere on the object.
+local PROBE_EGG = {
+    "OwnerPlayerUId", "BuildPlayerUId", "BuilderPlayerUId", "CreatePlayerUId",
+    "PlayerUId", "OwnerPlayerUID", "BaseCampId", "OwnerBaseCampId", "BaseCampIdBelongTo",
+    "GroupId", "GuildId", "OwnerGroupId", "MapObjectId", "MapObjectConcreteModelId",
+    "WorkProgress", "PalEggArray", "Eggs",
+}
+
+local function describeValue(value)
+    local kind = type(value)
+    if value == nil then return "nil" end
+    if kind == "number" or kind == "boolean" or kind == "string" then
+        return kind .. " " .. tostring(value)
+    end
+    if kind == "userdata" then
+        local okGuid, text = pcall(guidToString, value)
+        if okGuid and text ~= nil and text ~= "00000000000000000000000000000000" then
+            return "guid " .. text
+        end
+        local okFull, full = pcall(function() return value:GetFullName() end)
+        if okFull and full ~= nil then
+            if okGuid and text ~= nil then return "guid " .. text .. " (" .. tostring(full) .. ")" end
+            return "obj " .. tostring(full)
+        end
+        if okGuid and text ~= nil then return "guid " .. text end
+        return "userdata " .. tostring(value)
+    end
+    if kind == "table" then
+        local okLen, len = pcall(function() return #value end)
+        return "table len=" .. (okLen and tostring(len) or "?")
+    end
+    return kind .. " " .. tostring(value)
+end
+
+local function readProperty(object, name)
+    local value = nil
+    local ok = pcall(function() value = object:GetPropertyValue(name) end)
+    if ok then return true, value end
+    ok = pcall(function() value = object[name] end)
+    if ok then return true, value end
+    return false, nil
+end
+
+-- Raw UE units, not in-game map coordinates. The two bases are far enough apart that
+-- clustering raw values separates them without needing the conversion.
+local function describeLocation(object)
+    local text = nil
+    pcall(function()
+        local loc = object:K2_GetActorLocation()
+        if loc ~= nil then text = string.format("%.0f,%.0f,%.0f", loc.X, loc.Y, loc.Z) end
+    end)
+    if text == nil then
+        pcall(function()
+            local loc = object.RootComponent.RelativeLocation
+            if loc ~= nil then text = string.format("%.0f,%.0f,%.0f", loc.X, loc.Y, loc.Z) end
+        end)
+    end
+    return text or "unknown"
+end
+
+-- ForEachProperty only walks properties declared on the struct itself, so inherited ones
+-- need the SuperStruct chain climbed by hand (UE4SS docs, UStruct).
+local function dumpObject(label, object, probeNames)
+    if not alive(object) then trace("dump:" .. label .. " object not alive") return end
+
+    local okClass, cls = pcall(function() return object:GetClass() end)
+    if not okClass or cls == nil then trace("dump:" .. label .. " GetClass FAILED") return end
+    local okName, clsName = pcall(function() return cls:GetFullName() end)
+    trace("dump:" .. label .. " class " .. (okName and tostring(clsName) or "?"))
+
+    local total = 0
+    local depth = 0
+    local current = cls
+    while current ~= nil and depth < 8 and total < 400 do
+        local okDepthName, depthName = pcall(function() return current:GetFullName() end)
+        trace("dump:" .. label .. " -- depth " .. depth .. " " .. (okDepthName and tostring(depthName) or "?"))
+        local okEach = pcall(function()
+            current:ForEachProperty(function(prop)
+                total = total + 1
+                if total > 400 then return true end
+                local name = nil
+                pcall(function() name = prop:GetFName():ToString() end)
+                local ptype = "?"
+                pcall(function() ptype = prop:GetClass():GetFName():ToString() end)
+                local line = "dump:" .. label .. " prop " .. tostring(name) .. " : " .. tostring(ptype)
+                if name ~= nil then
+                    local okValue, value = readProperty(object, name)
+                    line = line .. " = " .. (okValue and describeValue(value) or "<unreadable>")
+                end
+                trace(line)
+            end)
+        end)
+        if not okEach then trace("dump:" .. label .. " ForEachProperty UNAVAILABLE at depth " .. depth) break end
+        local okSuper, super = pcall(function() return current:GetSuperStruct() end)
+        if not okSuper or super == nil or not alive(super) then break end
+        current = super
+        depth = depth + 1
+    end
+    trace("dump:" .. label .. " property total " .. tostring(total) .. " over " .. tostring(depth + 1) .. " level(s)")
+
+    for _, name in ipairs(probeNames) do
+        local okValue, value = readProperty(object, name)
+        if okValue and value ~= nil then
+            trace("dump:" .. label .. " probe " .. name .. " = " .. describeValue(value))
+        end
+    end
+end
+
+-- UE4SS's own dumpers write full reflection data to files. They exist from 4.0.0 in the
+-- docs and this build is a 3.0.1 fork, so each is checked for rather than assumed.
+local function runGlobalDumpers()
+    if RAN_GLOBAL_DUMPERS then return end
+    RAN_GLOBAL_DUMPERS = true
+    local names = { "GenerateSDK", "DumpAllObjects", "GenerateLuaTypes", "DumpJMAP", "DumpUSMAP" }
+    for _, name in ipairs(names) do
+        local fn = _G[name]
+        if type(fn) == "function" then
+            trace("dump:global " .. name .. " calling")
+            local ok, err = pcall(fn)
+            trace("dump:global " .. name .. (ok and " OK" or (" FAILED " .. tostring(err))))
+        else
+            trace("dump:global " .. name .. " ABSENT")
+        end
+    end
+end
+
+-- ROUTING PROBE, temporary (2026-08-28). The CXX dump gives the blueprint's resolution
+-- chain: GetEggOwnerUId* resolves the true owner, GetLoggedInPlayerUId then maps it to a
+-- logged-in player, and AutoHatch delivers. If step two collapses every owner onto one
+-- player, that is the misrouting bug. This calls each step and logs what it returns.
+local ROUTE_HATCHES = 3
+
+-- UE4SS writes an 'Out' parameter into a table passed in that slot and returns nothing,
+-- so the answer is read back out of the table rather than from a return value. Proved by
+-- the 2026-08-28 probe: passing nil says "no table was on the stack", passing a table
+-- succeeds silently.
+local function callBlueprint(object, name, ...)
+    local fn = nil
+    local okLookup = pcall(function() fn = object[name] end)
+    if not okLookup or fn == nil then trace("route:" .. name .. " ABSENT") return nil end
+
+    local out = {}
+    local args = table.pack(...)
+    args[args.n + 1] = out
+    args.n = args.n + 1
+
+    local okCall, err = pcall(function() object[name](object, table.unpack(args, 1, args.n)) end)
+    if not okCall then trace("route:" .. name .. " FAILED: " .. tostring(err)) return nil end
+
+    local found = false
+    for key, value in pairs(out) do
+        found = true
+        trace("route:" .. name .. " out." .. tostring(key) .. " = " .. describeValue(value))
+    end
+    if not found then trace("route:" .. name .. " out table EMPTY") end
+    return out
+end
+
+-- TMap access from Lua is not documented for this build, so each shape is attempted and
+-- the one that works is reported rather than assumed.
+local function dumpMap(object, name, limit)
+    local map = nil
+    local okGet = pcall(function() map = object[name] end)
+    if not okGet or map == nil then trace("map:" .. name .. " UNREADABLE") return end
+
+    local num = nil
+    pcall(function() num = map:Num() end)
+    if num == nil then pcall(function() num = #map end) end
+    trace("map:" .. name .. " num=" .. tostring(num))
+
+    local shown = 0
+    local okEach = pcall(function()
+        map:ForEach(function(key, value)
+            shown = shown + 1
+            if shown > limit then return true end
+            local rawKey, rawValue = key, value
+            pcall(function() rawKey = key:get() end)
+            pcall(function() rawValue = value:get() end)
+            trace("map:" .. name .. " " .. describeValue(rawKey) .. " => " .. describeValue(rawValue))
+        end)
+    end)
+    if not okEach then trace("map:" .. name .. " ForEach UNAVAILABLE") end
+end
+
+-- OWNERSHIP FIX (2026-08-28). The mod resolves an egg's owner through
+-- WorkProgress_To_PlayerUId__Map, EggToPlayerMap and PlayerBreedFarms, and all three are
+-- empty at hatch time, so GetEggOwnerUId* returns a null GUID and delivery falls back to
+-- whichever player registered first since server start. That is the "everyone's eggs
+-- hatch to me" bug.
+--
+-- The correct owner IS known: PlayerEggIncubators maps each incubator's PalMapObjectModel
+-- to its owner, and it is populated and accurate. The hatching object is the CONCRETE
+-- model, whose ModelInstanceId is that PalMapObjectModel's InstanceId. That is the join.
+--
+-- This populates the map the blueprint already reads rather than calling AutoHatch
+-- directly, so there is no second delivery path to race and no duplicate Pal.
+local function guidText(value)
+    local ok, text = pcall(guidToString, value)
+    if ok then return text end
+    return nil
+end
+
+local function unwrap(value)
+    local inner = value
+    pcall(function() inner = value:get() end)
+    return inner
+end
+
+local function ownerForEgg(egg)
+    local modelId = nil
+    pcall(function() modelId = guidText(egg.ModelInstanceId) end)
+    if modelId == nil then trace("fix: egg has no ModelInstanceId") return nil end
+
+    local incubators = nil
+    pcall(function() incubators = _ModActor.PlayerEggIncubators end)
+    if incubators == nil then trace("fix: PlayerEggIncubators unreadable") return nil end
+
+    local owner = nil
+    pcall(function()
+        incubators:ForEach(function(key, value)
+            local model = unwrap(key)
+            local instanceId = nil
+            pcall(function() instanceId = guidText(model.InstanceId) end)
+            if instanceId ~= nil and instanceId == modelId then
+                owner = unwrap(value)
+                return true
+            end
+        end)
+    end)
+    if owner == nil then trace("fix: no incubator matched model " .. tostring(modelId)) end
+    return owner
+end
+
+local function workProgressesForEgg(egg)
+    local found = {}
+    local incubatorMap = nil
+    pcall(function() incubatorMap = _ModActor.WorkProgress_To_Incubator_Map end)
+    if incubatorMap == nil then return found end
+    local eggName = nil
+    pcall(function() eggName = egg:GetFullName() end)
+    if eggName == nil then return found end
+    pcall(function()
+        incubatorMap:ForEach(function(key, value)
+            local incubator = unwrap(value)
+            local name = nil
+            pcall(function() name = incubator:GetFullName() end)
+            if name == eggName then found[#found + 1] = unwrap(key) end
+        end)
+    end)
+    return found
+end
+
+local function applyOwnerFix(egg)
+    if not alive(_ModActor) or not alive(egg) then return end
+
+    local owner = ownerForEgg(egg)
+    if owner == nil then return end
+    local ownerId = guidText(owner)
+    trace("fix: resolved owner " .. tostring(ownerId))
+
+    local ownerMap = nil
+    pcall(function() ownerMap = _ModActor.WorkProgress_To_PlayerUId__Map end)
+    if ownerMap == nil then trace("fix: WorkProgress_To_PlayerUId__Map unreadable") return end
+
+    local targets = workProgressesForEgg(egg)
+    if #targets == 0 then trace("fix: no WorkProgress maps to this egg") return end
+
+    -- Add() is the documented TMap mutator; index assignment is the fallback if this
+    -- UE4SS fork does not expose it. Whichever lands is reported, never assumed.
+    local written = 0
+    for _, workProgress in ipairs(targets) do
+        local okAdd = pcall(function() ownerMap:Add(workProgress, owner) end)
+        if not okAdd then okAdd = pcall(function() ownerMap[workProgress] = owner end) end
+        if okAdd then written = written + 1 end
+    end
+
+    local num = nil
+    pcall(function() num = ownerMap:Num() end)
+    if num == nil then pcall(function() num = #ownerMap end) end
+
+    -- Read the map back and count what is actually in it, and whether OUR owner is there.
+    local counted = 0
+    local mine = 0
+    local ownerId = guidText(owner)
+    pcall(function()
+        ownerMap:ForEach(function(key, value)
+            counted = counted + 1
+            if guidText(unwrap(value)) == ownerId then mine = mine + 1 end
+        end)
+    end)
+    trace("fix: wrote " .. tostring(written) .. "/" .. tostring(#targets) ..
+          ", map num=" .. tostring(num) .. " readback=" .. tostring(counted) ..
+          " matching=" .. tostring(mine))
+end
+
+-- Every UId in the chain is correct and the Pal still lands on the wrong player, so the
+-- suspect is now the integer index the blueprint derives from that UId via GivePlayerID.
+-- The authoritative index lives on each APalPlayerState. Read it per player so the mod's
+-- claimed "Player ID: 256/257" can be checked against the game's own numbering rather
+-- than assumed to match it.
+local function dumpPlayerStateIds()
+    local players = nil
+    pcall(function() players = _ModActor.Players end)
+    if players == nil then trace("pid: Players unreadable") return end
+
+    pcall(function()
+        players:ForEach(function(key, value)
+            local uid = guidText(unwrap(key))
+            local state = unwrap(value)
+            if not alive(state) then trace("pid: " .. tostring(uid) .. " state not alive") return end
+
+            local reported = {}
+            local okClass, cls = pcall(function() return state:GetClass() end)
+            if okClass and cls ~= nil then
+                local current = cls
+                local depth = 0
+                while current ~= nil and depth < 8 do
+                    pcall(function()
+                        current:ForEachProperty(function(prop)
+                            local name = nil
+                            pcall(function() name = prop:GetFName():ToString() end)
+                            if name == nil then return end
+                            -- Only integer-ish fields whose name looks like an identifier:
+                            -- dereferencing every property on a live player state is how
+                            -- this codebase has crashed before.
+                            if string.find(name, "Id") or string.find(name, "ID")
+                               or string.find(name, "Index") or string.find(name, "Number") then
+                                local ptype = "?"
+                                pcall(function() ptype = prop:GetClass():GetFName():ToString() end)
+                                if string.find(ptype, "Int") or string.find(ptype, "Byte") then
+                                    local value = nil
+                                    pcall(function() value = state:GetPropertyValue(name) end)
+                                    if type(value) == "number" then
+                                        reported[#reported + 1] = name .. "=" .. tostring(value)
+                                    end
+                                end
+                            end
+                        end)
+                    end)
+                    local okSuper, super = pcall(function() return current:GetSuperStruct() end)
+                    if not okSuper or super == nil or not alive(super) then break end
+                    current = super
+                    depth = depth + 1
+                end
+            end
+            trace("pid: " .. tostring(uid) .. " -> " .. (#reported > 0 and table.concat(reported, " ") or "no integer id fields found"))
+        end)
+    end)
+end
+
+-- The native header names the hook's parameter RequestPlayerId, which is who ASKED for the
+-- hatch, not who owns the result. The Pal's own owner lives on the egg, in
+-- HatchedCharacterSaveParameter.OwnerPlayerUId, and a Pal inherits it. If an egg laid in a
+-- guild breed farm is stamped with the wrong member at creation, every UId downstream can
+-- be correct and the Pal still lands on that member. This reads the stamp.
+local function probeEggOwnerStamp(egg)
+    if not alive(egg) then return end
+
+    local param = nil
+    local okParam = pcall(function() param = egg.HatchedCharacterSaveParameter end)
+    if not okParam or param == nil then trace("stamp: HatchedCharacterSaveParameter UNREADABLE") return end
+
+    local owner = nil
+    pcall(function() owner = guidText(param.OwnerPlayerUId) end)
+    trace("stamp: OwnerPlayerUId = " .. tostring(owner))
+
+    local oldCount = nil
+    pcall(function() oldCount = #param.OldOwnerPlayerUIds end)
+    trace("stamp: OldOwnerPlayerUIds count = " .. tostring(oldCount))
+
+    -- Named fields worth seeing if the direct read above came back nil: the struct layout
+    -- differs between the single and multi hatching classes in the native header.
+    for _, name in ipairs({ "CharacterID", "Level", "OwnerPlayerUId" }) do
+        local value = nil
+        local okValue = pcall(function() value = param[name] end)
+        if okValue and value ~= nil then
+            trace("stamp: param." .. name .. " = " .. describeValue(value))
+        end
+    end
+end
+
+local function probeRouting(egg)
+    if not alive(_ModActor) then trace("route: no ModActor") return end
+
+    for _, name in ipairs({ "PlayerEggIncubators", "PlayerBreedFarms",
+                            "WorkProgress_To_PlayerUId__Map", "Players", "EggToPlayerMap",
+                            "PlayerSettings", "WorkBase_To_PlayerUId_Map",
+                            "WorkProgress_To_Incubator_Map" }) do
+        dumpMap(_ModActor, name, 12)
+    end
+    local useAuto = nil
+    pcall(function() useAuto = _ModActor.UseAutoHatch end)
+    trace("route:UseAutoHatch = " .. tostring(useAuto))
+    dumpPlayerStateIds()
+
+    local byteLen = nil
+    pcall(function() byteLen = #_ModActor.ByteArray end)
+    trace("route:ByteArray len=" .. tostring(byteLen))
+
+    if not alive(egg) then trace("route: egg not alive") return end
+    local single = callBlueprint(_ModActor, "GetEggOwnerUIdSingle", egg)
+    local multi = callBlueprint(_ModActor, "GetEggOwnerUIdMulti", egg, 0)
+
+    -- Feed whatever a resolver produced back through the suspect step. A true owner in and
+    -- a different UId out is the bug, caught in one line.
+    local resolved = nil
+    for _, out in ipairs({ single or {}, multi or {} }) do
+        for _, value in pairs(out) do
+            if resolved == nil then resolved = value end
+        end
+    end
+    if resolved ~= nil then
+        trace("route:resolved owner = " .. describeValue(resolved))
+        callBlueprint(_ModActor, "GetLoggedInPlayerUId", resolved)
+    else
+        trace("route: no owner resolved, skipping GetLoggedInPlayerUId")
+    end
 end
 
 local function loadJson(file)
@@ -185,7 +622,17 @@ local function RegisterHooks()
         local ok, rawRecipient = pcall(function() return playerId:get() end)
         trace("hatch:recipient " .. (ok and describeId(rawRecipient) or "unreadable"))
         local egg = self:get()
-        if alive(egg) then trace("hatch:egg " .. egg:GetFullName()) end
+        if alive(egg) then
+            trace("hatch:egg " .. egg:GetFullName())
+            -- Every hatch, because this is the signal a routing table would key on.
+            trace("hatch:loc " .. describeLocation(egg))
+        end
+        if hatchCount <= DUMP_HATCHES then
+            dumpObject("hatch" .. tostring(hatchCount) .. ".egg", egg, PROBE_EGG)
+        end
+        if hatchCount <= ROUTE_HATCHES then probeRouting(egg) end
+        probeEggOwnerStamp(egg)
+        applyOwnerFix(egg)
 
         if sentBytes and not SEND_BYTES_EVERY_HATCH then trace("hatch:bytes already sent") return end
         if not alive(_ModActor) then trace("hatch:no ModActor") return end
@@ -193,6 +640,26 @@ local function RegisterHooks()
         if ar == nil then trace("hatch:no archive") return end
         local bytes = ar.Bytes
         if bytes == nil then trace("hatch:no bytes") return end
+
+        -- Nothing in the mod empties ByteArray between hatches, which is why per-hatch
+        -- sends compounded last time. Clear it first, and report which method worked so a
+        -- silent no-op cannot masquerade as a clear.
+        local beforeLen = nil
+        pcall(function() beforeLen = #_ModActor.ByteArray end)
+        local cleared = pcall(function() _ModActor.ByteArray:Empty() end)
+        if not cleared then cleared = pcall(function() _ModActor.ByteArray:Clear() end) end
+        if not cleared then cleared = pcall(function() _ModActor.ByteArray = {} end) end
+        local afterLen = nil
+        pcall(function() afterLen = #_ModActor.ByteArray end)
+        trace("hatch:bytearray " .. tostring(beforeLen) .. " -> " .. tostring(afterLen) ..
+              " cleared=" .. tostring(cleared))
+
+        if #bytes > BYTE_CEILING then
+            trace("hatch:REFUSING to send " .. tostring(#bytes) .. " bytes, over ceiling " ..
+                  tostring(BYTE_CEILING) .. ". The accumulator is growing again.")
+            return
+        end
+
         for byteIndex = 1, #bytes do
             _ModActor:GetBytes(bytes[byteIndex])
         end
