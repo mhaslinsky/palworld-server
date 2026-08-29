@@ -56,11 +56,23 @@ local function trace(where)
     print("[AutoHatchFix] " .. where .. "\n")
 end
 
+-- Propagating the wrapped function's return value is load-bearing, not tidiness. LoopAsync
+-- STOPS when its callback returns true and continues on false, so a wrapper that swallowed the
+-- return handed it nil instead, leaving the poll loop's continuation resting on however UE4SS
+-- happens to coerce nil at that boundary. That is unverified, and if it coerces the wrong way
+-- the sweep runs exactly once and then stops with no error anywhere.
+--
+-- On a caught error the loop must keep going, so return false explicitly rather than nil: a
+-- transient failure in one sweep should not end the mod for the rest of the server's life.
 local function guarded(name, body)
     return function(...)
         local args = table.pack(...)
-        local ok, err = pcall(function() return body(table.unpack(args, 1, args.n)) end)
-        if not ok then trace(name .. " failed: " .. tostring(err)) end
+        local ok, result = pcall(function() return body(table.unpack(args, 1, args.n)) end)
+        if not ok then
+            trace(name .. " failed: " .. tostring(result))
+            return false
+        end
+        return result
     end
 end
 
