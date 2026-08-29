@@ -22,8 +22,13 @@
 -- that calls into it — repoint there if the Blueprint's path or signature changes.
 
 local MOD_ACTOR_BLUEPRINT_PATH = "/Game/Mods/AutoHatchFix/ModActor.ModActor_C"
--- ^ REPOINT HERE once the companion Blueprint's real package path is known. Nothing else
---   in this file needs to change to retarget it.
+-- ^ Confirmed against the built asset: generated_class().get_path_name() reports exactly this.
+
+-- The Blueprint function's name contains a SPACE. UE named the UFunction from the display form
+-- of the graph, so the compiled class exposes "Do Hatch" and NOT "DoHatch". Probing the class
+-- default object is what settled it: "DoHatch" answers "Failed to find function", "Do Hatch"
+-- answers with a missing-argument error, and only the second shape proves presence.
+local BLUEPRINT_HATCH_FN = "Do Hatch"
 
 local SETTINGS_FILE = ".\\Mods\\AutoHatchFix\\Scripts\\PlayerSettings.txt"
 -- ^ Lua relative paths resolve against the server process's working directory (C:\PalServer),
@@ -261,10 +266,21 @@ local function callDoHatch(modActor, eggModel, ownerPlayerId)
         trace("hatch: no ModActor, cannot deliver")
         return false
     end
-    local ok, err = pcall(function() modActor:DoHatch(eggModel, ownerPlayerId) end)
+    -- The function's real name carries a SPACE: "Do Hatch", not "DoHatch". UE's function graph
+    -- named it from the display form, and it is what the compiled class exposes. Verified by
+    -- probing the class default object: calling "DoHatch" gets "Failed to find function", while
+    -- "Do Hatch" gets a wrong-argument-count error, which is the shape that proves it exists.
+    --
+    -- Colon-call syntax cannot express a name with a space, so index it and pass self manually.
+    local ok, err = pcall(function()
+        modActor[BLUEPRINT_HATCH_FN](modActor, eggModel, ownerPlayerId)
+    end)
     if not ok then
-        trace("hatch: DoHatch call_ok=false err=" .. tostring(err))
+        trace("hatch: " .. BLUEPRINT_HATCH_FN .. " call_ok=false err=" .. tostring(err))
     end
+    -- ok only means the call did not throw. Whether anything HATCHED is decided by the slot
+    -- disappearing on the next sweep, which is why this returns the call result and the caller
+    -- keys its cooldown on the slot rather than on this boolean.
     return ok
 end
 
