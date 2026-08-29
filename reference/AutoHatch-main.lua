@@ -1021,55 +1021,202 @@ local function hatchTest(senderUId)
             local okCamp = pcall(function() baseCamp = guidText(model:GetBaseCampIdBelongTo()) end)
             trace("test:   BaseCamp ok=" .. tostring(okCamp) .. " = " .. tostring(baseCamp))
 
+            -- IsWorkable reports whether the STRUCTURE is operable, not whether an egg is
+            -- ready: it read false on all 13 incubators including ones seen auto-hatching an
+            -- hour earlier. Readiness has to come from the slots, so probe every candidate
+            -- the class actually declares and let the log say which one tracks reality.
             local workable = nil
             local okWorkable = pcall(function() workable = model:IsWorkable() end)
             trace("test:   IsWorkable ok=" .. tostring(okWorkable) .. " value=" .. tostring(workable))
+
+            local slotNum = nil
+            local okSlots = pcall(function() slotNum = model:GetItemSlotNum() end)
+            trace("test:   GetItemSlotNum ok=" .. tostring(okSlots) .. " value=" .. tostring(slotNum))
+
+            if okSlots and type(slotNum) == "number" and slotNum > 0 then
+                for slot = 0, math.min(slotNum, 6) - 1 do
+                    local parts = {}
+
+                    -- A work progress object is the game's own unit of "this job exists and
+                    -- has advanced this far", so a non-nil one plus its completion is the
+                    -- most likely readiness signal.
+                    -- An occupied slot returns a live UPalWorkProgress and an empty one
+                    -- returns nil, so presence alone answers "is there an egg here". Whether
+                    -- it is READY is IsCompleted(), which the class exposes directly, so no
+                    -- threshold arithmetic against RequiredWorkAmount is needed.
+                    --
+                    -- GetPalEggRankInfo is deliberately gone from this probe: it filled three
+                    -- out-fields on every slot of every incubator, occupied or not, so it
+                    -- discriminated nothing.
+                    local progress = nil
+                    local okProgress = pcall(function() progress = model:GetWorkProgress(slot) end)
+                    if okProgress and progress ~= nil and alive(progress) then
+                        parts[#parts + 1] = "progress=present"
+                        local completed = nil
+                        local okDone = pcall(function() completed = progress:IsCompleted() end)
+                        parts[#parts + 1] = "COMPLETED=" .. (okDone and tostring(completed) or "READ FAILED")
+                        for _, field in ipairs({ "CurrentWorkAmount", "RequiredWorkAmount", "bInProgress" }) do
+                            local okField, value = readProperty(progress, field)
+                            if okField and value ~= nil then
+                                parts[#parts + 1] = field .. "=" .. tostring(value)
+                            end
+                        end
+                        local rate = nil
+                        if pcall(function() rate = progress:GetProgressRate() end) and rate ~= nil then
+                            parts[#parts + 1] = "rate=" .. tostring(rate)
+                        end
+                    else
+                        parts[#parts + 1] = "progress=" .. (okProgress and "nil (empty slot)" or "READ FAILED")
+                    end
+
+                    trace("test:   slot[" .. slot .. "] " .. table.concat(parts, " "))
+                end
+            end
         end
         -- GO / NO-GO. Pick a workable incubator built by someone other than the sender and
         -- call the game's obtain function with THAT owner's PlayerId. Where the Pal lands
         -- decides whether a pure-Lua rewrite is possible at all.
-        local pick, pickOwner = nil, nil
+        -- Select on a COMPLETED egg owned by someone else. IsWorkable was the earlier
+        -- criterion and it read false on all 13 incubators including ones actively hatching,
+        -- so it selected nothing and would have kept selecting nothing.
+        local pick, pickOwner, pickSlot = nil, nil, nil
         for index = 1, #found do
             local model = found[index]
             local backId = nil
             pcall(function() backId = guidText(model:GetModelInstanceId()) end)
             local owner = backId ~= nil and ownerByModelId[backId] or nil
-            local workable = nil
-            pcall(function() workable = model:IsWorkable() end)
-            if owner ~= nil and owner ~= senderUId and workable == true and pick == nil then
-                pick, pickOwner = model, owner
-            end
-        end
-        if pick == nil then
-            trace("test: no WORKABLE incubator built by another player right now. "
-                  .. "Enumeration succeeded; the obtain call needs a ready egg in his hatchery.")
-            return
-        end
-
-        local ownerPlayerId = nil
-        for index = 1, count do
-            local entry = nil
-            if pcall(function() entry = array[index] end) and entry ~= nil then
-                local state = unwrap(entry)
-                local uid = nil
-                pcall(function() uid = guidText(state.PlayerUId) end)
-                if uid == pickOwner then
-                    local okId, playerId = readProperty(state, "PlayerId")
-                    if okId then ownerPlayerId = playerId end
+            if owner ~= nil and owner ~= senderUId and pick == nil then
+                local slotNum = nil
+                pcall(function() slotNum = model:GetItemSlotNum() end)
+                if type(slotNum) == "number" then
+                    for slot = 0, slotNum - 1 do
+                        local progress = nil
+                        pcall(function() progress = model:GetWorkProgress(slot) end)
+                        if progress ~= nil and alive(progress) then
+                            local completed = nil
+                            pcall(function() completed = progress:IsCompleted() end)
+                            if completed == true and pick == nil then
+                                pick, pickOwner, pickSlot = model, owner, slot
+                            end
+                        end
+                    end
                 end
             end
         end
+        if pick == nil then
+            trace("test: no COMPLETED egg in another player's incubator right now. Enumeration, "
+                  .. "ownership and readiness all worked; the delivery call needs a finished egg.")
+            return
+        end
+        trace("test: picked slot " .. tostring(pickSlot) .. " of an incubator owned by " .. tostring(pickOwner))
+
+        -- PlayerArray is read HERE, not reused from the caller: this branch runs before the
+        -- mod-map path reaches its own read, so the outer `count` is still nil and the loop
+        -- below threw "bad 'for' limit". A nil bound has to be treated as "not looked up",
+        -- never as zero, or an offline owner and a failed read become the same answer.
+        local gameStateForId = nil
+        pcall(function() gameStateForId = _ModActor["Game State"] end)
+        if gameStateForId == nil then pcall(function() gameStateForId = _ModActor:GetGameStateFromLua() end) end
+
+        local ownerPlayerId = nil
+        local lookupOk = false
+        if gameStateForId ~= nil then
+            local okArr, playerArray = readProperty(gameStateForId, "PlayerArray")
+            local arrayCount = nil
+            if okArr and playerArray ~= nil then
+                pcall(function() arrayCount = #playerArray end)
+            end
+            if type(arrayCount) == "number" then
+                lookupOk = true
+                for index = 1, arrayCount do
+                    local entry = nil
+                    if pcall(function() entry = playerArray[index] end) and entry ~= nil then
+                        local state = unwrap(entry)
+                        local uid = nil
+                        pcall(function() uid = guidText(state.PlayerUId) end)
+                        if uid == pickOwner then
+                            local okId, playerId = readProperty(state, "PlayerId")
+                            if okId then ownerPlayerId = playerId end
+                        end
+                    end
+                end
+            end
+        end
+        trace("test: PlayerId lookup ran=" .. tostring(lookupOk)
+              .. " result=" .. tostring(ownerPlayerId or "none"))
         trace("test: GO/NO-GO target owner=" .. tostring(pickOwner)
               .. " PlayerId=" .. tostring(ownerPlayerId))
         if ownerPlayerId == nil then
             trace("test: that owner is OFFLINE, so he has no PlayerId. Calling anyway is the "
                   .. "only way to learn whether the parameter must name a connected player.")
         end
+        -- Two candidate entry points, tried in order of how much they let us control.
+        --
+        -- ObtainHatchedCharacter_ServerInternal(RequestPlayerId, Archive) names the recipient
+        -- explicitly, which is what a rewrite wants. It is declared with TWO parameters on
+        -- the multi model, and passing one got "UFunction expected 2 parameters, received 1",
+        -- so the archive slot has to be filled even if the game only writes to it.
+        --
+        -- RequestObtainSingleHatchedCharacter(SlotIndex) takes no player at all, so the game
+        -- resolves the recipient itself. If that lands the Pal with the incubator's OWNER
+        -- rather than whoever triggered it, the whole addressing problem disappears and the
+        -- rewrite gets simpler than the mod it replaces.
+        -- THE ADDRESSING TEST. The previous run proved the call is accepted; what it could
+        -- not show is whether RequestPlayerId decides the destination, because the owner was
+        -- offline and the id passed was 0.
+        --
+        -- So address ANOTHER player's completed egg to the SENDER, using the sender's own
+        -- live PlayerId. The sender is the only connected player, so if a Pal appears in his
+        -- Palbox the parameter controls delivery and a rewrite simply passes each egg's true
+        -- owner. If nothing appears, the destination comes from somewhere else entirely and
+        -- no amount of correct addressing will fix this.
+        local senderPlayerId = nil
+        if gameStateForId ~= nil then
+            local okArr2, playerArray2 = readProperty(gameStateForId, "PlayerArray")
+            local count2 = nil
+            if okArr2 and playerArray2 ~= nil then pcall(function() count2 = #playerArray2 end) end
+            if type(count2) == "number" then
+                for index = 1, count2 do
+                    local entry = nil
+                    if pcall(function() entry = playerArray2[index] end) and entry ~= nil then
+                        local state = unwrap(entry)
+                        local uid = nil
+                        pcall(function() uid = guidText(state.PlayerUId) end)
+                        if uid == senderUId then
+                            local okId, playerId = readProperty(state, "PlayerId")
+                            if okId then senderPlayerId = playerId end
+                        end
+                    end
+                end
+            end
+        end
+        local addressTo = ownerPlayerId or senderPlayerId
+        trace("test: ADDRESSING to PlayerId=" .. tostring(addressTo)
+              .. " (owner id=" .. tostring(ownerPlayerId or "offline")
+              .. ", sender id=" .. tostring(senderPlayerId or "unresolved") .. ")")
+        if addressTo == nil then
+            trace("test: no usable PlayerId at all; not calling, because a 0 here would repeat "
+                  .. "the previous inconclusive run rather than add anything.")
+            return
+        end
+
+        local archiveOut = {}
         local okCall, err = pcall(function()
-            pick:ObtainHatchedCharacter_ServerInternal(ownerPlayerId or 0)
+            pick:ObtainHatchedCharacter_ServerInternal(addressTo, archiveOut)
         end)
-        trace("test: obtain call_ok=" .. tostring(okCall) .. (okCall and "" or (" err=" .. tostring(err))))
-        trace("test: DONE. Check whether the Pal reached " .. tostring(pickOwner) .. " or the sender.")
+        trace("test: obtain(playerId,archive) call_ok=" .. tostring(okCall)
+              .. (okCall and "" or (" err=" .. tostring(err))))
+
+        if not okCall then
+            local okSingle, singleErr = pcall(function()
+                pick:RequestObtainSingleHatchedCharacter(pickSlot)
+            end)
+            trace("test: RequestObtainSingleHatchedCharacter(" .. tostring(pickSlot) .. ") call_ok="
+                  .. tostring(okSingle) .. (okSingle and "" or (" err=" .. tostring(singleErr))))
+        end
+
+        trace("test: DONE. Owner was " .. tostring(pickOwner)
+              .. " (offline=" .. tostring(ownerPlayerId == nil) .. "). Check whose Palbox got the Pal.")
         return
     end
     trace("test: target owner=" .. tostring(targetOwner) .. " model=" .. tostring(describeValue(targetModel)))
