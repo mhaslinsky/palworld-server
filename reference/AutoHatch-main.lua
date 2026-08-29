@@ -54,7 +54,7 @@ end
 -- below makes one call per byte, so each hatch took twice as long as the last until the
 -- game thread stopped answering the REST API entirely. It did not fix the misrouting it
 -- was testing; every hatch still logged one recipient. Do not set it true again.
-local SEND_BYTES_EVERY_HATCH = true
+local SEND_BYTES_EVERY_HATCH = false
 local hatchCount = 0
 local BYTE_CEILING = 10000000
 -- Writing the true owner into WorkProgress_To_PlayerUId__Map read back correctly and
@@ -486,6 +486,92 @@ end
 -- hatch already failed to defeat.
 local RESET_USED_MULTI_HATCH = false
 
+-- GROUND TRUTH. Every probe so far reads what the mod INTENDS; none reads where the Pal
+-- actually lands. UPalIndividualCharacterContainer::FindEmptySlot is reflected and runs on
+-- the DESTINATION container when a Pal is inserted, so hooking it names the receiver
+-- directly, without depending on the actor-owner read that has failed four times.
+--
+-- Gated to the hatch window: FindEmptySlot fires for ordinary container work too, and an
+-- ungated hook would bury the one call that matters.
+local inHatchWindow = false
+local hatchWindowLabel = "none"
+
+local function describeContainer(container)
+    if not alive(container) then return "not alive" end
+    local parts = {}
+    local full = nil
+    pcall(function() full = container:GetFullName() end)
+    parts[#parts + 1] = (full ~= nil and tostring(full) or "unnameable")
+
+    -- FPalContainerId is the container's identity, and the base class exposes both the
+    -- property and a getter. Try each: one working is enough, and which one worked matters.
+    local okId, idValue = readProperty(container, "ID")
+    if okId and idValue ~= nil then parts[#parts + 1] = "ID=" .. describeValue(idValue) end
+    local viaGetter = nil
+    local okGetter = pcall(function() viaGetter = container:GetId() end)
+    if okGetter and viaGetter ~= nil then parts[#parts + 1] = "GetId=" .. describeValue(viaGetter) end
+
+    local slotCount = nil
+    pcall(function() slotCount = container:Num() end)
+    parts[#parts + 1] = "Num=" .. tostring(slotCount)
+    return table.concat(parts, " ")
+end
+
+-- Which container belongs to which player, so a container id in the hook above can be
+-- attributed. Walks each known player state for container-shaped properties.
+local function dumpPlayerContainers()
+    local players = nil
+    pcall(function() players = _ModActor.Players end)
+    if players == nil then trace("cont: Players unreadable") return end
+    pcall(function()
+        players:ForEach(function(key, value)
+            local uid = guidText(unwrap(key))
+            local state = unwrap(value)
+            if not alive(state) then trace("cont: " .. tostring(uid) .. " state not alive") return end
+            local okClass, cls = pcall(function() return state:GetClass() end)
+            if not okClass or cls == nil then return end
+            local current = cls
+            local depth = 0
+            while current ~= nil and depth < 6 do
+                pcall(function()
+                    current:ForEachProperty(function(prop)
+                        local name = nil
+                        pcall(function() name = prop:GetFName():ToString() end)
+                        if name == nil then return end
+                        if string.find(name, "Container") or string.find(name, "Storage")
+                           or string.find(name, "Party") or string.find(name, "Pal") then
+                            local okRead, propValue = readProperty(state, name)
+                            if okRead and propValue ~= nil then
+                                local target = unwrap(propValue)
+                                local full = nil
+                                pcall(function() full = target:GetFullName() end)
+                                if full ~= nil then
+                                    trace("cont:" .. tostring(uid) .. " " .. name .. " = " .. tostring(full))
+                                end
+                            end
+                        end
+                    end)
+                end)
+                local okSuper, super = pcall(function() return current:GetSuperStruct() end)
+                if not okSuper or super == nil or not alive(super) then break end
+                current = super
+                depth = depth + 1
+            end
+        end)
+    end)
+end
+
+local function RegisterContainerHook()
+    local ok = pcall(function()
+        RegisterHook("/Script/Pal.PalIndividualCharacterContainer:FindEmptySlot",
+          guarded("container.pre", function(self)
+            if not inHatchWindow then return end
+            trace("cont:FindEmptySlot during " .. hatchWindowLabel .. " -> " .. describeContainer(self:get()))
+          end))
+    end)
+    trace("cont: FindEmptySlot hook registered=" .. tostring(ok))
+end
+
 local function probeBlueprintLatches(phase)
     if not alive(_ModActor) then return end
     local parts = {}
@@ -805,10 +891,17 @@ local function RegisterHooks()
         end
     end
 
+    RegisterContainerHook()
+
     RegisterHook("/Script/Pal.PalMapObjectHatchingEggModelBase:ObtainHatchedCharacter_ServerInternal",
       guarded("hatch.pre", function(self, playerId, archive)
         hatchCount = hatchCount + 1
+        local okRecipient, rawRecipient = pcall(function() return playerId:get() end)
+        hatchWindowLabel = "hatch#" .. tostring(hatchCount) .. " recipient=" ..
+                           (okRecipient and tostring(rawRecipient) or "?")
+        inHatchWindow = true
         observeHatch("pre", self, playerId)
+        dumpPlayerContainers()
         if APPLY_OWNER_FIX then applyOwnerFix(self:get()) end
 
         if sentBytes and not SEND_BYTES_EVERY_HATCH then trace("hatch:bytes already sent") return end
@@ -845,6 +938,7 @@ local function RegisterHooks()
       end),
       guarded("hatch.post", function(self, playerId, archive)
         observeHatch("post", self, playerId)
+        inHatchWindow = false
       end))
 
     
