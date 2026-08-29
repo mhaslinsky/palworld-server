@@ -225,11 +225,60 @@ end
 -- reconnects picks it up automatically, since the egg itself is untouched by a skip.
 ---------------------------------------------------------------------------------------------
 
+-- Find the GameState from the WORLD, not from the ModActor.
+--
+-- This previously asked our ModActor for a "Game State" property and a GetGameStateFromLua()
+-- function. Both of those belong to the ORIGINAL AutoHatch blueprint (see
+-- reference/AutoHatch-ModActor.hpp); our replacement is a bare Actor carrying exactly one
+-- function. So both reads returned nil, playerIdForUid then returned nil for everyone, every
+-- owner looked OFFLINE, and all 13 incubators were skipped silently. The log showed the sweep
+-- running healthily and selecting nothing, with no error anywhere.
+--
+-- PalGameStateInGame is the class the chat hook already registers against, so the name is
+-- proven rather than guessed. Guessing here is especially dangerous: UE4SS answers an unknown
+-- name with a plausible TrivialObject rather than an error.
+-- Cached from the chat hook, whose `self` IS the live PalGameStateInGame the server is running.
+-- FindAllOf returns instances whose PlayerArray reads empty even with a player connected, so
+-- world enumeration alone never sees anybody. The original mod reached the right object through
+-- its own blueprint property; this reaches it through a hook argument, which is the one source
+-- proven to carry the live instance.
+local cachedGameState = nil
+
 local function getGameState(modActor)
-    local gameState = nil
-    pcall(function() gameState = modActor["Game State"] end)
-    if gameState == nil then pcall(function() gameState = modActor:GetGameStateFromLua() end) end
-    return gameState
+    -- Prefer the hooked instance. Verify it still has a readable PlayerArray rather than trusting
+    -- the cache blindly: a stale object across a level change would otherwise silently report an
+    -- empty server forever.
+    if alive(cachedGameState) then
+        local okCached, players = readProperty(cachedGameState, "PlayerArray")
+        if okCached and players ~= nil then return cachedGameState end
+        cachedGameState = nil
+    end
+
+    local found = nil
+    if not pcall(function() found = FindAllOf("PalGameStateInGame") end) or found == nil then
+        return nil
+    end
+    -- Skip the class default object. FindAllOf returns Default__PalGameStateInGame alongside
+    -- the live instance, and the CDO is a perfectly "alive" object carrying an EMPTY PlayerArray.
+    -- Taking the first hit therefore read the template, every player looked offline, and all 44
+    -- completed eggs were skipped in silence while ownership resolved 13/13 correctly.
+    --
+    -- Prefer an instance that actually has players in it; fall back to any non-default object so
+    -- an empty server still resolves rather than returning nil.
+    local fallback = nil
+    for index = 1, #found do
+        local candidate = found[index]
+        local name = nil
+        pcall(function() name = candidate:GetFullName() end)
+        if alive(candidate) and name ~= nil and not string.find(name, "Default__", 1, true) then
+            if fallback == nil then fallback = candidate end
+            local okArr, players = readProperty(candidate, "PlayerArray")
+            local count = nil
+            if okArr and players ~= nil then pcall(function() count = #players end) end
+            if type(count) == "number" and count > 0 then return candidate end
+        end
+    end
+    return fallback
 end
 
 local function playerIdForUid(modActor, ownerUId)
@@ -484,6 +533,18 @@ end
 -- different, confirmed game hook; this file still only writes to the server log (`trace`).
 local function RegisterChatHook()
     RegisterHook("/Script/Pal.PalGameStateInGame:BroadcastChatMessage", guarded("chat", function(self, chatMessage)
+        -- Capture the live GameState. This hook's self is the running instance, which is the
+        -- only source that has reliably yielded a populated PlayerArray on this server.
+        local live = nil
+        pcall(function() live = self:get() end)
+        if live == nil then pcall(function() live = unwrap(self) end) end
+        if alive(live) then
+            cachedGameState = live
+            local okP, players = readProperty(live, "PlayerArray")
+            local n = nil
+            if okP and players ~= nil then pcall(function() n = #players end) end
+            trace("chat: cached GameState, PlayerArray count=" .. tostring(n))
+        end
         if chatMessage:get() == nil then return end
         local messageStruct = chatMessage:get()
 
