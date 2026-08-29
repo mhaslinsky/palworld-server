@@ -110,25 +110,57 @@ Every ownership failure we have seen follows from that one rule.
   is a documented known issue: the eggs simply do not auto-hatch.
 - **Keep Palbox space free.** On a full Palbox, the mod drops the Pal on the ground. The
   author states outright that he cannot detect a full Palbox, so nothing warns you.
-- **Everyone's eggs landing on one player is real, and the mod is NOT the thing getting it
-  wrong.** Measured 2026-08-29 with both players hatching in one session, every step of the
-  mod's decision logged. On all seven of the second player's hatches the mod read the egg's
-  owner as `5C104B96`, `GetLoggedInPlayerUId` took `5C104B96` and returned `5C104B96`, and
-  the mod addressed the delivery to `5C104B96` (Player ID 257). The Pals landed in
-  `084390E6`'s Palbox anyway. There is not one wrong value anywhere in the mod.
+- **Everyone's eggs landing on one player is not a misroute. It is one auto-hatch context
+  collecting for everybody.** Settled 2026-08-29 by the control that had never been run:
+  with player A logged fully OUT, player B's eggs deliver to B correctly and **do not
+  auto-hatch at all**. With both online, B's incubators auto-hatch and the Pals go to A.
 
-  The suspicion now sits on the handoff. `ObtainHatchedCharacter_ServerInternal` takes an
-  `int32 RequestPlayerId`, not a UId, so a correctly resolved owner has to survive a round
-  trip through a per-connection integer before the game can find a container. That integer
-  is the only identity in the chain that is not proven correct.
+  So nothing is addressed to the wrong person. The mod sweeps every incubator under one
+  global `UseAutoHatch` bool and performs each collection through a single player's context,
+  which makes B's eggs arrive as though A had walked up and collected them. That accounts
+  for every symptom at once: "first to hatch after a restart captures everything", the
+  reproduction in both directions, and B's base auto-hatching only while A is connected.
+
+  The mod's own bookkeeping is correct throughout, which is why four rounds of fixes aimed
+  at it changed nothing:
+
+  - `PlayerEggIncubators` attributes each incubator to its true owner (two to `084390E6`,
+    six to `5C104B96`).
+  - The hatch hook receives a correct, CHANGING `RequestPlayerId`: 256 for A's hatches and
+    257 for B's.
+  - `GameState.PlayerArray` maps `256 -> 084390E6` and `257 -> 5C104B96`, two distinct
+    states, no duplicates.
+  - The mod's own line reads `Owner PlayerUId: 5C104B96... Sending Pals to: 5C104B96...`
+
+  `PlayerSettings`, the per-player map that `!autohatch on/off` writes, is EMPTY at hatch
+  time while the global `UseAutoHatch` reads true. The per-player switch is not what gates
+  the sweep.
 
 Before concluding a Pal was destroyed, check the first breeder's Palbox and the ground around
 the incubators. Both are ordinary outcomes.
 
 The earlier reading of the same symptom, that the mod invents the wrong owner from Breeding
-Farm slot 1, is superseded for the AUTO-HATCH path by the measurement above. The slot-1 rule
-still governs which eggs the mod picks up, so slot 1 still matters; it is simply not what
-decides where a hatched Pal is delivered.
+Farm slot 1, is superseded for the AUTO-HATCH path. The slot-1 rule still governs which eggs
+the mod picks up, so slot 1 still matters; it is simply not what decides delivery.
+
+**Workaround, reliable and free:** whoever wants the Pals should be the one hatching, and the
+other player should be logged out, or should accept that everything lands with whoever the
+active context belongs to. A player alone on the server always receives his own Pals.
+
+**Why the Lua cannot fix it.** The decision is compiled inline. With the whole path
+instrumented and every hook line tagged by caller, the only blueprint-sourced call during a
+hatch is `ExecuteUbergraph_ModActor` (entry points 37358 on every hatch, 36895 on some).
+`AutoHatch`, `GivePlayerID`, `FindBreedFarmBelongTo`, `AutoPickUpEgg`, `EggCleanUp`,
+`PickUpAllEggs`, `OnUpdateHatchedCharacterDelegate_Event` and
+`PalCharacterContainerManager::TryGetContainer` all registered successfully and fired ZERO
+times from the blueprint. There is no reflected call boundary between "the mod knows the
+owner" and "the Pal is granted", so there is nothing for a Lua hook to intercept.
+
+**Caller tagging is mandatory for any future probe here.** A UE4SS hook fires for ANY caller,
+including this file's own probes. Untagged, the probe's synthetic calls come back through the
+hook and read as the blueprint's behaviour. That produced two separate false clearances of
+`GetLoggedInPlayerUId`. Tagged, the truth is stark: the blueprint never calls that function
+during a hatch at all. Every `bp:` line now carries `src=probe` or `src=BLUEPRINT`.
 
 ### The `sentBytes` latch: tested, and it wedges the server
 

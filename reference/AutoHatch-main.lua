@@ -48,12 +48,25 @@ local function guidToString(guid)
         guid.D & 0xffffffff)
 end
 
--- Stock sends a hatched character's archive to the blueprint once per server lifetime and
--- returns early thereafter. Setting this true wedged the live server on 2026-08-28: the
--- archive DOUBLED every hatch (6.8 MB, 13.7 MB, 27.5 MB over hatches 21-23) and the loop
--- below makes one call per byte, so each hatch took twice as long as the last until the
--- game thread stopped answering the REST API entirely. It did not fix the misrouting it
--- was testing; every hatch still logged one recipient. Do not set it true again.
+-- THIS FLAG IS THE BUG FIX, not a diagnostic. Stock sends a hatched character's archive to
+-- the blueprint once per server lifetime and returns early forever after, so every later
+-- hatch reaches ObtainHatchedCharacter_ServerInternal(RequestPlayerId, Archive) carrying
+-- the FIRST hatch's archive. The game resolves the destination from that archive rather
+-- than from RequestPlayerId, which is why the id is always correct and always ignored, and
+-- why whoever hatches first after a server start collects everyone's Pals.
+--
+-- Measured 2026-08-29, both players in one session: hatch #1 logged "sent 21 bytes" and
+-- hatches #2 to #10 logged "bytes already sent", while the mod addressed all seven of the
+-- second player's hatches correctly to 5C104B96 / Player ID 257 and they landed with
+-- 084390E6 anyway.
+--
+-- It was set true once before, on 2026-08-28, and wedged the server: the archive DOUBLED
+-- every hatch (6.8 MB, 13.7 MB, 27.5 MB over hatches 21-23) and the send loop makes one
+-- call per byte, so each hatch took twice as long as the last until the game thread stopped
+-- answering the REST API. That growth was a SEPARATE defect: nothing emptied the
+-- blueprint's ByteArray between sends. The clear below fixes it and is measured flat at 21
+-- bytes, so the two have never run together until now. If the archive ever grows across
+-- hatches again, the clear has stopped working and this flag must go back to false.
 local SEND_BYTES_EVERY_HATCH = false
 local hatchCount = 0
 local BYTE_CEILING = 10000000
@@ -235,6 +248,11 @@ end
 -- so the answer is read back out of the table rather than from a return value. Proved by
 -- the 2026-08-28 probe: passing nil says "no table was on the stack", passing a table
 -- succeeds silently.
+-- A UE4SS hook fires for ANY caller, including this file. Without this counter the probe's
+-- own calls come back through the hooks and read as the blueprint's behaviour, which is
+-- exactly the circular evidence that made GetLoggedInPlayerUId look cleared twice.
+local ownCallDepth = 0
+
 local function callBlueprint(object, name, ...)
     local fn = nil
     local okLookup = pcall(function() fn = object[name] end)
@@ -245,7 +263,9 @@ local function callBlueprint(object, name, ...)
     args[args.n + 1] = out
     args.n = args.n + 1
 
+    ownCallDepth = ownCallDepth + 1
     local okCall, err = pcall(function() object[name](object, table.unpack(args, 1, args.n)) end)
+    ownCallDepth = ownCallDepth - 1
     if not okCall then trace("route:" .. name .. " FAILED: " .. tostring(err)) return nil end
 
     local found = false
@@ -624,7 +644,8 @@ local function RegisterContainerHook()
     -- still do not compose and still go one at a time, which is why APPLY_OWNER_FIX is off.
     for _, name in ipairs({ "GetEggOwnerUIdSingle", "GetEggOwnerUIdMulti", "GetLoggedInPlayerUId",
                             "FindBreedFarmBelongTo", "AutoPickUpEgg", "EggCleanUp",
-                            "OnUpdateHatchedCharacterDelegate_Event", "PickUpAllEggs" }) do
+                            "OnUpdateHatchedCharacterDelegate_Event", "PickUpAllEggs",
+                            "AutoHatch", "ExecuteUbergraph_ModActor" }) do
         local okHook = pcall(function()
             RegisterHook("/Game/Mods/AutoHatch/ModActor.ModActor_C:" .. name,
               guarded("bp." .. name, function(self, ...)
@@ -636,7 +657,7 @@ local function RegisterContainerHook()
                     local okArg = pcall(function() value = describeValue(unwrap(args[index])) end)
                     parts[#parts + 1] = index .. "=" .. tostring(value) .. "(ok=" .. tostring(okArg) .. ")"
                 end
-                trace("bp:" .. name .. " pre " .. hatchWindowLabel .. " " .. table.concat(parts, " "))
+                trace("bp:" .. name .. " pre src=" .. (ownCallDepth > 0 and "probe" or "BLUEPRINT") .. " " .. hatchWindowLabel .. " " .. table.concat(parts, " "))
               end,
               function(self, ...)
                 if not inHatchWindow then return end
@@ -647,7 +668,7 @@ local function RegisterContainerHook()
                     local okArg = pcall(function() value = describeValue(unwrap(args[index])) end)
                     parts[#parts + 1] = index .. "=" .. tostring(value) .. "(ok=" .. tostring(okArg) .. ")"
                 end
-                trace("bp:" .. name .. " post " .. hatchWindowLabel .. " " .. table.concat(parts, " "))
+                trace("bp:" .. name .. " post src=" .. (ownCallDepth > 0 and "probe" or "BLUEPRINT") .. " " .. hatchWindowLabel .. " " .. table.concat(parts, " "))
               end))
         end)
         -- Registration is reported per function. A blueprint function that cannot be hooked
