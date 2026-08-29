@@ -264,3 +264,75 @@ mattered. Keep it and the observed destination container as separate signals.
 
 Full analysis, test protocol and rollback:
 `~/Developer/AIDB/_global/personal/palworld-server/2026-08-22-autohatch-crash-investigation.md`
+
+## Building a replacement mod: the toolchain, and where a human is still required
+
+The replacement is a LogicMod: a Blueprint `ModActor` in a pak, plus a Lua bridge. Build scripts
+live in `reference/modkit/`, and `reference/AutoHatchFix-main.lua` is the Lua half.
+
+### Build box
+
+`ssh ascension-mdns` (Windows 11). The numeric aliases in `~/.ssh/config` all time out from the
+Mac because a mesh VPN fragments `10.0.0.0/24` onto the tunnel; `ascension.local` resolves over
+the mesh IPv6 and works. Do NOT diagnose with `ping`: the Windows profile is Public so ICMP is
+dropped regardless of whether SSH is fine.
+
+| Component | Where |
+|---|---|
+| Engine | `D:\Program Files\Epic Games\UE_5.1` (5.1.1, confirmed from `Build.version`) |
+| Kit | `C:\Dev\PalworldModdingKit` |
+| Wwise SDK | `D:\Audiokinetic\Wwise_2021.1.11.7933` |
+| MSVC | 14.38.33130 **pinned**, alongside 14.44.35207 |
+
+### Things that cost a build cycle each
+
+**Pin MSVC 14.38.33130.** UE 5.1 rejects 14.44 outright with `Detected compiler newer than
+Visual Studio 2022` and C4668 on `__has_feature`. The wiki's pin is not arbitrary.
+
+**`setup.exe modify` returns 87 on this box**, with or without `--productId`/`--channelId`. Use
+the `vs_BuildTools.exe` bootstrapper with the same `--add` arguments; it works first time.
+
+**UnrealBuildTool needs .NET 6**, and `SwarmInterface` needs the .NET FRAMEWORK SDK. Different
+things, both required; the box had neither.
+
+**Omit `ToolchainVersion` from `BuildConfiguration.xml`.** The wiki includes it and UE 5.1's
+schema rejects it as an invalid child of `WindowsPlatform`.
+
+**Wwise is installed by hand, not by the Launcher's integrate button.** Unpack
+`Unreal.5.0.tar.xz` from the offline installer bundle, copy the `Wwise` folder into `Plugins`,
+build `Plugins\Wwise\ThirdParty` from the SDK's `Win32_vc170`, `x64_vc170` and `include`,
+duplicate those as `vc160`, and patch `Wwise.uplugin` from `5.0.0` to `5.1`. Wwise cannot be
+removed instead: the kit's own C++ uses `UAkAudioEvent` and `UPalAkComponent` throughout, and
+the `Pal` module is what supplies the type definitions the mod needs.
+
+**Never write a `.uproject` with `Set-Content -Encoding UTF8`.** PowerShell 5.1 adds a BOM and
+the Wwise Launcher then rejects the file as "not a valid Unreal Engine project" while every
+JSON parser still reads it happily. Use targeted text edits and `UTF8Encoding($false)`.
+
+**`NiagaraUIRenderer` must be disabled** in `Pal.uproject`. Its DLL builds fine and then fails
+to load (`GetLastError=4551`), which stops the editor before it reaches any script. Nothing in
+this mod needs it.
+
+### The one step that cannot be automated
+
+Blueprint node and pin editing is C++ only in UE 5.1. `EdGraphPin` is not a reflected UObject,
+and `K2Node_FunctionEntry.UserDefinedPins` is not a reflected property at all: reading it errors
+"Failed to find property" rather than the "protected and cannot be read" that `FunctionReference`
+on the same object gives, so it was never exposed rather than merely guarded.
+
+So `build_modactor.py` creates the asset with an EMPTY `DoHatch` graph, and a human finishes it
+in the editor on `/Game/Mods/AutoHatchFix/ModActor`:
+
+1. Select the `DoHatch` entry node and add two inputs: `EggModel` (object reference, type
+   `/Script/Pal.PalMapObjectHatchingEggModelBase`) and `PlayerId` (integer).
+2. Drag from `EggModel`, add **Obtain Hatched Character (Server Internal)**, wire `EggModel` to
+   its target pin and `PlayerId` to the int32 parameter.
+3. Compile and save.
+
+**Record whether that node exposes the `Archive` (`FPalNetArchive`) pin, and whether it can be
+left unconnected.** The Lua attempt passed an empty table there and the call consumed nothing
+while reporting success, so a correctly marshalled archive is a live candidate for why the
+Blueprint route would work where Lua did not.
+
+Verify with `verify_modactor.py` in a SEPARATE editor process. Checking inside the run that
+created the asset proves only that objects are live in memory.
