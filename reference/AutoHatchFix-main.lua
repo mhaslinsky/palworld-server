@@ -41,6 +41,12 @@ local HATCH_RETRY_COOLDOWN_MS = 15000
 --   still completed after the cooldown gets re-attempted; one that is not yet past cooldown
 --   is skipped so a slow or failing bridge call cannot be hammered every 5s.
 
+local VERBOSE_EVERY_N_CYCLES = 6
+-- ^ 13 incubators of full per-slot detail every 5s is an unreadable, fast-rolling log. The
+--   full per-incubator breakdown prints only every Nth cycle (~30s at the default poll
+--   interval) OR immediately when the cycle summary's counts change from the previous one
+--   (see summaryChanged / sweepOnce below); the one-line summary still prints every cycle.
+
 ---------------------------------------------------------------------------------------------
 -- Guards, shared with reference/AutoHatch-main.lua's hardening style: a dead UObject and a
 -- nil are the same thing to every caller here, and telling them apart is what stops a
@@ -292,16 +298,32 @@ end
 ---------------------------------------------------------------------------------------------
 
 local lastAttemptAt = {} -- "modelId:slot" -> os-clock-ms of the last DoHatch call
+local cycleCount = 0
+local lastSummaryCounts = nil -- previous cycle's summary table, for the change-detection rate limit
 
 local function nowMs()
     return math.floor(os.clock() * 1000)
 end
 
+local function summaryChanged(current, previous)
+    if previous == nil then return true end
+    return current.incubators ~= previous.incubators
+        or current.ownersResolved ~= previous.ownersResolved
+        or current.ownersOnline ~= previous.ownersOnline
+        or current.occupiedSlots ~= previous.occupiedSlots
+        or current.completedSlots ~= previous.completedSlots
+        or current.hatchesAttempted ~= previous.hatchesAttempted
+end
+
+-- Third return value is diagnostic only (one line per OCCUPIED slot, per the task brief) and
+-- does not change occupied/completedSlots, which are computed exactly as before. It separates
+-- a read's SUCCESS from its VALUE per AGENTS.md/brief: an unreadable GetWorkProgress and a
+-- genuinely empty slot must never look the same in the log, and likewise for IsCompleted.
 local function occupiedAndCompletedSlots(model, slotNum)
-    local occupied, completedSlots = 0, {}
+    local occupied, completedSlots, slotDetails = 0, {}, {}
     for slot = 0, slotNum - 1 do
         local progress = nil
-        pcall(function() progress = model:GetWorkProgress(slot) end)
+        local progressReadOk = pcall(function() progress = model:GetWorkProgress(slot) end)
         -- An occupied slot returns a live UPalWorkProgress; an empty one returns nil.
         -- IsWorkable() is NOT readiness: it read false on every incubator in the measured
         -- sweep, including ones actively hatching, because it reports whether the
@@ -309,11 +331,14 @@ local function occupiedAndCompletedSlots(model, slotNum)
         if progress ~= nil and alive(progress) then
             occupied = occupied + 1
             local completed = nil
-            pcall(function() completed = progress:IsCompleted() end)
+            local completedReadOk = pcall(function() completed = progress:IsCompleted() end)
             if completed == true then completedSlots[#completedSlots + 1] = slot end
+            slotDetails[#slotDetails + 1] = string.format(
+                "    slot=%d progress_read_ok=%s completed_read_ok=%s completed=%s",
+                slot, tostring(progressReadOk), tostring(completedReadOk), tostring(completed))
         end
     end
-    return occupied, completedSlots
+    return occupied, completedSlots, slotDetails
 end
 
 local function sweepOnce(modActor)
@@ -321,13 +346,58 @@ local function sweepOnce(modActor)
     local eggs = findHatchingEggModels()
     trace("poll: " .. tostring(#eggs) .. " incubator(s) in the world")
 
+    cycleCount = cycleCount + 1
+    local summary = {
+        incubators = #eggs, ownersResolved = 0, ownersOnline = 0,
+        occupiedSlots = 0, completedSlots = 0, hatchesAttempted = 0,
+    }
+    local detailLines = {}
+
     for index = 1, #eggs do
         local model = eggs[index]
         if alive(model) then
+            -- Diagnostics below are read-only and gathered for EVERY incubator regardless of
+            -- which gate later skips it, so the log distinguishes: (a) nothing is completed
+            -- yet, (b) the readiness read itself is failing/unreadable, or (c) the owner gate
+            -- or the UId->PlayerId lookup is what rejects it. They do not change which
+            -- incubators get a DoHatch call: the decision sequence right after this block is
+            -- the same one that shipped before, just reading these already-computed values
+            -- instead of recomputing them.
             local modelId = nil
             pcall(function() modelId = guidText(model:GetModelInstanceId()) end)
             local owner = modelId ~= nil and ownerByModelId[modelId] or nil
+            if owner ~= nil then summary.ownersResolved = summary.ownersResolved + 1 end
 
+            local gateEnabled = isEnabledFor(owner) -- true for owner==nil too; harmless, unused by the gate below in that case
+
+            local slotNum = nil
+            local okSlots = pcall(function() slotNum = model:GetItemSlotNum() end)
+            local slotsReadable = okSlots and type(slotNum) == "number" and slotNum > 0
+
+            local occupied, completedSlots, slotDetails = 0, {}, {}
+            if slotsReadable then
+                occupied, completedSlots, slotDetails = occupiedAndCompletedSlots(model, slotNum)
+            end
+            summary.occupiedSlots = summary.occupiedSlots + occupied
+            summary.completedSlots = summary.completedSlots + #completedSlots
+
+            local ownerPlayerId, ownerOnline = nil, false
+            if owner ~= nil then
+                ownerPlayerId = playerIdForUid(modActor, owner)
+                ownerOnline = ownerPlayerId ~= nil
+                if ownerOnline then summary.ownersOnline = summary.ownersOnline + 1 end
+            end
+
+            detailLines[#detailLines + 1] = string.format(
+                "poll.detail: incubator[%d] model=%s owner=%s gate_enabled=%s slots=%s online=%s player_id=%s",
+                index, tostring(modelId), owner ~= nil and owner or "UNRESOLVED",
+                tostring(gateEnabled), slotsReadable and tostring(slotNum) or "unreadable",
+                tostring(ownerOnline), tostring(ownerPlayerId))
+            for _, line in ipairs(slotDetails) do
+                detailLines[#detailLines + 1] = line
+            end
+
+            -- ACTUAL SWEEP DECISION — identical to the pre-instrumentation version.
             if owner == nil then
                 -- Unresolved ownership: a map object this incubator's InstanceId does not
                 -- match. Not necessarily an error (a structure mid-placement can transiently
@@ -335,16 +405,12 @@ local function sweepOnce(modActor)
                 goto continue
             end
 
-            if not isEnabledFor(owner) then goto continue end
+            if not gateEnabled then goto continue end
 
-            local slotNum = nil
-            local okSlots = pcall(function() slotNum = model:GetItemSlotNum() end)
-            if not okSlots or type(slotNum) ~= "number" or slotNum <= 0 then goto continue end
+            if not slotsReadable then goto continue end
 
-            local _, completedSlots = occupiedAndCompletedSlots(model, slotNum)
             if #completedSlots == 0 then goto continue end
 
-            local ownerPlayerId = playerIdForUid(modActor, owner)
             if ownerPlayerId == nil then
                 -- Owner is offline. Nothing to address delivery to; the egg stays put and
                 -- the next sweep after they reconnect will pick it up. This is a design
@@ -359,6 +425,7 @@ local function sweepOnce(modActor)
                 local now = nowMs()
                 if last == nil or (now - last) >= HATCH_RETRY_COOLDOWN_MS then
                     lastAttemptAt[key] = now
+                    summary.hatchesAttempted = summary.hatchesAttempted + 1
                     trace("hatch: owner=" .. tostring(owner) .. " playerId=" .. tostring(ownerPlayerId)
                           .. " model=" .. tostring(modelId) .. " slot=" .. tostring(slot))
                     callDoHatch(modActor, model, ownerPlayerId)
@@ -367,6 +434,18 @@ local function sweepOnce(modActor)
         end
         ::continue::
     end
+
+    local verbose = summaryChanged(summary, lastSummaryCounts) or (cycleCount % VERBOSE_EVERY_N_CYCLES == 0)
+    if verbose then
+        for _, line in ipairs(detailLines) do trace(line) end
+    end
+    -- completed>0 with attempted=0 points at the gate (owner disabled or offline); completed=0
+    -- means there is simply nothing ready yet. Prints every cycle regardless of `verbose`.
+    trace(string.format(
+        "poll.summary: incubators=%d owners_resolved=%d owners_online=%d occupied=%d completed=%d attempted=%d",
+        summary.incubators, summary.ownersResolved, summary.ownersOnline,
+        summary.occupiedSlots, summary.completedSlots, summary.hatchesAttempted))
+    lastSummaryCounts = summary
 end
 
 ---------------------------------------------------------------------------------------------
@@ -395,6 +474,14 @@ local function findModActor()
     return nil
 end
 
+-- NOT IMPLEMENTED: an in-game chat reply. Neither this file, reference/AutoHatch-main.lua,
+-- nor AutoHatch-ModActor.hpp exposes a verified way to SEND a chat line back to a player —
+-- BroadcastChatMessage above is hooked as an inbound event (its handler receives an
+-- already-constructed FPalChatMessage), not called as an outbound send, and constructing that
+-- struct from scratch would be guessing at a signature this codebase has never confirmed
+-- (AGENTS.md/brief: never guess a property or function name). Player-visible confirmation
+-- would need either a verified send API added to the companion Blueprint ModActor, or a
+-- different, confirmed game hook; this file still only writes to the server log (`trace`).
 local function RegisterChatHook()
     RegisterHook("/Script/Pal.PalGameStateInGame:BroadcastChatMessage", guarded("chat", function(self, chatMessage)
         if chatMessage:get() == nil then return end
@@ -410,17 +497,26 @@ local function RegisterChatHook()
         if senderUId == nil then return end
 
         local text = messageStruct.Message:ToString()
-        if string.find(text, "!autohatch off") then
-            playerEnabled[senderUId] = false
-            savePlayerSettings()
-            trace("chat: " .. senderUId .. " -> disabled")
-        elseif string.find(text, "!autohatch on") then
-            playerEnabled[senderUId] = true
-            savePlayerSettings()
-            trace("chat: " .. senderUId .. " -> enabled")
-        elseif string.find(text, "!hatchstatus") then
-            local enabled = isEnabledFor(senderUId)
-            trace("chat: " .. senderUId .. " status enabled=" .. tostring(enabled))
+        -- "!AH" is the alias the operator actually types; matched case-insensitively and
+        -- as a leading command token (not a bare substring search) so it can also take no
+        -- argument and fall through to a status report instead of doing nothing.
+        local cmd, arg = text:lower():match("^%s*!(%a+)%s*(%a*)")
+
+        if cmd == "autohatch" or cmd == "ah" then
+            if arg == "off" then
+                playerEnabled[senderUId] = false
+                savePlayerSettings()
+                trace("chat: " .. senderUId .. " -> disabled")
+            elseif arg == "on" then
+                playerEnabled[senderUId] = true
+                savePlayerSettings()
+                trace("chat: " .. senderUId .. " -> enabled")
+            else
+                -- "!AH" / "!autohatch" with no (or an unrecognized) argument: report state.
+                trace("chat: " .. senderUId .. " status enabled=" .. tostring(isEnabledFor(senderUId)))
+            end
+        elseif cmd == "hatchstatus" then
+            trace("chat: " .. senderUId .. " status enabled=" .. tostring(isEnabledFor(senderUId)))
         end
     end))
 end
