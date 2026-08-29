@@ -175,8 +175,30 @@ Proven on the live server 2026-08-29, via the manual `!hatchtest` command:
 | Enumerate every incubator in the world | **works**, `FindAllOf` returns 13, no join-time map |
 | Resolve each one's owner, INCLUDING offline players | **works**, 29,237 of 29,237 map objects yield a builder |
 | Group incubators by base camp | **works**, `GetBaseCampIdBelongTo()` |
-| Detect a ready egg | open. `IsWorkable` is NOT it |
-| Deliver to the named owner | open, needs one ready egg |
+| Detect a ready egg | **works**, `GetWorkProgress(slot)` non-nil plus `IsCompleted()` |
+| Deliver to the named owner | **DOES NOT WORK. This closes the rewrite.** |
+
+**The delivery call cannot be driven from Lua, and that is what ends this idea.** Measured
+2026-08-29 under the best possible conditions: the tester's OWN incubator, ten COMPLETED
+eggs, addressed to his own live `PlayerId` while connected. Three reflected entry points,
+each measured by counting occupied slots either side of the call:
+
+| Call | Result |
+|---|---|
+| `ObtainHatchedCharacter_ServerInternal(PlayerId, Archive)` | `call_ok=true`, `CONSUMED=false` |
+| `RequestObtainSingleHatchedCharacter(SlotIndex)` | `CONSUMED=false` |
+| `RequestObtainAllHatchedCharacter()` | `CONSUMED=false` |
+
+`occupied BEFORE = 10`, `occupied AFTER = 10`, nothing on the ground, nothing in the party,
+nothing in the Palbox. The likely reason is that `RequestObtain*` are client-originated RPCs
+that must come from the owning player's controller, and `_ServerInternal` is the inner half
+of that same flow, so calling either on the server-side model object skips the context that
+makes them act.
+
+**`call_ok=true` proved worthless three separate times here.** It is the return of a `pcall`,
+so it reports only that the invocation did not throw. The ONLY evidence a hatch occurred is a
+slot that emptied, which is why the probe counts occupied slots before and after. Any future
+attempt at this must measure world state, never a return value.
 
 **Ownership is a two-step join, and the first step is the one that catches people.** An egg
 is a CONCRETE model (`UPalMapObjectConcreteModelBase` -> `...HatchingEggModelBase` ->

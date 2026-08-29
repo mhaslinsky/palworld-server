@@ -1079,13 +1079,23 @@ local function hatchTest(senderUId)
         -- Select on a COMPLETED egg owned by someone else. IsWorkable was the earlier
         -- criterion and it read false on all 13 incubators including ones actively hatching,
         -- so it selected nothing and would have kept selecting nothing.
+        -- Prefer the SENDER'S OWN completed egg. The previous run addressed an offline third
+        -- party's egg to the sender: the call returned ok, the mod's hook saw the game enter
+        -- the function, and the incubator still read occupied=10 completed=10 afterwards. So
+        -- the call did nothing while reporting success, and nothing was learned about
+        -- addressing, only that a mismatched owner fails silently.
+        --
+        -- The sender's own egg is the control that separates the two: correct owner, live
+        -- PlayerId, connected player. If that consumes a slot the mechanism works and the
+        -- earlier no-op was the owner mismatch. If it does not, the approach is dead and no
+        -- rewrite follows.
         local pick, pickOwner, pickSlot = nil, nil, nil
         for index = 1, #found do
             local model = found[index]
             local backId = nil
             pcall(function() backId = guidText(model:GetModelInstanceId()) end)
             local owner = backId ~= nil and ownerByModelId[backId] or nil
-            if owner ~= nil and owner ~= senderUId and pick == nil then
+            if owner ~= nil and owner == senderUId and pick == nil then
                 local slotNum = nil
                 pcall(function() slotNum = model:GetItemSlotNum() end)
                 if type(slotNum) == "number" then
@@ -1104,8 +1114,9 @@ local function hatchTest(senderUId)
             end
         end
         if pick == nil then
-            trace("test: no COMPLETED egg in another player's incubator right now. Enumeration, "
-                  .. "ownership and readiness all worked; the delivery call needs a finished egg.")
+            trace("test: no COMPLETED egg in the SENDER'S OWN incubator right now. Enumeration, "
+                  .. "ownership and readiness all worked; this control needs a finished egg of "
+                  .. "the tester's own.")
             return
         end
         trace("test: picked slot " .. tostring(pickSlot) .. " of an incubator owned by " .. tostring(pickOwner))
@@ -1200,19 +1211,62 @@ local function hatchTest(senderUId)
             return
         end
 
+        -- Count occupied slots either side of the call. call_ok=true already proved itself
+        -- worthless once: the only evidence that a hatch happened is a slot that emptied.
+        local function occupiedSlots(model)
+            local total = nil
+            pcall(function() total = model:GetItemSlotNum() end)
+            if type(total) ~= "number" then return nil end
+            local busy = 0
+            for slot = 0, total - 1 do
+                local progress = nil
+                pcall(function() progress = model:GetWorkProgress(slot) end)
+                if progress ~= nil and alive(progress) then busy = busy + 1 end
+            end
+            return busy
+        end
+        local before = occupiedSlots(pick)
+        trace("test: occupied BEFORE = " .. tostring(before))
+
         local archiveOut = {}
         local okCall, err = pcall(function()
             pick:ObtainHatchedCharacter_ServerInternal(addressTo, archiveOut)
         end)
+        local after = occupiedSlots(pick)
+        trace("test: occupied AFTER = " .. tostring(after)
+              .. " CONSUMED=" .. tostring(before ~= nil and after ~= nil and after < before))
         trace("test: obtain(playerId,archive) call_ok=" .. tostring(okCall)
               .. (okCall and "" or (" err=" .. tostring(err))))
 
-        if not okCall then
+        -- Run the second entry point UNCONDITIONALLY. It was gated on `not okCall`, and the
+        -- first call keeps returning ok while consuming nothing, so the gate meant this never
+        -- executed once. A fallback that only runs on a loud failure is useless against a
+        -- silent one.
+        --
+        -- RequestObtainSingleHatchedCharacter takes a slot and NO player, so the game resolves
+        -- the recipient and the surrounding context itself. That is the likely reason the
+        -- _ServerInternal variant no-ops when called cold from Lua: it is the inner half of a
+        -- request whose outer half sets up state we never established.
+        if after ~= nil and before ~= nil and after >= before then
             local okSingle, singleErr = pcall(function()
                 pick:RequestObtainSingleHatchedCharacter(pickSlot)
             end)
+            local afterSingle = occupiedSlots(pick)
             trace("test: RequestObtainSingleHatchedCharacter(" .. tostring(pickSlot) .. ") call_ok="
                   .. tostring(okSingle) .. (okSingle and "" or (" err=" .. tostring(singleErr))))
+            trace("test: occupied after single = " .. tostring(afterSingle)
+                  .. " CONSUMED=" .. tostring(afterSingle ~= nil and afterSingle < before))
+
+            -- And the all-slots variant, same reasoning, only if the single one changed
+            -- nothing. Ordered narrowest first so a success is attributable to one call.
+            if afterSingle ~= nil and afterSingle >= before then
+                local okAll, allErr = pcall(function() pick:RequestObtainAllHatchedCharacter() end)
+                local afterAll = occupiedSlots(pick)
+                trace("test: RequestObtainAllHatchedCharacter() call_ok=" .. tostring(okAll)
+                      .. (okAll and "" or (" err=" .. tostring(allErr))))
+                trace("test: occupied after all = " .. tostring(afterAll)
+                      .. " CONSUMED=" .. tostring(afterAll ~= nil and afterAll < before))
+            end
         end
 
         trace("test: DONE. Owner was " .. tostring(pickOwner)
@@ -1277,6 +1331,72 @@ local function hatchTest(senderUId)
     trace("test: obtain call_ok=" .. tostring(okCall) .. (okCall and "" or (" err=" .. tostring(err))))
     trace("test: DONE. Check whether the Pal reached " .. tostring(targetOwner)
           .. " or the player who typed the command.")
+end
+
+-- Read-only companion to hatchTest. It never calls obtain, so it is safe to run repeatedly,
+-- and it prints each incubator's world location so a slot can be inspected in game.
+--
+-- Separate command rather than a flag on hatchTest: a state check that can mutate on a wrong
+-- argument is exactly the shape of accident this branch cannot afford, given every run costs
+-- a server restart to undo.
+local function hatchState(senderUId)
+    if not alive(_ModActor) then trace("state: no ModActor") return end
+    local found = nil
+    local okFind = pcall(function() found = FindAllOf("PalMapObjectHatchingEggModelBase") end)
+    if not okFind or found == nil then
+        okFind = pcall(function() found = FindAllOf("PalMapObjectMultiHatchingEggModel") end)
+    end
+    if not okFind or found == nil then trace("state: find_ok=" .. tostring(okFind)) return end
+
+    local ownerByModelId = {}
+    local models = nil
+    if pcall(function() models = FindAllOf("PalMapObjectModel") end) and models ~= nil then
+        for index = 1, #models do
+            local mapObject = models[index]
+            local instanceId, builder = nil, nil
+            pcall(function() instanceId = guidText(mapObject.InstanceId) end)
+            pcall(function() builder = guidText(mapObject.BuildPlayerUId) end)
+            if instanceId ~= nil and builder ~= nil then ownerByModelId[instanceId] = builder end
+        end
+    end
+
+    trace("state: " .. tostring(#found) .. " incubators")
+    for index = 1, #found do
+        local model = found[index]
+        local backId = nil
+        pcall(function() backId = guidText(model:GetModelInstanceId()) end)
+        local owner = backId ~= nil and ownerByModelId[backId] or nil
+
+        -- Location comes from the concrete model's own getter, which writes an out-vector.
+        local location = {}
+        local okLoc = pcall(function() model:GetMapObjectLocation(location) end)
+        local where = "unknown"
+        if okLoc then
+            local parts = {}
+            for key, value in pairs(location) do parts[#parts + 1] = tostring(key) .. "=" .. tostring(value) end
+            if #parts > 0 then where = table.concat(parts, ",") end
+        end
+
+        local slotNum = nil
+        pcall(function() slotNum = model:GetItemSlotNum() end)
+        local occupied, completed = 0, 0
+        if type(slotNum) == "number" then
+            for slot = 0, slotNum - 1 do
+                local progress = nil
+                pcall(function() progress = model:GetWorkProgress(slot) end)
+                if progress ~= nil and alive(progress) then
+                    occupied = occupied + 1
+                    local done = nil
+                    pcall(function() done = progress:IsCompleted() end)
+                    if done == true then completed = completed + 1 end
+                end
+            end
+        end
+        trace("state[" .. index .. "] owner=" .. tostring(owner or "unresolved")
+              .. " modelId=" .. tostring(backId)
+              .. " occupied=" .. tostring(occupied) .. " completed=" .. tostring(completed)
+              .. " at " .. where)
+    end
 end
 
 local function loadJson(file)
@@ -1383,6 +1503,9 @@ local function RegisterHooks()
                     saveToJson({ senderUId, false })
                 elseif string.find(text, "!autohatch on") then
                     saveToJson({ senderUId, true })
+                elseif string.find(text, "!hatchstate") then
+                    trace("state: !hatchstate from " .. tostring(senderUId))
+                    hatchState(senderUId)
                 elseif string.find(text, "!hatchtest") then
                     trace("test: !hatchtest from " .. tostring(senderUId))
                     hatchTest(senderUId)
