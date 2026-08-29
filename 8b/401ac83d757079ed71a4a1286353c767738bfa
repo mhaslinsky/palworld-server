@@ -1,0 +1,27 @@
+reference/AutoHatch-main.lua
+  s_2545e887ad9c5b::t_e47ae4ef62be1d 70-73,75-102,111-212,625-632
+  s_2545e887ad9c5b::t_a2bbc6e5836376 217,365-376,378-379
+  s_2545e887ad9c5b::t_147a75d23fedbf 74,271-364,377,380-381,635
+  s_2545e887ad9c5b::t_cc6d84495d4c69 103-110,218,227,240,472,477-479
+  s_2545e887ad9c5b::t_2c62165d1076b3 59,643-662
+  s_2545e887ad9c5b::t_7b4bb341329647 219-222,228-239,241-242,473-474,490-491,493-497
+  s_2545e887ad9c5b::t_defd4532fd6447 382-436,480
+  s_2545e887ad9c5b::t_1a8a342287e56a 437-467,634
+  s_2545e887ad9c5b::t_fb31e431132060 213-216,223-226,243-270,468-471,475-476,481-489,492,498-505,633
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "8b401ac83d757079ed71a4a1286353c767738bfa",
+  "prompts": {},
+  "sessions": {
+    "s_2545e887ad9c5b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c67a37fa-88b0-414f-8944-808d5d579ec3",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    }
+  }
+}
