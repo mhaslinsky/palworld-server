@@ -679,6 +679,59 @@ local function probeBlueprintLatches(phase)
     end
 end
 
+-- ObtainHatchedCharacter_ServerInternal takes an int32 RequestPlayerId, not a UId, so the
+-- correct UId the mod resolves has to survive a round trip through a per-connection integer
+-- before the game can find a container for it. This walks the GameState's PlayerArray and
+-- prints, for every PlayerState the server currently holds, its PlayerId alongside its UId
+-- and name. A PlayerId that maps to the wrong UId, or two states sharing one PlayerId, puts
+-- the fault in that lookup rather than anywhere in the mod.
+local function probePlayerArray(phase)
+    local gameState = nil
+    local okState = pcall(function() gameState = _ModActor["Game State"] end)
+    if not okState or gameState == nil then
+        okState = pcall(function() gameState = _ModActor:GetGameStateFromLua() end)
+    end
+    if gameState == nil then trace("parr:" .. phase .. " GameState unreadable read_ok=" .. tostring(okState)) return end
+
+    local okRead, array = readProperty(gameState, "PlayerArray")
+    if not okRead or array == nil then
+        trace("parr:" .. phase .. " PlayerArray read_ok=" .. tostring(okRead) .. " value=nil")
+        return
+    end
+
+    -- Length and iteration are reported apart from the entries. An array that could not be
+    -- counted and an array that is genuinely empty are different findings, and collapsing
+    -- them is how three earlier probes reported an absent value as a zero.
+    local count = nil
+    local okCount = pcall(function() count = #array end)
+    trace("parr:" .. phase .. " count_ok=" .. tostring(okCount) .. " count=" .. tostring(count))
+    if not okCount or count == nil then return end
+
+    local seen = {}
+    for index = 1, count do
+        local entry = nil
+        local okEntry = pcall(function() entry = array[index] end)
+        if not okEntry or entry == nil then
+            trace("parr:" .. phase .. " [" .. index .. "] entry_ok=false")
+        else
+            local state = unwrap(entry)
+            local okId, playerId = readProperty(state, "PlayerId")
+            local okName, playerName = readProperty(state, "PlayerNamePrivate")
+            local uid = "unread"
+            pcall(function() uid = guidText(state.PlayerUId) end)
+            local full = "unnameable"
+            pcall(function() full = state:GetFullName() end)
+            local idText = tostring(okId and playerId or "unread")
+            local duplicate = seen[idText] and " DUPLICATE_OF_" .. tostring(seen[idText]) or ""
+            seen[idText] = index
+            trace("parr:" .. phase .. " [" .. index .. "] PlayerId=" .. idText
+                  .. " uid=" .. tostring(uid)
+                  .. " name=" .. tostring(okName and playerName or "unread")
+                  .. duplicate .. " obj=" .. tostring(full))
+        end
+    end
+end
+
 local function probeModActorOwnership()
     if not alive(_ModActor) then trace("own: no ModActor") return end
     for _, name in ipairs({ "GetOwner", "GetNetOwningPlayer", "GetInstigator", "GetInstigatorController" }) do
@@ -967,6 +1020,7 @@ local function RegisterHooks()
             dumpMap(_ModActor, name, 8)
         end
         probeBlueprintLatches(phase)
+        probePlayerArray(phase)
         probeResolvers(egg)
         if phase == "pre" then
             probeModActorOwnership()

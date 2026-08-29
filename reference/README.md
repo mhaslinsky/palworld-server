@@ -86,7 +86,7 @@ also derives the player state from the character's own controller rather than a
 module-level `playerState` that holds whichever state was created last server-wide; that
 dangling pointer was real, and is simply not what was crashing us.
 
-sha256 `28df5db6a26097cd9ceba9812a1052394c3f47037f53b32186b023fc9efa81bf`, verified
+sha256 `30bfd5c8fee980d2d32ce3374c9e3df66e59166d60ae7df38a0cf21301338b28`, verified
 on the live box and required verbatim by `scripts/deploy-autohatch.ps1 -ExpectedSha256`.
 
 Every change is a guard or a breadcrumb; no gameplay logic is altered. The substantive one
@@ -110,13 +110,25 @@ Every ownership failure we have seen follows from that one rule.
   is a documented known issue: the eggs simply do not auto-hatch.
 - **Keep Palbox space free.** On a full Palbox, the mod drops the Pal on the ground. The
   author states outright that he cannot detect a full Palbox, so nothing warns you.
-- **Everyone's eggs landing on one player is an open upstream bug**, reported as "All Guild
-  Members eggs are hatching to me" and independently described as the first person to breed
-  after a server start collecting everyone's Pals. Our own logs show 35 hatches addressed to
-  a single UId, matching that pattern.
+- **Everyone's eggs landing on one player is real, and the mod is NOT the thing getting it
+  wrong.** Measured 2026-08-29 with both players hatching in one session, every step of the
+  mod's decision logged. On all seven of the second player's hatches the mod read the egg's
+  owner as `5C104B96`, `GetLoggedInPlayerUId` took `5C104B96` and returned `5C104B96`, and
+  the mod addressed the delivery to `5C104B96` (Player ID 257). The Pals landed in
+  `084390E6`'s Palbox anyway. There is not one wrong value anywhere in the mod.
+
+  The suspicion now sits on the handoff. `ObtainHatchedCharacter_ServerInternal` takes an
+  `int32 RequestPlayerId`, not a UId, so a correctly resolved owner has to survive a round
+  trip through a per-connection integer before the game can find a container. That integer
+  is the only identity in the chain that is not proven correct.
 
 Before concluding a Pal was destroyed, check the first breeder's Palbox and the ground around
-the incubators. Both are ordinary outcomes of the rule above.
+the incubators. Both are ordinary outcomes.
+
+The earlier reading of the same symptom, that the mod invents the wrong owner from Breeding
+Farm slot 1, is superseded for the AUTO-HATCH path by the measurement above. The slot-1 rule
+still governs which eggs the mod picks up, so slot 1 still matters; it is simply not what
+decides where a hatched Pal is delivered.
 
 ### The `sentBytes` latch: tested, and it wedges the server
 
