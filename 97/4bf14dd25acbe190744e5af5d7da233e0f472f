@@ -1,0 +1,33 @@
+reference/modkit/runpy.bat
+  s_2545e887ad9c5b::t_e396f04f5bb833 1-11
+reference/modkit/makelabel.py
+  s_2545e887ad9c5b::t_e396f04f5bb833 1-39
+reference/modkit/verify_modactor.py
+  s_2545e887ad9c5b::t_1bd20bd021c8a7 1-26
+reference/modkit/wwiseintegrate.ps1
+  s_2545e887ad9c5b::t_e396f04f5bb833 1-64
+reference/README.md
+  s_2545e887ad9c5b::t_27d4bda180fc29 267-338
+reference/modkit/buildkit.bat
+  s_2545e887ad9c5b::t_e396f04f5bb833 1-13
+reference/modkit/build_modactor.py
+  s_2545e887ad9c5b::t_b8f5b566fc7135 1-40
+reference/modkit/cookmod.bat
+  s_2545e887ad9c5b::t_e396f04f5bb833 1-27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "974bf14dd25acbe190744e5af5d7da233e0f472f",
+  "prompts": {},
+  "sessions": {
+    "s_2545e887ad9c5b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c67a37fa-88b0-414f-8944-808d5d579ec3",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    }
+  }
+}
