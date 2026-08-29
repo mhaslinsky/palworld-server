@@ -254,6 +254,30 @@ local function getGameState(modActor)
         cachedGameState = nil
     end
 
+    -- Ask the ACTOR's world. This became reachable only once findModActor started taking the
+    -- actor BPModLoaderMod actually spawned: a class default object belongs to no world, so
+    -- GetWorld on it yields nothing, and the whole route looked unavailable. It is preferred over
+    -- the chat cache because it needs nobody to speak first, which otherwise left the mod unable
+    -- to resolve a single online player until somebody typed in chat.
+    if alive(modActor) then
+        local world = nil
+        pcall(function() world = modActor:GetWorld() end)
+        if alive(world) then
+            local fromWorld = nil
+            pcall(function() fromWorld = world.GameState end)
+            if not alive(fromWorld) then
+                pcall(function() fromWorld = world:GetGameState() end)
+            end
+            if alive(fromWorld) then
+                local okArr, players = readProperty(fromWorld, "PlayerArray")
+                if okArr and players ~= nil then
+                    cachedGameState = fromWorld
+                    return fromWorld
+                end
+            end
+        end
+    end
+
     local found = nil
     if not pcall(function() found = FindAllOf("PalGameStateInGame") end) or found == nil then
         return nil
@@ -316,6 +340,26 @@ end
 -- reports whether the call THREW.
 ---------------------------------------------------------------------------------------------
 
+-- Whether the Blueprint graph EXECUTES is observed here, not by a Print String node. UE strips
+-- UKismetSystemLibrary::PrintString entirely in Shipping and Test builds
+-- (`#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)` wraps its whole body, read from the UE 5.1 engine
+-- source), and this server is PalServer-Win64-Shipping.exe. A Print String first node therefore
+-- emits nothing whether or not the graph ran, which is a probe that cannot go green. Do not
+-- instrument a server Blueprint that way again.
+--
+-- What survives Shipping is the graph's own side effects. `Do Hatch` calls
+-- ObtainHatchedCharacter_ServerInternal on the egg model, and nothing in THIS file calls that
+-- function, so a fire of its hook while inDoHatchCall is set proves the graph reached the call
+-- node. The hook path is the one already proven to register and fire in
+-- reference/AutoHatch-main.lua.
+local inDoHatchCall = false
+local obtainFiresInsideCall = 0
+local obtainFiresTotal = 0
+-- Fires of a hook on OUR OWN Do Hatch. This is the earlier and stricter of the two signals: it
+-- rises when ProcessEvent reaches the function, before any node in the body runs, so it separates
+-- "dispatch never happened" from "dispatch happened and the body did nothing".
+local doHatchHookFires = 0
+
 local function callDoHatch(modActor, eggModel, ownerPlayerId)
     if not alive(modActor) then
         trace("hatch: no ModActor, cannot deliver")
@@ -327,16 +371,54 @@ local function callDoHatch(modActor, eggModel, ownerPlayerId)
     -- "Do Hatch" gets a wrong-argument-count error, which is the shape that proves it exists.
     --
     -- Colon-call syntax cannot express a name with a space, so index it and pass self manually.
-    local ok, err = pcall(function()
-        modActor[BLUEPRINT_HATCH_FN](modActor, eggModel, ownerPlayerId)
+    -- The sweep runs under LoopAsync, which is a WORKER thread, and this reaches into Unreal to
+    -- run Blueprint bytecode. BPModLoaderMod never does that from off the game thread: it wraps
+    -- SpawnActor and its PreBeginPlay() Blueprint call in ExecuteInGameThread
+    -- (reference/BPModLoaderMod-main.lua:308 and :339; the comment at :338 says why). Reads such
+    -- as FindAllOf and property access survive a worker thread, which is why the sweep looked
+    -- healthy while the one call that had to dispatch did not.
+    --
+    -- ExecuteInGameThread is asynchronous, so this can no longer report the outcome to its
+    -- caller. That costs nothing: the caller keys its cooldown on the slot count, never on a
+    -- return value, because the return value here was only ever a pcall result.
+    local queued = pcall(function()
+        ExecuteInGameThread(function()
+            -- Revalidate inside the callback. Queueing defers execution, and an actor or egg can
+            -- go away between the sweep observing it and the game thread arriving here.
+            if not alive(modActor) or not alive(eggModel) then
+                trace("hatch: object died before the game thread ran the call")
+                return
+            end
+            -- UE4SS's __index answers ANY name with a plausible TrivialObject, so print what came
+            -- back: a UFunction proves the name resolved, a TrivialObject proves it did not.
+            local memberType = nil
+            pcall(function() memberType = tostring(modActor[BLUEPRINT_HATCH_FN]) end)
+
+            local firesBefore = obtainFiresInsideCall
+            local hooksBefore = doHatchHookFires
+            inDoHatchCall = true
+            local ok, err = pcall(function()
+                modActor[BLUEPRINT_HATCH_FN](modActor, eggModel, ownerPlayerId)
+            end)
+            inDoHatchCall = false
+            if not ok then
+                trace("hatch: " .. BLUEPRINT_HATCH_FN .. " call_ok=false err=" .. tostring(err))
+            end
+            -- THE measurement. call_ok says only that nothing threw. `processevent` says whether
+            -- dispatch reached the function at all; `reached_obtain` says whether its body ran as
+            -- far as the delivery node. Both survive a Shipping build; a Print String node does
+            -- not.
+            trace("hatch: on_game_thread call_ok=" .. tostring(ok) ..
+                  " fn=" .. tostring(memberType) ..
+                  " processevent=" .. tostring(doHatchHookFires > hooksBefore) ..
+                  " reached_obtain=" .. tostring(obtainFiresInsideCall > firesBefore) ..
+                  " obtain_total=" .. tostring(obtainFiresTotal))
+        end)
     end)
-    if not ok then
-        trace("hatch: " .. BLUEPRINT_HATCH_FN .. " call_ok=false err=" .. tostring(err))
+    if not queued then
+        trace("hatch: ExecuteInGameThread unavailable, call NOT dispatched")
     end
-    -- ok only means the call did not throw. Whether anything HATCHED is decided by the slot
-    -- disappearing on the next sweep, which is why this returns the call result and the caller
-    -- keys its cooldown on the slot rather than on this boolean.
-    return ok
+    return queued
 end
 
 ---------------------------------------------------------------------------------------------
@@ -490,10 +572,21 @@ local function sweepOnce(modActor)
     end
     -- completed>0 with attempted=0 points at the gate (owner disabled or offline); completed=0
     -- means there is simply nothing ready yet. Prints every cycle regardless of `verbose`.
+    -- Carry the GameState's own player count. owners_online=0 is ambiguous between "nobody is
+    -- playing" and "the GameState lookup failed", and reading it as the former wasted a whole
+    -- test round while a player was demonstrably connected.
+    local gameState = getGameState(modActor)
+    local connected = "no-gamestate"
+    if gameState ~= nil then
+        local okArr, playerArray = readProperty(gameState, "PlayerArray")
+        local count = nil
+        if okArr and playerArray ~= nil then pcall(function() count = #playerArray end) end
+        connected = tostring(count)
+    end
     trace(string.format(
-        "poll.summary: incubators=%d owners_resolved=%d owners_online=%d occupied=%d completed=%d attempted=%d",
+        "poll.summary: incubators=%d owners_resolved=%d owners_online=%d occupied=%d completed=%d attempted=%d players_in_gamestate=%s",
         summary.incubators, summary.ownersResolved, summary.ownersOnline,
-        summary.occupiedSlots, summary.completedSlots, summary.hatchesAttempted))
+        summary.occupiedSlots, summary.completedSlots, summary.hatchesAttempted, connected))
     lastSummaryCounts = summary
 end
 
@@ -505,21 +598,57 @@ end
 
 local _ModActor = nil
 
+-- Skip the class default object, exactly as getGameState does above. FindAllOf returns
+-- Default__ModActor_C alongside the spawned actor; a CDO is IsA its own class, answers IsValid,
+-- and exposes every UFunction, so it passes every check here while carrying no world. Calling a
+-- Blueprint function on it dispatches against a template and delivers nothing. That is the same
+-- trap Default__PalGameStateInGame set with its empty PlayerArray.
+--
+-- The old log line printed MOD_ACTOR_BLUEPRINT_PATH, a hardcoded constant, so it read identical
+-- for the CDO and the real actor and was never evidence about the object held. Print the
+-- object's own name instead.
 local function findModActor()
     if alive(_ModActor) then return _ModActor end
+
+    -- BPModLoaderMod publishes the actor it actually spawned, keyed by mod name
+    -- (reference/BPModLoaderMod-main.lua:258). That is the authoritative instance and it cannot
+    -- be a CDO, so prefer it over scanning. Scanning stays as the fallback because the shared
+    -- variable only exists once the loader has reached the spawn.
+    local shared = nil
+    pcall(function() shared = ModRef:GetSharedVariable("BPModLoaderMod_AutoHatchFix") end)
+    if alive(shared) then
+        _ModActor = shared
+        local sharedName = nil
+        pcall(function() sharedName = shared:GetFullName() end)
+        trace("init: ModActor from BPModLoader shared variable, using=" .. tostring(sharedName))
+        return _ModActor
+    end
+
     local candidates = nil
-    if pcall(function() candidates = FindAllOf("ModActor_C") end) and candidates ~= nil then
-        for index = 1, #candidates do
-            local candidate = candidates[index]
-            local isOurs = nil
-            pcall(function() isOurs = candidate:IsA(MOD_ACTOR_BLUEPRINT_PATH) end)
-            if isOurs then
+    if not pcall(function() candidates = FindAllOf("ModActor_C") end) or candidates == nil then
+        return nil
+    end
+    local skippedDefaults = 0
+    for index = 1, #candidates do
+        local candidate = candidates[index]
+        local isOurs = nil
+        pcall(function() isOurs = candidate:IsA(MOD_ACTOR_BLUEPRINT_PATH) end)
+        if isOurs and alive(candidate) then
+            local name = nil
+            pcall(function() name = candidate:GetFullName() end)
+            if name ~= nil and string.find(name, "Default__", 1, true) then
+                skippedDefaults = skippedDefaults + 1
+            else
                 _ModActor = candidate
-                trace("init: found ModActor at " .. MOD_ACTOR_BLUEPRINT_PATH)
+                trace("init: ModActor candidates=" .. tostring(#candidates) ..
+                      " skipped_CDO=" .. tostring(skippedDefaults) ..
+                      " using=" .. tostring(name))
                 return _ModActor
             end
         end
     end
+    trace("init: no non-default ModActor among " .. tostring(#candidates) ..
+          " candidate(s), skipped_CDO=" .. tostring(skippedDefaults))
     return nil
 end
 
@@ -582,6 +711,57 @@ local function RegisterChatHook()
     end))
 end
 
+-- The execution probe. This hook is observation only: it never calls anything and never alters
+-- the delivery. Registration itself is the control, so log it rather than assuming it took.
+local function RegisterObtainProbe()
+    local ok = pcall(function()
+        RegisterHook("/Script/Pal.PalMapObjectHatchingEggModelBase:ObtainHatchedCharacter_ServerInternal",
+          guarded("obtain", function(self, playerId)
+            obtainFiresTotal = obtainFiresTotal + 1
+            if inDoHatchCall then obtainFiresInsideCall = obtainFiresInsideCall + 1 end
+            local recipient = nil
+            pcall(function() recipient = playerId:get() end)
+            trace("obtain: fired inside_do_hatch=" .. tostring(inDoHatchCall) ..
+                  " recipient=" .. tostring(recipient) ..
+                  " total=" .. tostring(obtainFiresTotal))
+            return false
+        end))
+    end)
+    trace("init: obtain probe registered=" .. tostring(ok))
+end
+
+-- Hook our own Blueprint function. Registration is itself informative: UE4SS can only hook an
+-- FName it has seen, so a registration failure says the name is wrong, which is the one reading
+-- the uasset's name table cannot rule out from here.
+-- Register against BOTH spellings and report each. The cooked asset's name table carries
+-- "Do Hatch" three times and "DoHatch" zero times, so the space is what the class exposes; but
+-- UE4SS splits a hook path on ':' and its handling of a space in the trailing name is unproven
+-- here, so a failure to register does not by itself mean the name is wrong. Registering both
+-- separates "UE4SS cannot express this name" from "this name does not exist".
+-- Registered LAZILY, on the first cycle that has an actor, not at init. UE4SS can only hook a
+-- class it has already loaded, and BPModLoaderMod spawns our ModActor well after this mod's
+-- ExecuteAsync runs, so registering at init failed for BOTH spellings and said nothing about
+-- either name. A registration attempt before the class exists is another control that cannot
+-- go green.
+local doHatchProbeAttempted = false
+
+local function RegisterDoHatchProbe()
+    if doHatchProbeAttempted then return end
+    doHatchProbeAttempted = true
+    for _, candidateName in ipairs({ BLUEPRINT_HATCH_FN, "DoHatch" }) do
+        local ok = pcall(function()
+            RegisterHook(MOD_ACTOR_BLUEPRINT_PATH .. ":" .. candidateName,
+              guarded("dohatch", function()
+                doHatchHookFires = doHatchHookFires + 1
+                trace("dohatch: ProcessEvent reached '" .. candidateName ..
+                      "', fires=" .. tostring(doHatchHookFires))
+                return false
+            end))
+        end)
+        trace("init: Do Hatch probe name='" .. candidateName .. "' registered=" .. tostring(ok))
+    end
+end
+
 local function RegisterPollLoop()
     LoopAsync(POLL_INTERVAL_MS, guarded("poll", function()
         local modActor = findModActor()
@@ -589,6 +769,7 @@ local function RegisterPollLoop()
             trace("poll: no ModActor yet, waiting")
             return false -- keep looping; do not stop on a transient absence
         end
+        RegisterDoHatchProbe()
         sweepOnce(modActor)
         return false
     end))
@@ -597,6 +778,7 @@ end
 ExecuteAsync(function()
     loadPlayerSettings()
     RegisterChatHook()
+    RegisterObtainProbe()
     RegisterPollLoop()
     trace("init: AutoHatchFix loaded")
 end)
