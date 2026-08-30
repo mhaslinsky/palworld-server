@@ -131,6 +131,34 @@ resource "aws_s3_object" "windows_seed_paks_script" {
   content_type = "text/plain"
 }
 
+# Re-deploys the AutoHatchFix Lua and enables it, refusing while anyone is online. On demand via
+# SSM like its two siblings above, so it stays out of the boot fetch list and does not change the
+# user_data hash. Deliberately targets AutoHatchFix, not the original AutoHatch: the original
+# mod's Lua must stay disabled on this server (its pak is enabled and driven as machinery; its own
+# shared-context sweep is the misroute AutoHatchFix replaces), and this script must never
+# re-enable it.
+resource "aws_s3_object" "windows_deploy_autohatch_script" {
+  count        = local.windows_enabled
+  bucket       = aws_s3_bucket.backups.id
+  key          = "scripts/windows/deploy-autohatch.ps1"
+  source       = "${path.module}/../scripts/deploy-autohatch.ps1"
+  etag         = filemd5("${path.module}/../scripts/deploy-autohatch.ps1")
+  content_type = "text/plain"
+}
+
+# The mod file the script above delivers. It lives under scripts/windows/ rather than
+# beside the UE4SS stage because the instance role can already read that prefix, and a
+# mod that needed an IAM change to reach the box would be one apply away from every
+# instance-replacement hazard in AGENTS.md rule 4.
+resource "aws_s3_object" "windows_autohatchfix_lua" {
+  count        = local.windows_enabled
+  bucket       = aws_s3_bucket.backups.id
+  key          = "scripts/windows/autohatchfix-main.lua"
+  source       = "${path.module}/../reference/AutoHatchFix-main.lua"
+  etag         = filemd5("${path.module}/../reference/AutoHatchFix-main.lua")
+  content_type = "text/plain"
+}
+
 # The instance may read its own bootstrap scripts, and write backups under its OWN
 # prefix. Deliberately narrow: it cannot read or delete the world backups, and it
 # cannot write into world/linux/* (the shared instance role would otherwise let a
