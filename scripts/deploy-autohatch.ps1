@@ -1,10 +1,15 @@
-﻿# Deploy the repo's hardened AutoHatch Lua to the box and re-enable the mod. Run on the
-# box via SSM Run Command (no RDP), fetching itself and the Lua from S3:
+﻿# Deploy the repo's AutoHatchFix Lua to the box and enable it. Run on the box via SSM Run
+# Command (no RDP), fetching itself and the Lua from S3:
 #
 #   $aws = "C:\Program Files\Amazon\AWSCLIV2\aws.exe"
 #   $b = (Get-Content C:\PalServer\idle.conf.json -Raw | ConvertFrom-Json).BackupBucket
 #   & $aws s3 cp "s3://$b/scripts/windows/deploy-autohatch.ps1" C:\PalServer\scripts\deploy-autohatch.ps1 --only-show-errors
 #   & powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\PalServer\scripts\deploy-autohatch.ps1 -ExpectedSha256 <sha>
+#
+# This targets AutoHatchFix, not the original AutoHatch mod. The original's Lua must stay
+# DISABLED on this server (its pak is enabled and driven as machinery by AutoHatchFix; its
+# own shared-context sweep is the "everyone's Pals go to whoever hatched first" bug
+# AutoHatchFix replaces), so this script never touches the original's enabled.txt.
 #
 # It REFUSES while anyone is online, and refuses just as hard when it cannot tell. A
 # running server whose REST API does not answer is an unknown roster, not an empty one;
@@ -66,8 +71,8 @@ if ($server) {
 }
 
 # --- Fetch the Lua and prove it arrived intact -----------------------------------
-$staged = "C:\PalServer\scripts\autohatch-main.lua"
-& $awsExe s3 cp "s3://$bucket/scripts/windows/autohatch-main.lua" $staged --region $region --only-show-errors
+$staged = "C:\PalServer\scripts\autohatchfix-main.lua"
+& $awsExe s3 cp "s3://$bucket/scripts/windows/autohatchfix-main.lua" $staged --region $region --only-show-errors
 if ($LASTEXITCODE -ne 0) { Write-Output "FAILED: s3 cp exit $LASTEXITCODE"; exit 1 }
 if (-not (Test-Path $staged)) { Write-Output "FAILED: s3 cp exited 0 but '$staged' does not exist"; exit 1 }
 
@@ -77,18 +82,22 @@ if ($actual -ne $expected) {
   Write-Output "FAILED: hash mismatch. expected $expected, got $actual. NOT deploying."
   exit 1
 }
-Write-Output "Fetched autohatch-main.lua, sha256 $actual (matches)."
+Write-Output "Fetched autohatchfix-main.lua, sha256 $actual (matches)."
 
 # --- Copy into both Mods folders, live and stage ----------------------------------
 # Copy-Item rather than a re-encode: the file is ASCII now, and a script that rewrites
 # the bytes it was asked to deliver can no longer be checked against the hash above.
+# The parent directory is created rather than treated as a hard failure: unlike AutoHatch,
+# AutoHatchFix has no long install history on this box, so a missing Scripts folder is an
+# expected first-deploy state, not evidence something else is wrong.
 $targets = @(
-  "C:\PalServer\Pal\Binaries\Win64\ue4ss\Mods\AutoHatch\Scripts\main.lua",
-  "$saveQualifier\PalServer\ue4ss-stage\Win64\ue4ss\Mods\AutoHatch\Scripts\main.lua"
+  "C:\PalServer\Pal\Binaries\Win64\ue4ss\Mods\AutoHatchFix\Scripts\main.lua",
+  "$saveQualifier\PalServer\ue4ss-stage\Win64\ue4ss\Mods\AutoHatchFix\Scripts\main.lua"
 )
 foreach ($target in $targets) {
   $parent = Split-Path -Parent $target
-  if (-not (Test-Path $parent)) { $problems += "missing directory '$parent'"; continue }
+  if (-not (Test-Path $parent)) { New-Item -ItemType Directory -Path $parent -Force -ErrorAction SilentlyContinue | Out-Null }
+  if (-not (Test-Path $parent)) { $problems += "could not create directory '$parent'"; continue }
   Copy-Item -Path $staged -Destination $target -Force -ErrorAction SilentlyContinue
   if (-not (Test-Path $target)) { $problems += "copy to '$target' produced no file"; continue }
   $landed = (Get-FileHash -Path $target -Algorithm SHA256).Hash.ToLower()
@@ -121,21 +130,37 @@ function Enable-ByRename {
   return $null
 }
 
-$renames = @(
-  @{ Label = "live UE4SS enabled.txt";
-     Disabled = "C:\PalServer\Pal\Binaries\Win64\ue4ss\Mods\AutoHatch\enabled.txt.disabled";
-     Enabled = "C:\PalServer\Pal\Binaries\Win64\ue4ss\Mods\AutoHatch\enabled.txt" },
-  @{ Label = "staged UE4SS enabled.txt";
-     Disabled = "$saveQualifier\PalServer\ue4ss-stage\Win64\ue4ss\Mods\AutoHatch\enabled.txt.disabled";
-     Enabled = "$saveQualifier\PalServer\ue4ss-stage\Win64\ue4ss\Mods\AutoHatch\enabled.txt" },
-  @{ Label = "staged AutoHatch.pak";
-     Disabled = "$saveQualifier\PalServer\logicmods-stage\AutoHatch.pak.disabled";
-     Enabled = "$saveQualifier\PalServer\logicmods-stage\AutoHatch.pak" }
-)
-foreach ($rename in $renames) {
-  $problem = Enable-ByRename -DisabledPath $rename.Disabled -EnabledPath $rename.Enabled -Label $rename.Label
-  if ($problem) { $problems += $problem } else { Write-Output "OK: $($rename.Label) enabled" }
+function Ensure-Enabled {
+  param([string]$EnabledPath, [string]$Label)
+  # Same contract as Enable-ByRename above (return a problem string or $null), for a mod
+  # folder with no .disabled counterpart to rename FROM: AutoHatchFix has no long install
+  # history on this box, so its enabled.txt may simply never have existed yet.
+  if (Test-Path $EnabledPath) { return $null }
+  New-Item -ItemType File -Path $EnabledPath -Force -ErrorAction SilentlyContinue | Out-Null
+  if (-not (Test-Path $EnabledPath)) { return "$Label - could not create '$EnabledPath'" }
+  return $null
 }
+
+# Only AutoHatchFix's own enabled.txt is touched here. The original AutoHatch mod's Lua
+# enabled.txt is deliberately left alone in both trees: it must stay disabled, or its
+# shared-context sweep runs again and reintroduces the misroute this mod replaces. Its pak
+# stays enabled separately, as the machinery AutoHatchFix drives.
+$enables = @(
+  @{ Label = "live AutoHatchFix enabled.txt";
+     Path = "C:\PalServer\Pal\Binaries\Win64\ue4ss\Mods\AutoHatchFix\enabled.txt" },
+  @{ Label = "staged AutoHatchFix enabled.txt";
+     Path = "$saveQualifier\PalServer\ue4ss-stage\Win64\ue4ss\Mods\AutoHatchFix\enabled.txt" }
+)
+foreach ($enable in $enables) {
+  $problem = Ensure-Enabled -EnabledPath $enable.Path -Label $enable.Label
+  if ($problem) { $problems += $problem } else { Write-Output "OK: $($enable.Label) enabled" }
+}
+
+$autoHatchPakRename = @{ Label = "staged AutoHatch.pak";
+  Disabled = "$saveQualifier\PalServer\logicmods-stage\AutoHatch.pak.disabled";
+  Enabled = "$saveQualifier\PalServer\logicmods-stage\AutoHatch.pak" }
+$problem = Enable-ByRename -DisabledPath $autoHatchPakRename.Disabled -EnabledPath $autoHatchPakRename.Enabled -Label $autoHatchPakRename.Label
+if ($problem) { $problems += $problem } else { Write-Output "OK: $($autoHatchPakRename.Label) enabled" }
 
 # The launcher mirrors the stage into LogicMods before every launch, so the live pak
 # follows from the staged one. Reported rather than touched: it is locked while the
@@ -148,5 +173,5 @@ if ($problems.Count -gt 0) {
   $problems | ForEach-Object { Write-Output "  - $_" }
   exit 1
 }
-Write-Output "RESULT: Lua deployed and AutoHatch re-enabled. Restart the server to load it."
+Write-Output "RESULT: Lua deployed and AutoHatchFix enabled. Restart the server to load it."
 exit 0
