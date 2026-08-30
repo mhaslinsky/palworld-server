@@ -181,8 +181,13 @@ end
 -- egg:GetModelInstanceId() against the map object's own InstanceId.
 ---------------------------------------------------------------------------------------------
 
+-- Rebuilt each sweep alongside ownerByModelId; holds the UPalMapObjectModel so BuildPlayerUId can
+-- be re-read as a real FGuid when calling the original mod's AutoHatch.
+local ownerObjectByModelId = {}
+
 local function buildOwnerByModelId()
     local ownerByModelId = {}
+    ownerObjectByModelId = {}
     local models = nil
     local okModels = pcall(function() models = FindAllOf("PalMapObjectModel") end)
     if not okModels or models == nil then
@@ -197,6 +202,10 @@ local function buildOwnerByModelId()
         pcall(function() builder = guidText(mapObject.BuildPlayerUId) end)
         if instanceId ~= nil and builder ~= nil then
             ownerByModelId[instanceId] = builder
+            -- Keep the map object itself as well. The original mod's AutoHatch(FGuid) needs a real
+            -- FGuid, and guidText above is one-way, so the raw value is re-read from this object at
+            -- call time rather than reconstructed from its hex text.
+            ownerObjectByModelId[instanceId] = mapObject
             mapped = mapped + 1
         end
     end
@@ -360,6 +369,112 @@ local obtainFiresTotal = 0
 -- "dispatch never happened" from "dispatch happened and the body did nothing".
 local doHatchHookFires = 0
 
+-- One-shot dispatch probe, consumed in sweepOnce. Declared here because Lua resolves a name that
+-- has no local in scope to a GLOBAL rather than erroring, so a local declared below its use reads
+-- as nil and the probe would silently never fire. probeTarget is refreshed every sweep and only
+-- ever holds an ONLINE owner's own incubator, so this can never address another player's eggs.
+-- Off: it has served its purpose. It proved dispatch reaches our Blueprint and runs its body to
+-- the delivery node, which is exactly what showed the Blueprint route cannot deliver at all.
+local DISPATCH_PROBE = false
+local dispatchProbeFired = false
+local probeTarget = nil
+
+---------------------------------------------------------------------------------------------
+-- DELIVERY VIA THE ORIGINAL MOD'S OWN ENTRY POINT.
+--
+-- Our companion Blueprint is proven to dispatch and to run its body all the way to
+-- ObtainHatchedCharacter_ServerInternal (processevent=true, reached_obtain=true, recipient
+-- correct), and the egg is still not consumed. Direct Lua calls to the same function behave
+-- identically. So the caller was never the variable: that function ignores an injected request
+-- whatever invokes it. Its real payload is the Archive parameter, which the original builds by
+-- streaming bytes through GetBytes(uint8) into ByteArray; we pass a default-constructed one.
+--
+-- AutoHatch(FGuid PlayerUId) on the ORIGINAL mod's ModActor is the whole working delivery path
+-- and takes the recipient as a parameter. The original hatches reliably; its only defect is
+-- choosing the recipient, which is exactly the step we replace. reference/AutoHatch-ModActor.hpp
+-- flagged this on 2026-08-28: "AutoHatch(FGuid) takes the recipient directly, so a fix can skip
+-- the broken step."
+--
+-- Its pak is re-enabled, its own Lua is NOT: with no enabled.txt, its shared-context sweep never
+-- runs, so the blueprint exists purely as machinery we drive. UseAutoHatch is forced false every
+-- cycle as a second guard, because the sweep it gates is the misroute itself.
+---------------------------------------------------------------------------------------------
+
+local _OrigModActor = nil
+local origHandoffDone = false
+
+local function findOriginalModActor()
+    if alive(_OrigModActor) then return _OrigModActor end
+    local shared = nil
+    pcall(function() shared = ModRef:GetSharedVariable("BPModLoaderMod_AutoHatch") end)
+    if alive(shared) then
+        _OrigModActor = shared
+        local name = nil
+        pcall(function() name = shared:GetFullName() end)
+        trace("orig: found original ModActor, using=" .. tostring(name))
+        return _OrigModActor
+    end
+    return nil
+end
+
+-- Hand the original blueprint the three managers its own Lua would normally supply. Without them
+-- its graph has no world handles and AutoHatch would run against nils. Each is reported, because
+-- a silent partial handoff would look exactly like a working one.
+local function handOffToOriginal(origActor, gameState)
+    if origHandoffDone or not alive(origActor) then return end
+    local function firstLive(className)
+        local found = nil
+        if not pcall(function() found = FindAllOf(className) end) or found == nil then return nil end
+        for index = 1, #found do
+            local candidate = found[index]
+            local name = nil
+            pcall(function() name = candidate:GetFullName() end)
+            if alive(candidate) and name ~= nil and not string.find(name, "Default__", 1, true) then
+                return candidate
+            end
+        end
+        return nil
+    end
+    local objectManager = firstLive("PalMapObjectManager")
+    local playerManager = firstLive("PalPlayerManager")
+    local okState = gameState ~= nil and pcall(function() origActor:GetGameStateFromLua(gameState) end)
+    local okObject = objectManager ~= nil and pcall(function() origActor:GetObjectManagerFromLua(objectManager) end)
+    local okPlayer = playerManager ~= nil and pcall(function() origActor:GetPlayerManagerFromLua(playerManager) end)
+    trace("orig: handoff gamestate=" .. tostring(okState) ..
+          " objectmanager=" .. tostring(okObject) ..
+          " playermanager=" .. tostring(okPlayer))
+    if okState and okObject and okPlayer then origHandoffDone = true end
+end
+
+-- Deliver every completed egg belonging to ONE owner, addressed to that owner. Called once per
+-- owner per sweep, which is what keeps one collection context per owner instead of the single
+-- shared context that produced the misroute.
+local function callOriginalAutoHatch(origActor, ownerModelId, ownerText)
+    local sourceObject = ownerObjectByModelId[ownerModelId]
+    if not alive(origActor) or not alive(sourceObject) then
+        trace("orig: cannot deliver, actor or source object not alive")
+        return false
+    end
+    return pcall(function()
+        ExecuteInGameThread(function()
+            if not alive(origActor) or not alive(sourceObject) then return end
+            -- Force the original's own sweep off before every call. Its gate is a single global
+            -- bool, so leaving it true would let the blueprint hatch on its own schedule through
+            -- the shared context, which is the bug being replaced.
+            pcall(function() origActor.UseAutoHatch = false end)
+            local ownerGuid = nil
+            pcall(function() ownerGuid = sourceObject.BuildPlayerUId end)
+            if ownerGuid == nil then
+                trace("orig: could not re-read BuildPlayerUId for " .. tostring(ownerText))
+                return
+            end
+            local ok, err = pcall(function() origActor:AutoHatch(ownerGuid) end)
+            trace("orig: AutoHatch(" .. tostring(ownerText) .. ") call_ok=" .. tostring(ok) ..
+                  (ok and "" or (" err=" .. tostring(err))))
+        end)
+    end)
+end
+
 local function callDoHatch(modActor, eggModel, ownerPlayerId)
     if not alive(modActor) then
         trace("hatch: no ModActor, cannot deliver")
@@ -484,6 +599,13 @@ local function sweepOnce(modActor)
     }
     local detailLines = {}
 
+    -- The delivery machinery. Resolved every sweep because the original's pak loads on the
+    -- loader's own schedule, which is later than this mod's first cycles.
+    local origActor = findOriginalModActor()
+    if origActor ~= nil then
+        handOffToOriginal(origActor, getGameState(modActor))
+    end
+
     for index = 1, #eggs do
         local model = eggs[index]
         if alive(model) then
@@ -518,6 +640,9 @@ local function sweepOnce(modActor)
                 ownerOnline = ownerPlayerId ~= nil
                 if ownerOnline then summary.ownersOnline = summary.ownersOnline + 1 end
             end
+            if ownerOnline and gateEnabled and probeTarget == nil then
+                probeTarget = { model = model, playerId = ownerPlayerId }
+            end
 
             detailLines[#detailLines + 1] = string.format(
                 "poll.detail: incubator[%d] model=%s owner=%s gate_enabled=%s slots=%s online=%s player_id=%s",
@@ -549,17 +674,21 @@ local function sweepOnce(modActor)
                 goto continue
             end
 
-            for slotIndex = 1, #completedSlots do
-                local slot = completedSlots[slotIndex]
-                local key = tostring(modelId) .. ":" .. tostring(slot)
-                local last = lastAttemptAt[key]
-                local now = nowMs()
-                if last == nil or (now - last) >= HATCH_RETRY_COOLDOWN_MS then
-                    lastAttemptAt[key] = now
-                    summary.hatchesAttempted = summary.hatchesAttempted + 1
-                    trace("hatch: owner=" .. tostring(owner) .. " playerId=" .. tostring(ownerPlayerId)
-                          .. " model=" .. tostring(modelId) .. " slot=" .. tostring(slot))
-                    callDoHatch(modActor, model, ownerPlayerId)
+            -- One call per OWNER, not per slot: AutoHatch takes a recipient and collects that
+            -- player's eggs, so a per-slot loop would issue the same request repeatedly. The
+            -- cooldown key is therefore the owner, not the slot.
+            local key = tostring(owner)
+            local last = lastAttemptAt[key]
+            local now = nowMs()
+            if last == nil or (now - last) >= HATCH_RETRY_COOLDOWN_MS then
+                lastAttemptAt[key] = now
+                summary.hatchesAttempted = summary.hatchesAttempted + 1
+                trace("hatch: owner=" .. tostring(owner) .. " playerId=" .. tostring(ownerPlayerId)
+                      .. " model=" .. tostring(modelId) .. " completed=" .. tostring(#completedSlots))
+                if origActor ~= nil then
+                    callOriginalAutoHatch(origActor, tostring(modelId), tostring(owner))
+                else
+                    trace("hatch: original ModActor not available, no delivery path")
                 end
             end
         end
@@ -572,6 +701,19 @@ local function sweepOnce(modActor)
     end
     -- completed>0 with attempted=0 points at the gate (owner disabled or offline); completed=0
     -- means there is simply nothing ready yet. Prints every cycle regardless of `verbose`.
+    -- ONE-SHOT DISPATCH PROBE. Whether Lua can make Blueprint bytecode run is a separate
+    -- question from whether a ready egg exists, and coupling them means the answer waits on
+    -- somebody's incubator finishing. So fire exactly one call against an ONLINE owner's own
+    -- incubator, whether or not it holds anything: an empty incubator has nothing to deliver, so
+    -- the game side no-ops and no Pal moves, while `processevent` still reports whether dispatch
+    -- landed. Restricted to an online owner's own incubator so it can never touch another
+    -- player's eggs. Set DISPATCH_PROBE false once the bridge is proven.
+    if DISPATCH_PROBE and not dispatchProbeFired and probeTarget ~= nil then
+        dispatchProbeFired = true
+        trace("probe: firing ONE Do Hatch at an online owner's own incubator (no egg required)")
+        callDoHatch(modActor, probeTarget.model, probeTarget.playerId)
+    end
+
     -- Carry the GameState's own player count. owners_online=0 is ambiguous between "nobody is
     -- playing" and "the GameState lookup failed", and reading it as the former wasted a whole
     -- test round while a player was demonstrably connected.
