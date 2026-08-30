@@ -851,14 +851,16 @@ local function callOriginalAutoHatch(origActor, ownerModelId, ownerText)
     return pcall(function()
         ExecuteInGameThread(function()
             if not alive(origActor) or not alive(sourceObject) then return end
-            -- UseAutoHatch is armed ONLY for the duration of this call, then disarmed again.
-            -- Forcing it false around the call was self-defeating: it is the mod's single global
-            -- gate, and AutoHatch's own graph very plausibly early-outs on it, so the previous
-            -- version may have been switching off the exact branch it was trying to invoke. The
-            -- reason to keep it false the rest of the time is unchanged: it gates the blueprint's
-            -- own timer-driven sweep, which is the shared-context misroute being replaced.
-            -- Read it back rather than trusting the write, since a silent no-op here looks
-            -- identical to a successful arm.
+            local ownerGuid = nil
+            -- Same source as the archive, so the two halves of the request always name the same
+            -- person. Under the misaddress test that is deliberately NOT the incubator's owner.
+            -- Resolved BEFORE arming: UseAutoHatch must never be left true on an early return, so
+            -- every precondition is checked first and arming happens only once nothing can bail.
+            pcall(function() ownerGuid = addressGuidSource.BuildPlayerUId end)
+            if ownerGuid == nil then
+                trace("orig: could not read BuildPlayerUId for " .. tostring(addressedTo))
+                return
+            end
             -- Load THIS owner's recording. Empty first: nothing in the original clears ByteArray
             -- between sends, which is what made it double every hatch until the game thread hung.
             local beforeLen = nil
@@ -878,17 +880,16 @@ local function callOriginalAutoHatch(origActor, ownerModelId, ownerText)
                   " -> loaded=" .. tostring(loadedLen) .. " of " .. tostring(#ownerBytes) ..
                   " for " .. tostring(ownerText))
 
+            -- UseAutoHatch is armed ONLY for the duration of this call, then disarmed again. It
+            -- is the mod's single global gate: leaving it true after this callback returns means
+            -- the blueprint's own timer-driven sweep is live, which is the shared-context misroute
+            -- this file exists to replace. No early return sits between this arm and the disarm
+            -- below, so every path out of here disarms it.
             pcall(function() origActor.UseAutoHatch = true end)
             local armed = nil
+            -- Read it back rather than trusting the write, since a silent no-op here looks
+            -- identical to a successful arm.
             pcall(function() armed = origActor.UseAutoHatch end)
-            local ownerGuid = nil
-            -- Same source as the archive, so the two halves of the request always name the same
-            -- person. Under the misaddress test that is deliberately NOT the incubator's owner.
-            pcall(function() ownerGuid = addressGuidSource.BuildPlayerUId end)
-            if ownerGuid == nil then
-                trace("orig: could not re-read BuildPlayerUId for " .. tostring(addressedTo))
-                return
-            end
             inOurDelivery = true
             local ok, err = pcall(function() origActor:AutoHatch(ownerGuid) end)
             inOurDelivery = false
