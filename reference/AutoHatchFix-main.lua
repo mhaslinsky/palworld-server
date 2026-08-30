@@ -29,20 +29,22 @@
 -- is exactly the step this file replaces. Its pak is enabled and its own Lua is not (no
 -- enabled.txt), so its shared-context sweep never runs and the blueprint is machinery we drive;
 -- UseAutoHatch is forced false before every call as a second guard.
--- callOriginalAutoHatch() below is the ONLY place that delivers.
---
--- The companion Blueprint and callDoHatch() are retained but no longer on the delivery path.
--- They are what PROVED the above: without them, "Lua cannot dispatch Blueprint bytecode" and
--- "the game refuses an injected obtain" were indistinguishable.
+-- callOriginalAutoHatch() below is the ONLY place that delivers. The companion Blueprint's
+-- direct-call probe (callDoHatch) proved the above but is no longer on the delivery path, and
+-- has been removed along with it.
 
 local MOD_ACTOR_BLUEPRINT_PATH = "/Game/Mods/AutoHatchFix/ModActor.ModActor_C"
 -- ^ Confirmed against the built asset: generated_class().get_path_name() reports exactly this.
 
--- The Blueprint function's name contains a SPACE. UE named the UFunction from the display form
--- of the graph, so the compiled class exposes "Do Hatch" and NOT "DoHatch". Probing the class
--- default object is what settled it: "DoHatch" answers "Failed to find function", "Do Hatch"
--- answers with a missing-argument error, and only the second shape proves presence.
-local BLUEPRINT_HATCH_FN = "Do Hatch"
+-- Worth keeping even with the probe gone: that Blueprint function's real name has a SPACE. UE
+-- named the UFunction from the display form of the graph, so the compiled class exposes
+-- "Do Hatch", not "DoHatch". Found by probing the class default object: calling "DoHatch"
+-- answers "Failed to find function", while "Do Hatch" answers with a missing-argument error,
+-- which is the shape that proves it exists.
+--
+-- Also worth keeping: UE4SS can only hook a class it has already loaded, and BPModLoaderMod
+-- spawns our ModActor well after this mod's ExecuteAsync runs. A hook on this Blueprint's own
+-- functions must be registered LAZILY, on a poll cycle that has a live actor, never at init.
 
 local SETTINGS_FILE = ".\\Mods\\AutoHatchFix\\Scripts\\PlayerSettings.txt"
 -- ^ Lua relative paths resolve against the server process's working directory (C:\PalServer),
@@ -198,37 +200,6 @@ local obtainFiresAtDispatch = nil
 -- reference to the same ModActor the sweep resolved, refreshed every sweepOnce call.
 local lastKnownOrigActor = nil
 
--- THE REDIRECT. Rewrite ObtainHatchedCharacter_ServerInternal's RequestPlayerId to the hatchery
--- owner, so a genuine hatch delivers to whoever built the incubator rather than whoever clicked.
--- OFF, and the reason is the most useful thing measured tonight. Rewriting RequestPlayerId WORKS
--- mechanically (readback confirmed took=true) and changes NOTHING about who receives the Pal: a
--- delivery rewritten to a disconnected player 257 still landed in player 256's Palbox.
---
--- What did track the outcome was the ARCHIVE. Two runs settle it:
---   archive=absent player,  RequestPlayerId=connected player -> nothing delivered
---   archive=connected player, RequestPlayerId=bogus 257      -> delivered to that player
--- The archive's GUID is the recipient. RequestPlayerId is not consulted for routing.
---
--- Which is also the original mod's bug in one line: it replays ONE captured archive for the whole
--- server, so every Pal carries whichever player hatched first.
-local REDIRECT_TO_OWNER = false
-
--- FORCED REDIRECT (test only). Set to a PlayerId to rewrite EVERY delivery to it, regardless of
--- who owns the incubator. Exists because the owner-based redirect above has never actually run:
--- with one player connected, the owner and the clicker are the same person, so there is nothing
--- to rewrite, and `:set()` on a hook argument remains completely untested on this UE4SS fork.
---
--- Two things fall out of one run against the tester's OWN eggs:
---   took=true/false  -> whether :set() works at all here. If false, this whole approach is dead
---                       and no amount of two-player testing would have revealed it.
---   Pals stop arriving -> the game HONOURS RequestPlayerId, so redirecting by owner will work.
---   Pals still arrive  -> the parameter is decoration and the recipient is decided elsewhere.
---
--- 257 is deliberately a player who is not connected (the second player held 256/257 in an earlier
--- session), so a successful redirect should deliver to nobody rather than to someone real.
--- Set to nil for normal operation.
-local FORCE_REDIRECT_PLAYER_ID = nil
-
 -- Snapshots the hook can read. The obtain hook fires from the game's own call stack, outside any
 -- sweep, so it cannot rebuild these itself; the sweep refreshes them every cycle.
 --   model InstanceId (hex) -> owner PlayerUId (hex)
@@ -247,59 +218,6 @@ local peakIncubatorCount = 0
 -- hatch (6.8 MB, 13.7 MB, 27.5 MB) until the game thread stopped answering the REST API with no
 -- crash dump. Refuse anything absurd rather than feed it.
 local ARCHIVE_BYTE_CEILING = 100000
-
--- ROUTING TEST MODE. Answers "what actually decides the recipient" with ONE player, by making
--- the two candidate sources disagree on purpose: replay one player's recording while naming a
--- DIFFERENT owner in the AutoHatch argument. Normally both name the same person and a successful
--- hatch proves nothing about which one did the work.
---
--- It also lets delivery proceed for an OFFLINE owner, which normal operation refuses. That is the
--- point: the tester puts their own eggs into another player's hatchery, so the incubator's owner
--- is somebody not connected. Turn this OFF for ordinary play; an offline owner has no addressable
--- recipient and holding their eggs is the correct behaviour.
--- OFF. It answered what it was for: with three offline owners named by correctly synthesized
--- archives and call_ok=true every cycle, nothing was ever consumed, which establishes that
--- delivery requires a CONNECTED recipient and that the offline gate is separate from routing.
--- Leaving it on costs a pointless AutoHatch per offline owner per cycle, and would dump a
--- returning player's whole backlog through a test path the moment they reconnect.
---
--- Turning it off does NOT affect the two-player test: it only ever relaxed the offline gate, and
--- an owner who is online takes the normal path regardless.
-local ROUTING_TEST = false
-
--- MISADDRESS TEST. The two-player test cannot be simulated, because delivery needs a CONNECTED
--- recipient and an absent player cannot be faked. This asks the same question from the other
--- side, with one player.
---
--- Set this to another player's UId (hex, as printed in poll.detail's owner= field). Every
--- delivery then names THAT player in both the synthesized archive and the AutoHatch argument,
--- regardless of who actually owns the incubator. Run it against the ONE configuration already
--- known to deliver: the tester's own completed eggs, in their own hatchery, while connected.
---
---   nothing hatches  => the address is HONOURED. Delivery went looking for the named (absent)
---                       player and stopped. That is what per-owner addressing depends on.
---   Pals still arrive => the address is IGNORED and the recipient comes from somewhere else
---                       (the connected player, or a shared context). Per-owner archives would
---                       then fix nothing, and the two-player test would fail.
---
--- Set to nil for normal operation. This NEVER touches another player's eggs: it changes who a
--- delivery is addressed to, not which incubators are swept.
--- Disarmed. It answered, and the answer is two-part:
---
---   1. The FGuid we pass to AutoHatch does NOT choose the recipient. We named an ABSENT player in
---      both the archive and the argument, and the call arrived at
---      ObtainHatchedCharacter_ServerInternal with RequestPlayerId=256, the CONNECTED player. The
---      blueprint resolves the recipient itself, from a logged-in player, ignoring our address.
---   2. The archive is still checked. With the archive naming the absent player and
---      RequestPlayerId resolved to the connected one, NOTHING was consumed across many cycles;
---      when both named the same connected player, eggs hatched. Delivery appears to require the
---      two to AGREE.
---
--- Consequence: per-owner archives cannot by themselves route a Pal to the right person, because
--- RequestPlayerId is not ours to set. They do act as a FILTER, turning a would-be misroute into a
--- no-op rather than delivering someone else's Pal to the wrong player, which is strictly safer
--- than the original's behaviour but is not the fix.
-local MISADDRESS_TEST_UID = nil
 
 ---------------------------------------------------------------------------------------------
 -- ARCHIVE SYNTHESIS. The captured 21 bytes decode completely:
@@ -708,29 +626,7 @@ end
 -- source), and this server is PalServer-Win64-Shipping.exe. A Print String first node therefore
 -- emits nothing whether or not the graph ran, which is a probe that cannot go green. Do not
 -- instrument a server Blueprint that way again.
---
--- What survives Shipping is the graph's own side effects. `Do Hatch` calls
--- ObtainHatchedCharacter_ServerInternal on the egg model, and nothing in THIS file calls that
--- function, so a fire of its hook while inDoHatchCall is set proves the graph reached the call
--- node. The hook path is the one already proven to register and fire in
--- reference/AutoHatch-main.lua.
-local inDoHatchCall = false
-local obtainFiresInsideCall = 0
 local obtainFiresTotal = 0
--- Fires of a hook on OUR OWN Do Hatch. This is the earlier and stricter of the two signals: it
--- rises when ProcessEvent reaches the function, before any node in the body runs, so it separates
--- "dispatch never happened" from "dispatch happened and the body did nothing".
-local doHatchHookFires = 0
-
--- One-shot dispatch probe, consumed in sweepOnce. Declared here because Lua resolves a name that
--- has no local in scope to a GLOBAL rather than erroring, so a local declared below its use reads
--- as nil and the probe would silently never fire. probeTarget is refreshed every sweep and only
--- ever holds an ONLINE owner's own incubator, so this can never address another player's eggs.
--- Off: it has served its purpose. It proved dispatch reaches our Blueprint and runs its body to
--- the delivery node, which is exactly what showed the Blueprint route cannot deliver at all.
-local DISPATCH_PROBE = false
-local dispatchProbeFired = false
-local probeTarget = nil
 
 ---------------------------------------------------------------------------------------------
 -- DELIVERY VIA THE ORIGINAL MOD'S OWN ENTRY POINT.
@@ -845,25 +741,8 @@ local function callOriginalAutoHatch(origActor, ownerModelId, ownerText)
     -- Prefer a real captured recording; otherwise BUILD this owner's, which the byte layout makes
     -- possible for anyone. The owner's FGuid comes off the incubator itself (BuildPlayerUId), so
     -- this works for a player who has never hand-hatched and for one who is not connected.
-    -- MISADDRESS TEST: address this delivery to somebody else entirely, in BOTH the archive and
-    -- the AutoHatch argument, so the two cannot disagree. Borrow the target's real FGuid off a
-    -- structure they built, since Lua cannot build an FGuid from hex.
     local addressedTo = ownerText
     local addressGuidSource = sourceObject
-    if MISADDRESS_TEST_UID ~= nil then
-        local sample = sampleObjectByOwnerUid[MISADDRESS_TEST_UID]
-        if alive(sample) then
-            addressedTo = MISADDRESS_TEST_UID
-            addressGuidSource = sample
-            trace("MISADDRESS TEST: eggs owned by " .. tostring(ownerText) ..
-                  " are being addressed to " .. tostring(MISADDRESS_TEST_UID) ..
-                  ". Nothing hatching => the address is honoured; " ..
-                  "Pals still arriving => the address is ignored.")
-        else
-            trace("MISADDRESS TEST: no world object found for " .. tostring(MISADDRESS_TEST_UID) ..
-                  ", cannot borrow their FGuid; delivering normally")
-        end
-    end
 
     local ownerBytes = archiveBytesByUid[addressedTo]
     local source = "captured"
@@ -933,72 +812,11 @@ local function callOriginalAutoHatch(origActor, ownerModelId, ownerText)
     end)
 end
 
-local function callDoHatch(modActor, eggModel, ownerPlayerId)
-    if not alive(modActor) then
-        trace("hatch: no ModActor, cannot deliver")
-        return false
-    end
-    -- The function's real name carries a SPACE: "Do Hatch", not "DoHatch". UE's function graph
-    -- named it from the display form, and it is what the compiled class exposes. Verified by
-    -- probing the class default object: calling "DoHatch" gets "Failed to find function", while
-    -- "Do Hatch" gets a wrong-argument-count error, which is the shape that proves it exists.
-    --
-    -- Colon-call syntax cannot express a name with a space, so index it and pass self manually.
-    -- The sweep runs under LoopAsync, which is a WORKER thread, and this reaches into Unreal to
-    -- run Blueprint bytecode. BPModLoaderMod never does that from off the game thread: it wraps
-    -- SpawnActor and its PreBeginPlay() Blueprint call in ExecuteInGameThread
-    -- (reference/BPModLoaderMod-main.lua:308 and :339; the comment at :338 says why). Reads such
-    -- as FindAllOf and property access survive a worker thread, which is why the sweep looked
-    -- healthy while the one call that had to dispatch did not.
-    --
-    -- ExecuteInGameThread is asynchronous, so this can no longer report the outcome to its
-    -- caller. That costs nothing: the caller keys its cooldown on the slot count, never on a
-    -- return value, because the return value here was only ever a pcall result.
-    local queued = pcall(function()
-        ExecuteInGameThread(function()
-            -- Revalidate inside the callback. Queueing defers execution, and an actor or egg can
-            -- go away between the sweep observing it and the game thread arriving here.
-            if not alive(modActor) or not alive(eggModel) then
-                trace("hatch: object died before the game thread ran the call")
-                return
-            end
-            -- UE4SS's __index answers ANY name with a plausible TrivialObject, so print what came
-            -- back: a UFunction proves the name resolved, a TrivialObject proves it did not.
-            local memberType = nil
-            pcall(function() memberType = tostring(modActor[BLUEPRINT_HATCH_FN]) end)
-
-            local firesBefore = obtainFiresInsideCall
-            local hooksBefore = doHatchHookFires
-            inDoHatchCall = true
-            local ok, err = pcall(function()
-                modActor[BLUEPRINT_HATCH_FN](modActor, eggModel, ownerPlayerId)
-            end)
-            inDoHatchCall = false
-            if not ok then
-                trace("hatch: " .. BLUEPRINT_HATCH_FN .. " call_ok=false err=" .. tostring(err))
-            end
-            -- THE measurement. call_ok says only that nothing threw. `processevent` says whether
-            -- dispatch reached the function at all; `reached_obtain` says whether its body ran as
-            -- far as the delivery node. Both survive a Shipping build; a Print String node does
-            -- not.
-            trace("hatch: on_game_thread call_ok=" .. tostring(ok) ..
-                  " fn=" .. tostring(memberType) ..
-                  " processevent=" .. tostring(doHatchHookFires > hooksBefore) ..
-                  " reached_obtain=" .. tostring(obtainFiresInsideCall > firesBefore) ..
-                  " obtain_total=" .. tostring(obtainFiresTotal))
-        end)
-    end)
-    if not queued then
-        trace("hatch: ExecuteInGameThread unavailable, call NOT dispatched")
-    end
-    return queued
-end
-
 ---------------------------------------------------------------------------------------------
 -- The sweep. One pass builds the owner map once (not per-egg), enumerates every incubator in
 -- the world (not a join-time map, so an offline owner's incubators are still found), and for
--- each COMPLETED slot whose owner has auto-hatch enabled, dispatches ONE DoHatch call, then
--- records the attempt so a fast repeat sweep does not re-issue it inside the cooldown.
+-- each COMPLETED slot whose owner has auto-hatch enabled, queues ONE delivery, then records the
+-- attempt so a fast repeat sweep does not re-issue it inside the cooldown.
 ---------------------------------------------------------------------------------------------
 
 local lastAttemptAt = {} -- "modelId:slot" -> os-clock-ms of the last DoHatch call
@@ -1143,10 +961,6 @@ local function sweepOnce(modActor)
                 ownerOnline = ownerPlayerId ~= nil
                 if ownerOnline then summary.incubatorsWithOnlineOwner = summary.incubatorsWithOnlineOwner + 1 end
             end
-            if ownerOnline and gateEnabled and probeTarget == nil then
-                probeTarget = { model = model, playerId = ownerPlayerId }
-            end
-
             detailLines[#detailLines + 1] = string.format(
                 "poll.detail: incubator[%d] model=%s owner=%s gate_enabled=%s slots=%s online=%s player_id=%s",
                 index, tostring(modelId), owner ~= nil and owner or "UNRESOLVED",
@@ -1170,15 +984,11 @@ local function sweepOnce(modActor)
 
             if #completedSlots == 0 then goto continue end
 
-            if ownerPlayerId == nil and not ROUTING_TEST then
+            if ownerPlayerId == nil then
                 -- Owner is offline. Nothing to address delivery to; the egg stays put and
                 -- the next sweep after they reconnect will pick it up. This is a design
                 -- choice, not a failure: holding beats hatching to nobody.
                 goto continue
-            end
-            if ownerPlayerId == nil then
-                trace("ROUTING TEST: proceeding for OFFLINE owner " .. tostring(owner) ..
-                      " (normal operation would hold these eggs)")
             end
 
             -- One call per OWNER, not per slot: AutoHatch takes a recipient and collects that
@@ -1213,18 +1023,6 @@ local function sweepOnce(modActor)
     end
     -- completed>0 with attempted=0 points at the gate (owner disabled or offline); completed=0
     -- means there is simply nothing ready yet. Prints every cycle regardless of `verbose`.
-    -- ONE-SHOT DISPATCH PROBE. Whether Lua can make Blueprint bytecode run is a separate
-    -- question from whether a ready egg exists, and coupling them means the answer waits on
-    -- somebody's incubator finishing. So fire exactly one call against an ONLINE owner's own
-    -- incubator, whether or not it holds anything: an empty incubator has nothing to deliver, so
-    -- the game side no-ops and no Pal moves, while `processevent` still reports whether dispatch
-    -- landed. Restricted to an online owner's own incubator so it can never touch another
-    -- player's eggs. Set DISPATCH_PROBE false once the bridge is proven.
-    if DISPATCH_PROBE and not dispatchProbeFired and probeTarget ~= nil then
-        dispatchProbeFired = true
-        trace("probe: firing ONE Do Hatch at an online owner's own incubator (no egg required)")
-        callDoHatch(modActor, probeTarget.model, probeTarget.playerId)
-    end
 
     -- Carry the GameState's own player count. owners_online=0 is ambiguous between "nobody is
     -- playing" and "the GameState lookup failed", and reading it as the former wasted a whole
@@ -1414,33 +1212,21 @@ end
 local function RegisterObtainProbe()
     local ok = pcall(function()
         RegisterHook("/Script/Pal.PalMapObjectHatchingEggModelBase:ObtainHatchedCharacter_ServerInternal",
-          -- REDIRECT AT THE DELIVERY BOUNDARY.
-          --
-          -- Every previous approach tried to ORIGINATE a delivery and failed, because the request
-          -- itself can only be produced by a real player action. This does the opposite: it lets
-          -- the genuine request happen and edits the one field that says who it is for.
-          --
-          -- RequestPlayerId is an explicit parameter of this function. We have been reading it all
-          -- along and never writing it. UE4SS hands hook arguments as wrappers with :get() and
-          -- :set(), so a pre-hook can rewrite it before the game's own body runs. The click keeps
-          -- supplying the context and the valid Archive; only the destination changes.
-          --
-          -- This is what makes the ownership map load-bearing instead of decorative: the egg knows
-          -- which incubator it is in, the incubator knows who built it, and that owner is who the
-          -- Pal should reach.
+          -- The archive loaded into origActor.ByteArray by callOriginalAutoHatch is what actually
+          -- routes the Pal (ARCHIVE SYNTHESIS above), not RequestPlayerId. This hook only captures
+          -- and logs; it never rewrites the call.
           guarded("obtain", function(self, playerId, archive)
             obtainFiresTotal = obtainFiresTotal + 1
             -- A delivery just landed; let the next queued owner go out now rather than waiting up
             -- to POLL_INTERVAL_MS for the next sweep tick to notice.
             pumpDeliveryQueue(lastKnownOrigActor)
-            if inDoHatchCall then obtainFiresInsideCall = obtainFiresInsideCall + 1 end
             local recipient = nil
             pcall(function() recipient = playerId:get() end)
             -- THE CAPTURE. A genuine player hatch passes a real Archive through here; that is the
             -- only place a usable one ever exists. Observation only: nothing here alters the call.
             captureArchiveFor(recipient, archive)
 
-            -- Resolve who this egg's incubator belongs to, and redirect the request to them.
+            -- Resolve who this egg's incubator belongs to, for the log line below.
             local eggModel = unwrap(self)
             local eggModelId, trueOwnerUid, trueOwnerPlayerId = nil, nil, nil
             pcall(function() eggModelId = guidText(eggModel:GetModelInstanceId()) end)
@@ -1449,32 +1235,10 @@ local function RegisterObtainProbe()
                 trueOwnerPlayerId = lastPlayerIdByUid[trueOwnerUid]
             end
 
-            -- The forced target wins when set, so the rewrite path runs even when the owner and
-            -- the clicker are the same person, which is the only case a solo tester can produce.
-            if FORCE_REDIRECT_PLAYER_ID ~= nil then
-                trueOwnerPlayerId = FORCE_REDIRECT_PLAYER_ID
-            end
-
-            local rewrote = false
-            if REDIRECT_TO_OWNER and trueOwnerPlayerId ~= nil and trueOwnerPlayerId ~= recipient then
-                -- :set() may not be supported for this parameter on this UE4SS fork. Report
-                -- whether the write actually took by reading the value back, rather than assuming
-                -- the call succeeded because it did not throw.
-                pcall(function() playerId:set(trueOwnerPlayerId) end)
-                local readBack = nil
-                pcall(function() readBack = playerId:get() end)
-                rewrote = (readBack == trueOwnerPlayerId)
-                trace("obtain: REDIRECT " .. tostring(recipient) .. " -> " ..
-                      tostring(trueOwnerPlayerId) .. " (owner " .. tostring(trueOwnerUid) ..
-                      ") readback=" .. tostring(readBack) .. " took=" .. tostring(rewrote))
-            end
-
-            trace("obtain: fired inside_do_hatch=" .. tostring(inDoHatchCall) ..
-                  " ours=" .. tostring(inOurDelivery) ..
+            trace("obtain: fired ours=" .. tostring(inOurDelivery) ..
                   " recipient=" .. tostring(recipient) ..
                   " egg_owner=" .. tostring(trueOwnerUid) ..
                   " owner_player_id=" .. tostring(trueOwnerPlayerId) ..
-                  " redirected=" .. tostring(rewrote) ..
                   " total=" .. tostring(obtainFiresTotal))
 
             -- The one line that answers the outstanding question, written where a restart cannot
@@ -1488,38 +1252,6 @@ local function RegisterObtainProbe()
     trace("init: obtain probe registered=" .. tostring(ok))
 end
 
--- Hook our own Blueprint function. Registration is itself informative: UE4SS can only hook an
--- FName it has seen, so a registration failure says the name is wrong, which is the one reading
--- the uasset's name table cannot rule out from here.
--- Register against BOTH spellings and report each. The cooked asset's name table carries
--- "Do Hatch" three times and "DoHatch" zero times, so the space is what the class exposes; but
--- UE4SS splits a hook path on ':' and its handling of a space in the trailing name is unproven
--- here, so a failure to register does not by itself mean the name is wrong. Registering both
--- separates "UE4SS cannot express this name" from "this name does not exist".
--- Registered LAZILY, on the first cycle that has an actor, not at init. UE4SS can only hook a
--- class it has already loaded, and BPModLoaderMod spawns our ModActor well after this mod's
--- ExecuteAsync runs, so registering at init failed for BOTH spellings and said nothing about
--- either name. A registration attempt before the class exists is another control that cannot
--- go green.
-local doHatchProbeAttempted = false
-
-local function RegisterDoHatchProbe()
-    if doHatchProbeAttempted then return end
-    doHatchProbeAttempted = true
-    for _, candidateName in ipairs({ BLUEPRINT_HATCH_FN, "DoHatch" }) do
-        local ok = pcall(function()
-            RegisterHook(MOD_ACTOR_BLUEPRINT_PATH .. ":" .. candidateName,
-              guarded("dohatch", function()
-                doHatchHookFires = doHatchHookFires + 1
-                trace("dohatch: ProcessEvent reached '" .. candidateName ..
-                      "', fires=" .. tostring(doHatchHookFires))
-                return false
-            end))
-        end)
-        trace("init: Do Hatch probe name='" .. candidateName .. "' registered=" .. tostring(ok))
-    end
-end
-
 local function RegisterPollLoop()
     LoopAsync(POLL_INTERVAL_MS, guarded("poll", function()
         local modActor = findModActor()
@@ -1527,7 +1259,6 @@ local function RegisterPollLoop()
             trace("poll: no ModActor yet, waiting")
             return false -- keep looping; do not stop on a transient absence
         end
-        RegisterDoHatchProbe()
         sweepOnce(modActor)
         return false
     end))
