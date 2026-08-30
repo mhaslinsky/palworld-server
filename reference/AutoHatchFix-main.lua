@@ -157,6 +157,9 @@ local archiveBytesByUid = {}
 -- PlayerId (int, per-connection) -> PlayerUId (hex, stable). Rebuilt every sweep, because
 -- PlayerId is assigned per connection and is meaningless across a restart.
 local uidByPlayerId = {}
+-- PlayerUId (hex) -> that player's raw FGuid, kept so an archive can be synthesized for them and
+-- checked against the real one. Refreshed every sweep from the live PlayerState.
+local capturedGuidByUid = {}
 -- Set only while WE are replaying. The hook fires for any caller including our own replay, and
 -- capturing our own replay is how the 2026-08-29 "fresh bytes every hatch" test silently tested
 -- nothing: it re-recorded its own recording and could not have shown a difference either way.
@@ -167,10 +170,80 @@ local inOurDelivery = false
 -- crash dump. Refuse anything absurd rather than feed it.
 local ARCHIVE_BYTE_CEILING = 100000
 
+-- ROUTING TEST MODE. Answers "what actually decides the recipient" with ONE player, by making
+-- the two candidate sources disagree on purpose: replay one player's recording while naming a
+-- DIFFERENT owner in the AutoHatch argument. Normally both name the same person and a successful
+-- hatch proves nothing about which one did the work.
+--
+-- It also lets delivery proceed for an OFFLINE owner, which normal operation refuses. That is the
+-- point: the tester puts their own eggs into another player's hatchery, so the incubator's owner
+-- is somebody not connected. Turn this OFF for ordinary play; an offline owner has no addressable
+-- recipient and holding their eggs is the correct behaviour.
+local ROUTING_TEST = true
+
+---------------------------------------------------------------------------------------------
+-- ARCHIVE SYNTHESIS. The captured 21 bytes decode completely:
+--
+--   FF FF FF FF | 01 | E6 90 43 08 | 00 x12
+--   \--------/    \/   \---------------------/
+--    -1, likely   flag  the owner's FGuid, LITTLE-ENDIAN
+--    "all slots"
+--
+-- Read against PlayerUId 084390E6000000000000000000000000: bytes 6..9 are E6 90 43 08, which is
+-- 0x084390E6 with the byte order reversed, and B/C/D follow as twelve zeros. So the request is
+-- header plus recipient, and the recipient is the only part that varies between players.
+--
+-- That means a recording is not precious. We can BUILD one for any owner, which removes the
+-- hand-hatch step entirely and makes an offline owner addressable the moment they reconnect.
+--
+-- NOTE for anyone reading the earlier log: the `owner_uid_present_in_bytes` line reported false
+-- on this exact match, because it compared the big-endian hex TEXT of the UId against a
+-- little-endian byte dump. The check was wrong, not the data.
+---------------------------------------------------------------------------------------------
+
+local ARCHIVE_HEADER = { 0xFF, 0xFF, 0xFF, 0xFF, 0x01 }
+
+local function synthesizeArchiveBytes(guid)
+    if guid == nil then return nil end
+    local bytes = {}
+    for index = 1, #ARCHIVE_HEADER do bytes[index] = ARCHIVE_HEADER[index] end
+    local function appendLittleEndian(word)
+        if word == nil then return false end
+        word = word & 0xFFFFFFFF
+        bytes[#bytes + 1] = word & 0xFF
+        bytes[#bytes + 1] = (word >> 8) & 0xFF
+        bytes[#bytes + 1] = (word >> 16) & 0xFF
+        bytes[#bytes + 1] = (word >> 24) & 0xFF
+        return true
+    end
+    local ok = true
+    for _, field in ipairs({ "A", "B", "C", "D" }) do
+        local word = nil
+        pcall(function() word = guid[field] end)
+        if not appendLittleEndian(word) then ok = false end
+    end
+    if not ok or #bytes ~= 21 then return nil end
+    return bytes
+end
+
+local function bytesToHex(bytes)
+    if bytes == nil then return "nil" end
+    local parts = {}
+    for index = 1, #bytes do parts[index] = string.format("%02X", bytes[index]) end
+    return table.concat(parts)
+end
+
 local function captureArchiveFor(playerIdValue, archive)
     if inOurDelivery then return end -- our own replay; recording it would be circular
     local uid = uidByPlayerId[playerIdValue]
     if uid == nil then return end -- unknown connection; nothing to key the recording to
+    -- FIRST CAPTURE WINS. The inOurDelivery flag alone is not enough: AutoHatch returns before
+    -- the delivery actually runs, so the hook fires for our own replay with the flag already
+    -- cleared, and every log line reads ours=false. Re-recording a replay is how the 2026-08-29
+    -- "fresh bytes every hatch" experiment tested nothing. Worse, while the misroute is unfixed a
+    -- replay can deliver to the WRONG player, and re-capturing there would file one player's
+    -- request under another's name and quietly corrupt the very test that checks routing.
+    if archiveBytesByUid[uid] ~= nil then return end
     local liveArchive = nil
     pcall(function() liveArchive = archive:get() end)
     if liveArchive == nil then return end
@@ -192,10 +265,26 @@ local function captureArchiveFor(playerIdValue, archive)
         if value == nil then return end -- a partial recording is worse than none
         copy[byteIndex] = value
     end
-    local hadOne = archiveBytesByUid[uid] ~= nil
     archiveBytesByUid[uid] = copy
+    -- Dump the raw bytes. With one player online, "the right person" and "the only person" are
+    -- the same observation, so a successful hatch cannot tell whether the recipient came from the
+    -- FGuid passed to AutoHatch, from this recording, or from the blueprint's own state. The
+    -- contents settle it without a second player: an FGuid is 16 bytes, so if this owner's UId
+    -- appears here, the recording carries the identity.
+    local hex = bytesToHex(copy)
     trace("capture: stored " .. tostring(count) .. " archive byte(s) for " .. uid ..
-          (hadOne and " (refreshed)" or " (FIRST capture; their eggs can auto-hatch now)"))
+          " (first capture; their eggs can auto-hatch now)")
+    trace("capture: bytes=" .. hex)
+
+    -- THE CONTROL for synthesis. Build what we THINK this player's archive should be and compare
+    -- it byte for byte against the real one the game just handed us. A match proves the layout is
+    -- understood; a mismatch prints both so the difference is visible rather than assumed. This is
+    -- the check that has to be green before any synthesized archive is trusted for delivery, and
+    -- unlike the previous owner_uid_present test it compares like with like.
+    local synthesized = synthesizeArchiveBytes(capturedGuidByUid[uid])
+    local synthesizedHex = bytesToHex(synthesized)
+    trace("capture: synthesized=" .. synthesizedHex ..
+          " matches_real=" .. tostring(synthesizedHex == hex))
 end
 
 ---------------------------------------------------------------------------------------------
@@ -550,6 +639,7 @@ local function registerPlayerStatesWithOriginal(origActor, gameState)
                 local playerId = nil
                 pcall(function() playerId = state.PlayerId end)
                 if playerId ~= nil then uidByPlayerId[playerId] = uid end
+                pcall(function() capturedGuidByUid[uid] = state.PlayerUId end)
                 if pcall(function() origActor:GetPlayerStateFromLua(uid, state) end) then
                     registered = registered + 1
                 end
@@ -570,12 +660,24 @@ local function callOriginalAutoHatch(origActor, ownerModelId, ownerText)
     end
     -- No recording for this owner means there is nothing to replay. This is a normal state, not
     -- an error: it is every player's state until they hatch one egg by hand.
+    -- Prefer a real captured recording; otherwise BUILD this owner's, which the byte layout makes
+    -- possible for anyone. The owner's FGuid comes off the incubator itself (BuildPlayerUId), so
+    -- this works for a player who has never hand-hatched and for one who is not connected.
     local ownerBytes = archiveBytesByUid[ownerText]
+    local source = "captured"
     if ownerBytes == nil then
-        trace("orig: no captured archive for " .. tostring(ownerText) ..
-              "; they hatch ONE egg by hand to teach it, then their eggs auto-hatch")
+        local ownerGuidForArchive = nil
+        pcall(function() ownerGuidForArchive = sourceObject.BuildPlayerUId end)
+        ownerBytes = synthesizeArchiveBytes(ownerGuidForArchive)
+        source = "synthesized"
+    end
+    if ownerBytes == nil then
+        trace("orig: no archive for " .. tostring(ownerText) ..
+              " and could not synthesize one from the incubator's BuildPlayerUId")
         return false
     end
+    trace("orig: archive source=" .. source .. " bytes=" .. bytesToHex(ownerBytes) ..
+          " for " .. tostring(ownerText))
     return pcall(function()
         ExecuteInGameThread(function()
             if not alive(origActor) or not alive(sourceObject) then return end
@@ -816,11 +918,15 @@ local function sweepOnce(modActor)
 
             if #completedSlots == 0 then goto continue end
 
-            if ownerPlayerId == nil then
+            if ownerPlayerId == nil and not ROUTING_TEST then
                 -- Owner is offline. Nothing to address delivery to; the egg stays put and
                 -- the next sweep after they reconnect will pick it up. This is a design
                 -- choice, not a failure: holding beats hatching to nobody.
                 goto continue
+            end
+            if ownerPlayerId == nil then
+                trace("ROUTING TEST: proceeding for OFFLINE owner " .. tostring(owner) ..
+                      " (normal operation would hold these eggs)")
             end
 
             -- One call per OWNER, not per slot: AutoHatch takes a recipient and collects that
