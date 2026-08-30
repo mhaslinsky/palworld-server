@@ -184,6 +184,20 @@ local inOurDelivery = false
 -- another player's GUID as the tester's archive.
 local lastLoadedArchiveHex = nil
 
+-- Serializes deliveries across owners. callOriginalAutoHatch clears and reloads the SAME
+-- origActor.ByteArray, and AutoHatch returns before the blueprint's own delivery actually runs,
+-- so two owners queued back to back can interleave: owner B's load lands while owner A's delivery
+-- is still reading the ByteArray, and A's Pals go to B. One owner dispatches at a time; the next
+-- starts only once the obtain hook has fired since dispatch, or DELIVERY_TIMEOUT_MS has elapsed.
+local DELIVERY_TIMEOUT_MS = 4000
+local pendingDeliveries = {}
+local deliveryInFlight = false
+local deliveryDispatchedAt = nil
+local obtainFiresAtDispatch = nil
+-- The obtain hook fires from wherever the game calls it, not from the sweep, so it needs its own
+-- reference to the same ModActor the sweep resolved, refreshed every sweepOnce call.
+local lastKnownOrigActor = nil
+
 -- THE REDIRECT. Rewrite ObtainHatchedCharacter_ServerInternal's RequestPlayerId to the hatchery
 -- owner, so a genuine hatch delivers to whoever built the incubator rather than whoever clicked.
 -- OFF, and the reason is the most useful thing measured tonight. Rewriting RequestPlayerId WORKS
@@ -977,6 +991,28 @@ local function nowMs()
     return math.floor(os.clock() * 1000)
 end
 
+-- Dispatches at most one queued delivery. A delivery already in flight blocks the next one until
+-- the obtain hook has fired since dispatch (obtainFiresTotal moved) or DELIVERY_TIMEOUT_MS has
+-- elapsed with no fire at all; either clears deliveryInFlight and lets the next entry go out.
+local function pumpDeliveryQueue(origActor)
+    if deliveryInFlight then
+        local observed = obtainFiresAtDispatch ~= nil and obtainFiresTotal > obtainFiresAtDispatch
+        local timedOut = deliveryDispatchedAt ~= nil and (nowMs() - deliveryDispatchedAt) >= DELIVERY_TIMEOUT_MS
+        if not observed and not timedOut then return end
+        if timedOut and not observed then
+            trace("queue: delivery timed out after " .. tostring(DELIVERY_TIMEOUT_MS) ..
+                  "ms with no obtain-hook fire, unblocking the queue")
+        end
+        deliveryInFlight = false
+    end
+    if origActor == nil or #pendingDeliveries == 0 then return end
+    local nextDelivery = table.remove(pendingDeliveries, 1)
+    deliveryInFlight = true
+    deliveryDispatchedAt = nowMs()
+    obtainFiresAtDispatch = obtainFiresTotal
+    callOriginalAutoHatch(origActor, nextDelivery.ownerModelId, nextDelivery.ownerText)
+end
+
 local function summaryChanged(current, previous)
     if previous == nil then return true end
     return current.incubators ~= previous.incubators
@@ -1050,6 +1086,10 @@ local function sweepOnce(modActor)
         handOffToOriginal(origActor, liveGameState)
         registerPlayerStatesWithOriginal(origActor, liveGameState)
     end
+    -- Unstick a delivery queued last sweep: it may already have been observed, or timed out,
+    -- while nothing was watching between ticks.
+    lastKnownOrigActor = origActor
+    pumpDeliveryQueue(origActor)
 
     for index = 1, #eggs do
         local model = eggs[index]
@@ -1135,7 +1175,10 @@ local function sweepOnce(modActor)
                 trace("hatch: owner=" .. tostring(owner) .. " playerId=" .. tostring(ownerPlayerId)
                       .. " model=" .. tostring(modelId) .. " completed=" .. tostring(#completedSlots))
                 if origActor ~= nil then
-                    callOriginalAutoHatch(origActor, tostring(modelId), tostring(owner))
+                    -- Queued, not dispatched directly: two owners' ExecuteInGameThread callbacks
+                    -- queued back to back can interleave on the shared ByteArray (see
+                    -- pumpDeliveryQueue), so only one delivery is ever in flight at a time.
+                    pendingDeliveries[#pendingDeliveries + 1] = { ownerModelId = tostring(modelId), ownerText = tostring(owner) }
                 else
                     trace("hatch: original ModActor not available, no delivery path")
                 end
@@ -1143,6 +1186,8 @@ local function sweepOnce(modActor)
         end
         ::continue::
     end
+
+    pumpDeliveryQueue(origActor)
 
     local verbose = summaryChanged(summary, lastSummaryCounts) or (cycleCount % VERBOSE_EVERY_N_CYCLES == 0)
     if verbose then
@@ -1367,6 +1412,9 @@ local function RegisterObtainProbe()
           -- Pal should reach.
           guarded("obtain", function(self, playerId, archive)
             obtainFiresTotal = obtainFiresTotal + 1
+            -- A delivery just landed; let the next queued owner go out now rather than waiting up
+            -- to POLL_INTERVAL_MS for the next sweep tick to notice.
+            pumpDeliveryQueue(lastKnownOrigActor)
             if inDoHatchCall then obtainFiresInsideCall = obtainFiresInsideCall + 1 end
             local recipient = nil
             pcall(function() recipient = playerId:get() end)
