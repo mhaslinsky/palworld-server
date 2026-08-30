@@ -1,0 +1,25 @@
+reference/AutoHatchFix-main.lua
+  s_2545e887ad9c5b::t_45f9f6b5672a5d 32-34,39-43
+  s_2545e887ad9c5b::t_db7b0ed5fc4a2b 987
+  s_2545e887ad9c5b::t_5007cf32eb530f 44-47
+  s_2545e887ad9c5b::t_b9717c5a77736f 1229
+  s_2545e887ad9c5b::t_06e1f1a5166534 818-819
+  s_2545e887ad9c5b::t_fa046c91a1d05d 1215-1217
+  s_2545e887ad9c5b::t_28e4e006ccc9c5 1238
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "05c4ef506dfaa38efd18035f63b10d5d8e8877ad",
+  "prompts": {},
+  "sessions": {
+    "s_2545e887ad9c5b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c67a37fa-88b0-414f-8944-808d5d579ec3",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    }
+  }
+}
