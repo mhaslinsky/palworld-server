@@ -164,6 +164,53 @@ local capturedGuidByUid = {}
 -- capturing our own replay is how the 2026-08-29 "fresh bytes every hatch" test silently tested
 -- nothing: it re-recorded its own recording and could not have shown a difference either way.
 local inOurDelivery = false
+-- The hex of the last archive WE loaded into the blueprint. `inOurDelivery` alone cannot guard
+-- the capture, because AutoHatch returns before the delivery runs, so the hook fires for our own
+-- replay with the flag already cleared. Comparing the bytes is reliable where the flag is not:
+-- an archive identical to the one we just supplied IS our replay coming back around.
+--
+-- This is not hypothetical. After a restart the mod synthesizes and delivers before any human
+-- hatches, so the FIRST capture was our own replay, and during the misaddress test that recorded
+-- another player's GUID as the tester's archive.
+local lastLoadedArchiveHex = nil
+
+-- THE REDIRECT. Rewrite ObtainHatchedCharacter_ServerInternal's RequestPlayerId to the hatchery
+-- owner, so a genuine hatch delivers to whoever built the incubator rather than whoever clicked.
+-- OFF, and the reason is the most useful thing measured tonight. Rewriting RequestPlayerId WORKS
+-- mechanically (readback confirmed took=true) and changes NOTHING about who receives the Pal: a
+-- delivery rewritten to a disconnected player 257 still landed in player 256's Palbox.
+--
+-- What did track the outcome was the ARCHIVE. Two runs settle it:
+--   archive=absent player,  RequestPlayerId=connected player -> nothing delivered
+--   archive=connected player, RequestPlayerId=bogus 257      -> delivered to that player
+-- The archive's GUID is the recipient. RequestPlayerId is not consulted for routing.
+--
+-- Which is also the original mod's bug in one line: it replays ONE captured archive for the whole
+-- server, so every Pal carries whichever player hatched first.
+local REDIRECT_TO_OWNER = false
+
+-- FORCED REDIRECT (test only). Set to a PlayerId to rewrite EVERY delivery to it, regardless of
+-- who owns the incubator. Exists because the owner-based redirect above has never actually run:
+-- with one player connected, the owner and the clicker are the same person, so there is nothing
+-- to rewrite, and `:set()` on a hook argument remains completely untested on this UE4SS fork.
+--
+-- Two things fall out of one run against the tester's OWN eggs:
+--   took=true/false  -> whether :set() works at all here. If false, this whole approach is dead
+--                       and no amount of two-player testing would have revealed it.
+--   Pals stop arriving -> the game HONOURS RequestPlayerId, so redirecting by owner will work.
+--   Pals still arrive  -> the parameter is decoration and the recipient is decided elsewhere.
+--
+-- 257 is deliberately a player who is not connected (the second player held 256/257 in an earlier
+-- session), so a successful redirect should deliver to nobody rather than to someone real.
+-- Set to nil for normal operation.
+local FORCE_REDIRECT_PLAYER_ID = nil
+
+-- Snapshots the hook can read. The obtain hook fires from the game's own call stack, outside any
+-- sweep, so it cannot rebuild these itself; the sweep refreshes them every cycle.
+--   model InstanceId (hex) -> owner PlayerUId (hex)
+local lastOwnerByModelId = {}
+--   owner PlayerUId (hex) -> that player's current PlayerId, for connected players only
+local lastPlayerIdByUid = {}
 
 -- The 2026-08-28 runaway: nothing emptied ByteArray between sends, so the archive doubled every
 -- hatch (6.8 MB, 13.7 MB, 27.5 MB) until the game thread stopped answering the REST API with no
@@ -179,7 +226,49 @@ local ARCHIVE_BYTE_CEILING = 100000
 -- point: the tester puts their own eggs into another player's hatchery, so the incubator's owner
 -- is somebody not connected. Turn this OFF for ordinary play; an offline owner has no addressable
 -- recipient and holding their eggs is the correct behaviour.
-local ROUTING_TEST = true
+-- OFF. It answered what it was for: with three offline owners named by correctly synthesized
+-- archives and call_ok=true every cycle, nothing was ever consumed, which establishes that
+-- delivery requires a CONNECTED recipient and that the offline gate is separate from routing.
+-- Leaving it on costs a pointless AutoHatch per offline owner per cycle, and would dump a
+-- returning player's whole backlog through a test path the moment they reconnect.
+--
+-- Turning it off does NOT affect the two-player test: it only ever relaxed the offline gate, and
+-- an owner who is online takes the normal path regardless.
+local ROUTING_TEST = false
+
+-- MISADDRESS TEST. The two-player test cannot be simulated, because delivery needs a CONNECTED
+-- recipient and an absent player cannot be faked. This asks the same question from the other
+-- side, with one player.
+--
+-- Set this to another player's UId (hex, as printed in poll.detail's owner= field). Every
+-- delivery then names THAT player in both the synthesized archive and the AutoHatch argument,
+-- regardless of who actually owns the incubator. Run it against the ONE configuration already
+-- known to deliver: the tester's own completed eggs, in their own hatchery, while connected.
+--
+--   nothing hatches  => the address is HONOURED. Delivery went looking for the named (absent)
+--                       player and stopped. That is what per-owner addressing depends on.
+--   Pals still arrive => the address is IGNORED and the recipient comes from somewhere else
+--                       (the connected player, or a shared context). Per-owner archives would
+--                       then fix nothing, and the two-player test would fail.
+--
+-- Set to nil for normal operation. This NEVER touches another player's eggs: it changes who a
+-- delivery is addressed to, not which incubators are swept.
+-- Disarmed. It answered, and the answer is two-part:
+--
+--   1. The FGuid we pass to AutoHatch does NOT choose the recipient. We named an ABSENT player in
+--      both the archive and the argument, and the call arrived at
+--      ObtainHatchedCharacter_ServerInternal with RequestPlayerId=256, the CONNECTED player. The
+--      blueprint resolves the recipient itself, from a logged-in player, ignoring our address.
+--   2. The archive is still checked. With the archive naming the absent player and
+--      RequestPlayerId resolved to the connected one, NOTHING was consumed across many cycles;
+--      when both named the same connected player, eggs hatched. Delivery appears to require the
+--      two to AGREE.
+--
+-- Consequence: per-owner archives cannot by themselves route a Pal to the right person, because
+-- RequestPlayerId is not ours to set. They do act as a FILTER, turning a would-be misroute into a
+-- no-op rather than delivering someone else's Pal to the wrong player, which is strictly safer
+-- than the original's behaviour but is not the fix.
+local MISADDRESS_TEST_UID = nil
 
 ---------------------------------------------------------------------------------------------
 -- ARCHIVE SYNTHESIS. The captured 21 bytes decode completely:
@@ -264,6 +353,14 @@ local function captureArchiveFor(playerIdValue, archive)
         pcall(function() value = bytes[byteIndex] end)
         if value == nil then return end -- a partial recording is worse than none
         copy[byteIndex] = value
+    end
+    -- Reject our own replay coming back through the hook. Byte-identical to what we just loaded
+    -- means this is not a player's genuine request, and recording it would file whatever we sent
+    -- (possibly another player's GUID) as this player's archive.
+    local capturedHex = bytesToHex(copy)
+    if lastLoadedArchiveHex ~= nil and capturedHex == lastLoadedArchiveHex then
+        trace("capture: ignoring our own replay for " .. uid .. " (bytes match what we loaded)")
+        return
     end
     archiveBytesByUid[uid] = copy
     -- Dump the raw bytes. With one player online, "the right person" and "the only person" are
@@ -356,10 +453,15 @@ end
 -- Rebuilt each sweep alongside ownerByModelId; holds the UPalMapObjectModel so BuildPlayerUId can
 -- be re-read as a real FGuid when calling the original mod's AutoHatch.
 local ownerObjectByModelId = {}
+-- One map object per OWNER UId, so a real FGuid can be read for any owner in the world, online or
+-- not. The misaddress test needs the target's FGuid and Lua cannot construct an FGuid from a hex
+-- string; borrowing it off a structure that player built is the way to get a genuine one.
+local sampleObjectByOwnerUid = {}
 
 local function buildOwnerByModelId()
     local ownerByModelId = {}
     ownerObjectByModelId = {}
+    sampleObjectByOwnerUid = {}
     local models = nil
     local okModels = pcall(function() models = FindAllOf("PalMapObjectModel") end)
     if not okModels or models == nil then
@@ -378,10 +480,16 @@ local function buildOwnerByModelId()
             -- FGuid, and guidText above is one-way, so the raw value is re-read from this object at
             -- call time rather than reconstructed from its hex text.
             ownerObjectByModelId[instanceId] = mapObject
+            if sampleObjectByOwnerUid[builder] == nil then
+                sampleObjectByOwnerUid[builder] = mapObject
+            end
             mapped = mapped + 1
         end
     end
     trace("poll: map objects=" .. tostring(#models) .. " with a readable builder=" .. tostring(mapped))
+    -- Publish for the obtain hook, which runs outside the sweep and needs this to answer "who does
+    -- this egg belong to" at the instant a hatch request passes through.
+    lastOwnerByModelId = ownerByModelId
     return ownerByModelId
 end
 
@@ -640,6 +748,7 @@ local function registerPlayerStatesWithOriginal(origActor, gameState)
                 pcall(function() playerId = state.PlayerId end)
                 if playerId ~= nil then uidByPlayerId[playerId] = uid end
                 pcall(function() capturedGuidByUid[uid] = state.PlayerUId end)
+                if playerId ~= nil then lastPlayerIdByUid[uid] = playerId end
                 if pcall(function() origActor:GetPlayerStateFromLua(uid, state) end) then
                     registered = registered + 1
                 end
@@ -663,11 +772,31 @@ local function callOriginalAutoHatch(origActor, ownerModelId, ownerText)
     -- Prefer a real captured recording; otherwise BUILD this owner's, which the byte layout makes
     -- possible for anyone. The owner's FGuid comes off the incubator itself (BuildPlayerUId), so
     -- this works for a player who has never hand-hatched and for one who is not connected.
-    local ownerBytes = archiveBytesByUid[ownerText]
+    -- MISADDRESS TEST: address this delivery to somebody else entirely, in BOTH the archive and
+    -- the AutoHatch argument, so the two cannot disagree. Borrow the target's real FGuid off a
+    -- structure they built, since Lua cannot build an FGuid from hex.
+    local addressedTo = ownerText
+    local addressGuidSource = sourceObject
+    if MISADDRESS_TEST_UID ~= nil then
+        local sample = sampleObjectByOwnerUid[MISADDRESS_TEST_UID]
+        if alive(sample) then
+            addressedTo = MISADDRESS_TEST_UID
+            addressGuidSource = sample
+            trace("MISADDRESS TEST: eggs owned by " .. tostring(ownerText) ..
+                  " are being addressed to " .. tostring(MISADDRESS_TEST_UID) ..
+                  ". Nothing hatching => the address is honoured; " ..
+                  "Pals still arriving => the address is ignored.")
+        else
+            trace("MISADDRESS TEST: no world object found for " .. tostring(MISADDRESS_TEST_UID) ..
+                  ", cannot borrow their FGuid; delivering normally")
+        end
+    end
+
+    local ownerBytes = archiveBytesByUid[addressedTo]
     local source = "captured"
     if ownerBytes == nil then
         local ownerGuidForArchive = nil
-        pcall(function() ownerGuidForArchive = sourceObject.BuildPlayerUId end)
+        pcall(function() ownerGuidForArchive = addressGuidSource.BuildPlayerUId end)
         ownerBytes = synthesizeArchiveBytes(ownerGuidForArchive)
         source = "synthesized"
     end
@@ -699,6 +828,9 @@ local function callOriginalAutoHatch(origActor, ownerModelId, ownerText)
             for byteIndex = 1, #ownerBytes do
                 pcall(function() origActor:GetBytes(ownerBytes[byteIndex]) end)
             end
+            -- Remember what we supplied so the capture hook can recognise this same request when
+            -- the blueprint replays it back through ObtainHatchedCharacter_ServerInternal.
+            lastLoadedArchiveHex = bytesToHex(ownerBytes)
             local loadedLen = nil
             pcall(function() loadedLen = #origActor.ByteArray end)
             trace("orig: bytearray " .. tostring(beforeLen) .. " -> cleared=" .. tostring(cleared) ..
@@ -709,16 +841,19 @@ local function callOriginalAutoHatch(origActor, ownerModelId, ownerText)
             local armed = nil
             pcall(function() armed = origActor.UseAutoHatch end)
             local ownerGuid = nil
-            pcall(function() ownerGuid = sourceObject.BuildPlayerUId end)
+            -- Same source as the archive, so the two halves of the request always name the same
+            -- person. Under the misaddress test that is deliberately NOT the incubator's owner.
+            pcall(function() ownerGuid = addressGuidSource.BuildPlayerUId end)
             if ownerGuid == nil then
-                trace("orig: could not re-read BuildPlayerUId for " .. tostring(ownerText))
+                trace("orig: could not re-read BuildPlayerUId for " .. tostring(addressedTo))
                 return
             end
             inOurDelivery = true
             local ok, err = pcall(function() origActor:AutoHatch(ownerGuid) end)
             inOurDelivery = false
             pcall(function() origActor.UseAutoHatch = false end)
-            trace("orig: AutoHatch(" .. tostring(ownerText) .. ") armed=" .. tostring(armed) ..
+            trace("orig: AutoHatch(" .. tostring(addressedTo) .. ") armed=" .. tostring(armed) ..
+                  " eggs_owned_by=" .. tostring(ownerText) ..
                   " call_ok=" .. tostring(ok) .. (ok and "" or (" err=" .. tostring(err))))
         end)
     end)
@@ -977,6 +1112,36 @@ local function sweepOnce(modActor)
     local recordings = 0
     for _ in pairs(archiveBytesByUid) do recordings = recordings + 1 end
 
+    -- Dump the WHOLE PlayerArray, every entry's UId next to its PlayerId. Two things this exists
+    -- to check, neither of which the per-owner lookup can show on its own:
+    --   1. That the UId match is real. With one player connected, "the entry matching this UId"
+    --      and "the first entry" are the same observation, so a broken lookup looks identical.
+    --   2. That PalPlayerState.PlayerId is the SAME identifier space as the RequestPlayerId
+    --      parameter of ObtainHatchedCharacter_ServerInternal. Both are int32s named PlayerId and
+    --      that was assumed, never verified. Reconnecting changes a per-connection PlayerId, so
+    --      if this number and the obtain hook's recipient move together, they are one space.
+    do
+        local liveState = getGameState(modActor)
+        if liveState ~= nil then
+            local okArr, playerArray = readProperty(liveState, "PlayerArray")
+            local count = nil
+            if okArr and playerArray ~= nil then pcall(function() count = #playerArray end) end
+            if type(count) == "number" then
+                for index = 1, count do
+                    local entry = nil
+                    if pcall(function() entry = playerArray[index] end) and entry ~= nil then
+                        local state = unwrap(entry)
+                        local entryUid, entryPlayerId = nil, nil
+                        pcall(function() entryUid = guidText(state.PlayerUId) end)
+                        pcall(function() entryPlayerId = state.PlayerId end)
+                        trace("players: [" .. tostring(index) .. "/" .. tostring(count) .. "] uid=" ..
+                              tostring(entryUid) .. " player_id=" .. tostring(entryPlayerId))
+                    end
+                end
+            end
+        end
+    end
+
     local gameState = getGameState(modActor)
     local connected = "no-gamestate"
     if gameState ~= nil then
@@ -1118,6 +1283,20 @@ end
 local function RegisterObtainProbe()
     local ok = pcall(function()
         RegisterHook("/Script/Pal.PalMapObjectHatchingEggModelBase:ObtainHatchedCharacter_ServerInternal",
+          -- REDIRECT AT THE DELIVERY BOUNDARY.
+          --
+          -- Every previous approach tried to ORIGINATE a delivery and failed, because the request
+          -- itself can only be produced by a real player action. This does the opposite: it lets
+          -- the genuine request happen and edits the one field that says who it is for.
+          --
+          -- RequestPlayerId is an explicit parameter of this function. We have been reading it all
+          -- along and never writing it. UE4SS hands hook arguments as wrappers with :get() and
+          -- :set(), so a pre-hook can rewrite it before the game's own body runs. The click keeps
+          -- supplying the context and the valid Archive; only the destination changes.
+          --
+          -- This is what makes the ownership map load-bearing instead of decorative: the egg knows
+          -- which incubator it is in, the incubator knows who built it, and that owner is who the
+          -- Pal should reach.
           guarded("obtain", function(self, playerId, archive)
             obtainFiresTotal = obtainFiresTotal + 1
             if inDoHatchCall then obtainFiresInsideCall = obtainFiresInsideCall + 1 end
@@ -1126,9 +1305,42 @@ local function RegisterObtainProbe()
             -- THE CAPTURE. A genuine player hatch passes a real Archive through here; that is the
             -- only place a usable one ever exists. Observation only: nothing here alters the call.
             captureArchiveFor(recipient, archive)
+
+            -- Resolve who this egg's incubator belongs to, and redirect the request to them.
+            local eggModel = unwrap(self)
+            local eggModelId, trueOwnerUid, trueOwnerPlayerId = nil, nil, nil
+            pcall(function() eggModelId = guidText(eggModel:GetModelInstanceId()) end)
+            if eggModelId ~= nil then trueOwnerUid = lastOwnerByModelId[eggModelId] end
+            if trueOwnerUid ~= nil then
+                trueOwnerPlayerId = lastPlayerIdByUid[trueOwnerUid]
+            end
+
+            -- The forced target wins when set, so the rewrite path runs even when the owner and
+            -- the clicker are the same person, which is the only case a solo tester can produce.
+            if FORCE_REDIRECT_PLAYER_ID ~= nil then
+                trueOwnerPlayerId = FORCE_REDIRECT_PLAYER_ID
+            end
+
+            local rewrote = false
+            if REDIRECT_TO_OWNER and trueOwnerPlayerId ~= nil and trueOwnerPlayerId ~= recipient then
+                -- :set() may not be supported for this parameter on this UE4SS fork. Report
+                -- whether the write actually took by reading the value back, rather than assuming
+                -- the call succeeded because it did not throw.
+                pcall(function() playerId:set(trueOwnerPlayerId) end)
+                local readBack = nil
+                pcall(function() readBack = playerId:get() end)
+                rewrote = (readBack == trueOwnerPlayerId)
+                trace("obtain: REDIRECT " .. tostring(recipient) .. " -> " ..
+                      tostring(trueOwnerPlayerId) .. " (owner " .. tostring(trueOwnerUid) ..
+                      ") readback=" .. tostring(readBack) .. " took=" .. tostring(rewrote))
+            end
+
             trace("obtain: fired inside_do_hatch=" .. tostring(inDoHatchCall) ..
                   " ours=" .. tostring(inOurDelivery) ..
                   " recipient=" .. tostring(recipient) ..
+                  " egg_owner=" .. tostring(trueOwnerUid) ..
+                  " owner_player_id=" .. tostring(trueOwnerPlayerId) ..
+                  " redirected=" .. tostring(rewrote) ..
                   " total=" .. tostring(obtainFiresTotal))
             return false
         end))
