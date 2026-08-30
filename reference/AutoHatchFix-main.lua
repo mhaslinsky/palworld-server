@@ -211,6 +211,9 @@ local FORCE_REDIRECT_PLAYER_ID = nil
 local lastOwnerByModelId = {}
 --   owner PlayerUId (hex) -> that player's current PlayerId, for connected players only
 local lastPlayerIdByUid = {}
+-- Players already journaled as online this server run, so a join is recorded once rather than
+-- every five seconds.
+local journaledOnline = {}
 
 -- The 2026-08-28 runaway: nothing emptied ByteArray between sends, so the archive doubled every
 -- hatch (6.8 MB, 13.7 MB, 27.5 MB) until the game thread stopped answering the REST API with no
@@ -320,6 +323,28 @@ local function bytesToHex(bytes)
     local parts = {}
     for index = 1, #bytes do parts[index] = string.format("%02X", bytes[index]) end
     return table.concat(parts)
+end
+
+-- Durable delivery ledger. UE4SS.log is TRUNCATED on every server restart, and the restart is the
+-- most common thing that happens between a delivery and anyone looking at it. The open question
+-- (does a second player's egg reach that second player) will most likely be answered while nobody
+-- is watching, hours after this was written, by that player simply logging in. Without a record
+-- that outlives the restart, that answer is produced and destroyed silently.
+--
+-- D: is the durable volume (the world lives there and survives instance replacement); C: does not.
+-- Absolute path because Lua resolves relative paths against C:\PalServer, not this script's folder.
+local DELIVERY_LOG = "D:\\PalServer\\autohatchfix-deliveries.log"
+
+local function recordDelivery(line)
+    -- Best effort by design: a failure to journal must never interfere with a delivery. But say so
+    -- in UE4SS.log rather than failing silently, or a missing ledger reads as "nothing happened".
+    local file = io.open(DELIVERY_LOG, "a")
+    if file == nil then
+        trace("ledger: FAILED to open " .. DELIVERY_LOG .. " for append")
+        return
+    end
+    file:write(os.date("!%Y-%m-%dT%H:%M:%SZ ") .. line .. "\n")
+    file:close()
 end
 
 local function captureArchiveFor(playerIdValue, archive)
@@ -1136,6 +1161,15 @@ local function sweepOnce(modActor)
                         pcall(function() entryPlayerId = state.PlayerId end)
                         trace("players: [" .. tostring(index) .. "/" .. tostring(count) .. "] uid=" ..
                               tostring(entryUid) .. " player_id=" .. tostring(entryPlayerId))
+                        -- Journal a join once per player per server run. A delivery row means
+                        -- little without knowing who was connected when it happened, and the
+                        -- two-player case is precisely a question about that.
+                        if entryUid ~= nil and not journaledOnline[entryUid] then
+                            journaledOnline[entryUid] = true
+                            recordDelivery("online uid=" .. tostring(entryUid) ..
+                                           " player_id=" .. tostring(entryPlayerId) ..
+                                           " connected_count=" .. tostring(count))
+                        end
                     end
                 end
             end
@@ -1342,6 +1376,12 @@ local function RegisterObtainProbe()
                   " owner_player_id=" .. tostring(trueOwnerPlayerId) ..
                   " redirected=" .. tostring(rewrote) ..
                   " total=" .. tostring(obtainFiresTotal))
+
+            -- The one line that answers the outstanding question, written where a restart cannot
+            -- erase it. A row whose egg_owner is NOT the tester's UId is the two-player result.
+            recordDelivery("delivery egg_owner=" .. tostring(trueOwnerUid) ..
+                           " owner_player_id=" .. tostring(trueOwnerPlayerId) ..
+                           " request_player_id=" .. tostring(recipient))
             return false
         end))
     end)
