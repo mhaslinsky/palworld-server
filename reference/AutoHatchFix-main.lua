@@ -122,6 +122,16 @@ local function unwrap(value)
     return inner
 end
 
+-- A PlayerState exists briefly during a join before PlayerUId is populated, and reads as all
+-- zeros. Observed in the delivery ledger: one join produced TWO rows, an all-zeros one and then
+-- the real UId fourteen seconds later. In a two-player ledger that phantom row is exactly what
+-- someone would misread as a second player, so it is rejected everywhere a UId is keyed or
+-- recorded rather than filtered at the point it happened to be noticed.
+local function isRealUid(uid)
+    if uid == nil or uid == "" then return false end
+    return string.match(uid, "^0+$") == nil
+end
+
 local function readProperty(object, name)
     if not alive(object) then return false, nil end
     local ok, value = pcall(function() return object[name] end)
@@ -350,7 +360,9 @@ end
 local function captureArchiveFor(playerIdValue, archive)
     if inOurDelivery then return end -- our own replay; recording it would be circular
     local uid = uidByPlayerId[playerIdValue]
-    if uid == nil then return end -- unknown connection; nothing to key the recording to
+    -- isRealUid, not a nil check: an all-zeros UId from a half-initialised PlayerState would file
+    -- a real archive under a player who does not exist.
+    if not isRealUid(uid) then return end
     -- FIRST CAPTURE WINS. The inOurDelivery flag alone is not enough: AutoHatch returns before
     -- the delivery actually runs, so the hook fires for our own replay with the flag already
     -- cleared, and every log line reads ours=false. Re-recording a replay is how the 2026-08-29
@@ -765,7 +777,7 @@ local function registerPlayerStatesWithOriginal(origActor, gameState)
             local state = unwrap(entry)
             local uid = nil
             pcall(function() uid = guidText(state.PlayerUId) end)
-            if uid ~= nil and alive(state) then
+            if isRealUid(uid) and alive(state) then
                 -- Key the archive recordings by a STABLE id. The hook only sees the per-connection
                 -- PlayerId, which is reassigned on reconnect and meaningless across a restart, so
                 -- this map is what lets a capture survive as "this person's recording".
@@ -1164,7 +1176,7 @@ local function sweepOnce(modActor)
                         -- Journal a join once per player per server run. A delivery row means
                         -- little without knowing who was connected when it happened, and the
                         -- two-player case is precisely a question about that.
-                        if entryUid ~= nil and not journaledOnline[entryUid] then
+                        if isRealUid(entryUid) and not journaledOnline[entryUid] then
                             journaledOnline[entryUid] = true
                             recordDelivery("online uid=" .. tostring(entryUid) ..
                                            " player_id=" .. tostring(entryPlayerId) ..
