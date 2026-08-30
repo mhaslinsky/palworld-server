@@ -362,10 +362,28 @@ end
 -- D: is the durable volume (the world lives there and survives instance replacement); C: does not.
 -- Absolute path because Lua resolves relative paths against C:\PalServer, not this script's folder.
 local DELIVERY_LOG = "D:\\PalServer\\autohatchfix-deliveries.log"
+local DELIVERY_LOG_ROTATED = "D:\\PalServer\\autohatchfix-deliveries.log.1"
+-- D: is the same volume the world save lives on, so the ledger cannot grow without bound. One
+-- rotated file is enough: this is a diagnostic trail for a misroute investigation, not an audit
+-- log that needs deep history.
+local DELIVERY_LOG_MAX_BYTES = 5 * 1024 * 1024
+
+local function rotateDeliveryLogIfNeeded()
+    local file = io.open(DELIVERY_LOG, "r")
+    if file == nil then return end -- nothing to rotate yet
+    local size = file:seek("end")
+    file:close()
+    if type(size) ~= "number" or size < DELIVERY_LOG_MAX_BYTES then return end
+    os.remove(DELIVERY_LOG_ROTATED)
+    if not os.rename(DELIVERY_LOG, DELIVERY_LOG_ROTATED) then
+        trace("ledger: FAILED to rotate " .. DELIVERY_LOG .. " at " .. tostring(size) .. " bytes")
+    end
+end
 
 local function recordDelivery(line)
     -- Best effort by design: a failure to journal must never interfere with a delivery. But say so
     -- in UE4SS.log rather than failing silently, or a missing ledger reads as "nothing happened".
+    rotateDeliveryLogIfNeeded()
     local file = io.open(DELIVERY_LOG, "a")
     if file == nil then
         trace("ledger: FAILED to open " .. DELIVERY_LOG .. " for append")
