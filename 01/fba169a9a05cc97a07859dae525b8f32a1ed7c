@@ -1,0 +1,26 @@
+scripts/deploy-autohatch.ps1
+  s_2545e887ad9c5b::t_9378cdda8f68c9 176
+  s_2545e887ad9c5b::t_1c3a9ba8df97bd 133-152,154-156,159-163
+  s_2545e887ad9c5b::t_8edcd23283071e 1-2,9-12
+  s_2545e887ad9c5b::t_68252d013c26dd 74-75,85,90-92,94-95,99-100
+  s_2545e887ad9c5b::t_046d30ea6c05dc 13
+  s_2545e887ad9c5b::t_f2bec0c1d5ff98 164
+terraform/windows.tf
+  s_2545e887ad9c5b::t_4db9a62506eded 134-139,153,156-158
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "01fba169a9a05cc97a07859dae525b8f32a1ed7c",
+  "prompts": {},
+  "sessions": {
+    "s_2545e887ad9c5b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c67a37fa-88b0-414f-8944-808d5d579ec3",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    }
+  }
+}
