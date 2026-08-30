@@ -1174,12 +1174,11 @@ local function RegisterChatHook()
         local messageStruct = chatMessage:get()
 
         -- The field is `SenderPlayerUId` (capital S). The original mod's stock file read a
-        -- lower-case `senderPlayerUId`, which does not exist on the struct and returns nil —
-        -- see reference/README.md and AGENTS.md rule 6. Prefer the correct name, fall back
-        -- rather than assume this build matches.
-        local senderGuid = messageStruct.SenderPlayerUId
-        if senderGuid == nil then senderGuid = messageStruct.senderPlayerUId end
-        local senderUId = guidText(senderGuid)
+        -- lower-case `senderPlayerUId`, which does not exist on the struct — see
+        -- reference/README.md and AGENTS.md rule 6. No fallback to that name here: UE4SS's
+        -- __index answers any unknown name with a TrivialObject, never nil, so a lower-case
+        -- fallback could never have fired anyway.
+        local senderUId = guidText(messageStruct.SenderPlayerUId)
         if senderUId == nil then return end
 
         local text = messageStruct.Message:ToString()
