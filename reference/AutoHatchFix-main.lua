@@ -224,6 +224,10 @@ local lastPlayerIdByUid = {}
 -- Players already journaled as online this server run, so a join is recorded once rather than
 -- every five seconds.
 local journaledOnline = {}
+-- Highest incubator count enumerated since this server started, used to detect a cycle that read
+-- only part of the world. Reset by a restart, which is correct: a genuinely dismantled hatchery
+-- should not warn forever.
+local peakIncubatorCount = 0
 
 -- The 2026-08-28 runaway: nothing emptied ByteArray between sends, so the archive doubled every
 -- hatch (6.8 MB, 13.7 MB, 27.5 MB) until the game thread stopped answering the REST API with no
@@ -1011,7 +1015,24 @@ end
 local function sweepOnce(modActor)
     local ownerByModelId = buildOwnerByModelId()
     local eggs = findHatchingEggModels()
-    trace("poll: " .. tostring(#eggs) .. " incubator(s) in the world")
+
+    -- Announce a PARTIAL world read. Measured 2026-08-30: the count read 13, then 7, then 13 again
+    -- across three consecutive cycles with no player action between them, so FindAllOf transiently
+    -- returned about half the incubators in the world.
+    --
+    -- Nothing was lost, because the next cycle re-enumerates and every delivery decision is made
+    -- per cycle. The danger is that a cycle seeing 7 of 13 silently skips six owners' eggs while
+    -- printing a perfectly clean summary: a count lower than reality is indistinguishable from a
+    -- world that genuinely holds less. Track the high-water mark and say so when a cycle comes in
+    -- materially under it.
+    if #eggs > peakIncubatorCount then peakIncubatorCount = #eggs end
+    local partialRead = peakIncubatorCount > 0 and #eggs < peakIncubatorCount
+    trace("poll: " .. tostring(#eggs) .. " incubator(s) in the world" ..
+          (partialRead and (" PARTIAL WORLD READ: peak this run was " ..
+                            tostring(peakIncubatorCount) ..
+                            ", so " .. tostring(peakIncubatorCount - #eggs) ..
+                            " incubator(s) are missing from THIS cycle and their owners' eggs are" ..
+                            " being skipped without appearing anywhere else in this summary") or ""))
 
     cycleCount = cycleCount + 1
     local summary = {
