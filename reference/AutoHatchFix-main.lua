@@ -13,13 +13,27 @@
 -- offline owner still resolves), and gate delivery on THAT OWNER's own on/off setting,
 -- keeping one collection context per owner instead of one shared context for the server.
 --
--- WHAT LUA CANNOT DO: deliver the hatch itself. Measured on the live server, ten
--- COMPLETED eggs, addressed to the tester's own live PlayerId while connected —
--- `ObtainHatchedCharacter_ServerInternal`, `RequestObtainSingleHatchedCharacter` and
--- `RequestObtainAllHatchedCharacter` all returned call_ok=true and consumed nothing
--- (occupied slots 10 before, 10 after). So delivery is driven by a companion Blueprint
--- ModActor exposing `DoHatch(EggModel, PlayerId)`. callDoHatch() below is the ONLY place
--- that calls into it — repoint there if the Blueprint's path or signature changes.
+-- WHAT NOTHING WE WRITE CAN DO: deliver the hatch itself. Measured twice, two different
+-- callers, same result. From Lua directly: `ObtainHatchedCharacter_ServerInternal`,
+-- `RequestObtainSingleHatchedCharacter` and `RequestObtainAllHatchedCharacter` each returned
+-- call_ok=true and consumed nothing on ten COMPLETED eggs addressed to the tester's own live
+-- PlayerId. From a purpose-built companion Blueprint: the same function, reached with
+-- processevent=true and reached_obtain=true and the correct recipient, consumed nothing on the
+-- same ten eggs. The caller was never the variable. That function's payload is its Archive
+-- parameter, which the original mod assembles by streaming bytes through GetBytes(uint8) into
+-- ByteArray, and a default-constructed one carries nothing to obtain.
+--
+-- SO DELIVERY IS NOT REIMPLEMENTED, IT IS DRIVEN. `AutoHatch(FGuid PlayerUId)` on the ORIGINAL
+-- mod's ModActor is that mod's entire working delivery path and takes the recipient as a
+-- parameter. The original hatches reliably; its only defect is CHOOSING that recipient, which
+-- is exactly the step this file replaces. Its pak is enabled and its own Lua is not (no
+-- enabled.txt), so its shared-context sweep never runs and the blueprint is machinery we drive;
+-- UseAutoHatch is forced false before every call as a second guard.
+-- callOriginalAutoHatch() below is the ONLY place that delivers.
+--
+-- The companion Blueprint and callDoHatch() are retained but no longer on the delivery path.
+-- They are what PROVED the above: without them, "Lua cannot dispatch Blueprint bytecode" and
+-- "the game refuses an injected obtain" were indistinguishable.
 
 local MOD_ACTOR_BLUEPRINT_PATH = "/Game/Mods/AutoHatchFix/ModActor.ModActor_C"
 -- ^ Confirmed against the built asset: generated_class().get_path_name() reports exactly this.
@@ -113,6 +127,75 @@ local function readProperty(object, name)
     local ok, value = pcall(function() return object[name] end)
     if not ok then return false, nil end
     return true, value
+end
+
+---------------------------------------------------------------------------------------------
+-- ARCHIVE CAPTURE. This is the mechanism the whole mod turns on, and it is not a normal API.
+--
+-- ObtainHatchedCharacter_ServerInternal(RequestPlayerId, Archive) cannot be called into
+-- usefully from outside: measured no-ops from Lua directly, from a purpose-built Blueprint that
+-- provably ran its graph, and from the original mod's own AutoHatch. All three failed for the
+-- same reason. The Archive is the request, and a default-constructed one carries nothing.
+--
+-- The original mod never builds an Archive either. It hooks this same function, waits for a
+-- GENUINE player-initiated hatch, copies that real call's Archive bytes out, and replays them
+-- forever (reference/AutoHatch-main.lua, the hatch.pre hook). Auto-hatching is a replay of a
+-- recording, not a call.
+--
+-- That is also the original's bug, exactly. Its `sentBytes` latches after the first capture, so
+-- one server lifetime holds ONE recording, taken from whoever hatched first, and every later
+-- delivery replays that person's request. Which is the reported symptom verbatim: the first
+-- player to hatch after a restart receives everyone's Pals.
+--
+-- So: capture PER PLAYER, and replay a given owner's own recording for that owner's eggs. Each
+-- player teaches the mod once by hatching a single egg by hand; everything of theirs after that
+-- is automatic, addressed by their own captured request.
+---------------------------------------------------------------------------------------------
+
+-- PlayerUId (hex) -> array of archive bytes copied out of that player's own real hatch.
+local archiveBytesByUid = {}
+-- PlayerId (int, per-connection) -> PlayerUId (hex, stable). Rebuilt every sweep, because
+-- PlayerId is assigned per connection and is meaningless across a restart.
+local uidByPlayerId = {}
+-- Set only while WE are replaying. The hook fires for any caller including our own replay, and
+-- capturing our own replay is how the 2026-08-29 "fresh bytes every hatch" test silently tested
+-- nothing: it re-recorded its own recording and could not have shown a difference either way.
+local inOurDelivery = false
+
+-- The 2026-08-28 runaway: nothing emptied ByteArray between sends, so the archive doubled every
+-- hatch (6.8 MB, 13.7 MB, 27.5 MB) until the game thread stopped answering the REST API with no
+-- crash dump. Refuse anything absurd rather than feed it.
+local ARCHIVE_BYTE_CEILING = 100000
+
+local function captureArchiveFor(playerIdValue, archive)
+    if inOurDelivery then return end -- our own replay; recording it would be circular
+    local uid = uidByPlayerId[playerIdValue]
+    if uid == nil then return end -- unknown connection; nothing to key the recording to
+    local liveArchive = nil
+    pcall(function() liveArchive = archive:get() end)
+    if liveArchive == nil then return end
+    local bytes = nil
+    pcall(function() bytes = liveArchive.Bytes end)
+    if bytes == nil then return end
+    local count = nil
+    if not pcall(function() count = #bytes end) or type(count) ~= "number" or count == 0 then return end
+    if count > ARCHIVE_BYTE_CEILING then
+        trace("capture: REFUSING " .. tostring(count) .. " bytes for " .. uid .. ", over ceiling")
+        return
+    end
+    -- Copy the VALUES out. The Archive is a live argument on the game's stack and is gone the
+    -- moment this hook returns, so keeping a reference to it would dangle.
+    local copy = {}
+    for byteIndex = 1, count do
+        local value = nil
+        pcall(function() value = bytes[byteIndex] end)
+        if value == nil then return end -- a partial recording is worse than none
+        copy[byteIndex] = value
+    end
+    local hadOne = archiveBytesByUid[uid] ~= nil
+    archiveBytesByUid[uid] = copy
+    trace("capture: stored " .. tostring(count) .. " archive byte(s) for " .. uid ..
+          (hadOne and " (refreshed)" or " (FIRST capture; their eggs can auto-hatch now)"))
 end
 
 ---------------------------------------------------------------------------------------------
@@ -420,30 +503,60 @@ end
 -- Hand the original blueprint the three managers its own Lua would normally supply. Without them
 -- its graph has no world handles and AutoHatch would run against nils. Each is reported, because
 -- a silent partial handoff would look exactly like a working one.
+-- The class names are taken VERBATIM from the original's own handoff (reference/AutoHatch-main.lua
+-- around the possession hook), which passes the BP_ subclasses, not the native base classes. An
+-- earlier attempt here used FindAllOf on the bases and reported true for all three, because a
+-- pcall that does not throw reports true whatever the blueprint received.
 local function handOffToOriginal(origActor, gameState)
     if origHandoffDone or not alive(origActor) then return end
-    local function firstLive(className)
-        local found = nil
-        if not pcall(function() found = FindAllOf(className) end) or found == nil then return nil end
-        for index = 1, #found do
-            local candidate = found[index]
-            local name = nil
-            pcall(function() name = candidate:GetFullName() end)
-            if alive(candidate) and name ~= nil and not string.find(name, "Default__", 1, true) then
-                return candidate
+    local playerManager = FindFirstOf("BP_PalPlayerManager_C")
+    local objectManager = FindFirstOf("BP_PalMapObjectManager_C")
+    local bpGameState = FindFirstOf("BP_PalGameStateInGame_C")
+    local okPlayer = alive(playerManager) and pcall(function() origActor:GetPlayerManagerFromLua(playerManager) end)
+    local okObject = alive(objectManager) and pcall(function() origActor:GetObjectManagerFromLua(objectManager) end)
+    local okState = alive(bpGameState) and pcall(function() origActor:GetGameStateFromLua(bpGameState) end)
+    -- Report whether each object was FOUND separately from whether the call threw: those are
+    -- different failures and the previous version could not tell them apart.
+    trace("orig: handoff found gs=" .. tostring(alive(bpGameState)) ..
+          " om=" .. tostring(alive(objectManager)) ..
+          " pm=" .. tostring(alive(playerManager)) ..
+          " | called gs=" .. tostring(okState) ..
+          " om=" .. tostring(okObject) ..
+          " pm=" .. tostring(okPlayer))
+    if okState and okObject and okPlayer then origHandoffDone = true end
+end
+
+-- Register every connected player's PalPlayerState with the original blueprint. Its own Lua does
+-- this per player on OnCompleteInitializeParameter, and AutoHatch(FGuid) resolves its recipient
+-- through that registration, so without it the blueprint has no player to deliver to and the call
+-- can succeed while doing nothing. Re-run every sweep: it is idempotent and it picks up joins.
+local function registerPlayerStatesWithOriginal(origActor, gameState)
+    if not alive(origActor) or gameState == nil then return end
+    local okArr, playerArray = readProperty(gameState, "PlayerArray")
+    if not okArr or playerArray == nil then return end
+    local count = nil
+    if not pcall(function() count = #playerArray end) or type(count) ~= "number" then return end
+    local registered = 0
+    for index = 1, count do
+        local entry = nil
+        if pcall(function() entry = playerArray[index] end) and entry ~= nil then
+            local state = unwrap(entry)
+            local uid = nil
+            pcall(function() uid = guidText(state.PlayerUId) end)
+            if uid ~= nil and alive(state) then
+                -- Key the archive recordings by a STABLE id. The hook only sees the per-connection
+                -- PlayerId, which is reassigned on reconnect and meaningless across a restart, so
+                -- this map is what lets a capture survive as "this person's recording".
+                local playerId = nil
+                pcall(function() playerId = state.PlayerId end)
+                if playerId ~= nil then uidByPlayerId[playerId] = uid end
+                if pcall(function() origActor:GetPlayerStateFromLua(uid, state) end) then
+                    registered = registered + 1
+                end
             end
         end
-        return nil
     end
-    local objectManager = firstLive("PalMapObjectManager")
-    local playerManager = firstLive("PalPlayerManager")
-    local okState = gameState ~= nil and pcall(function() origActor:GetGameStateFromLua(gameState) end)
-    local okObject = objectManager ~= nil and pcall(function() origActor:GetObjectManagerFromLua(objectManager) end)
-    local okPlayer = playerManager ~= nil and pcall(function() origActor:GetPlayerManagerFromLua(playerManager) end)
-    trace("orig: handoff gamestate=" .. tostring(okState) ..
-          " objectmanager=" .. tostring(okObject) ..
-          " playermanager=" .. tostring(okPlayer))
-    if okState and okObject and okPlayer then origHandoffDone = true end
+    trace("orig: registered " .. tostring(registered) .. " of " .. tostring(count) .. " player state(s)")
 end
 
 -- Deliver every completed egg belonging to ONE owner, addressed to that owner. Called once per
@@ -455,22 +568,56 @@ local function callOriginalAutoHatch(origActor, ownerModelId, ownerText)
         trace("orig: cannot deliver, actor or source object not alive")
         return false
     end
+    -- No recording for this owner means there is nothing to replay. This is a normal state, not
+    -- an error: it is every player's state until they hatch one egg by hand.
+    local ownerBytes = archiveBytesByUid[ownerText]
+    if ownerBytes == nil then
+        trace("orig: no captured archive for " .. tostring(ownerText) ..
+              "; they hatch ONE egg by hand to teach it, then their eggs auto-hatch")
+        return false
+    end
     return pcall(function()
         ExecuteInGameThread(function()
             if not alive(origActor) or not alive(sourceObject) then return end
-            -- Force the original's own sweep off before every call. Its gate is a single global
-            -- bool, so leaving it true would let the blueprint hatch on its own schedule through
-            -- the shared context, which is the bug being replaced.
-            pcall(function() origActor.UseAutoHatch = false end)
+            -- UseAutoHatch is armed ONLY for the duration of this call, then disarmed again.
+            -- Forcing it false around the call was self-defeating: it is the mod's single global
+            -- gate, and AutoHatch's own graph very plausibly early-outs on it, so the previous
+            -- version may have been switching off the exact branch it was trying to invoke. The
+            -- reason to keep it false the rest of the time is unchanged: it gates the blueprint's
+            -- own timer-driven sweep, which is the shared-context misroute being replaced.
+            -- Read it back rather than trusting the write, since a silent no-op here looks
+            -- identical to a successful arm.
+            -- Load THIS owner's recording. Empty first: nothing in the original clears ByteArray
+            -- between sends, which is what made it double every hatch until the game thread hung.
+            local beforeLen = nil
+            pcall(function() beforeLen = #origActor.ByteArray end)
+            local cleared = pcall(function() origActor.ByteArray:Empty() end)
+            if not cleared then cleared = pcall(function() origActor.ByteArray:Clear() end) end
+            if not cleared then cleared = pcall(function() origActor.ByteArray = {} end) end
+            for byteIndex = 1, #ownerBytes do
+                pcall(function() origActor:GetBytes(ownerBytes[byteIndex]) end)
+            end
+            local loadedLen = nil
+            pcall(function() loadedLen = #origActor.ByteArray end)
+            trace("orig: bytearray " .. tostring(beforeLen) .. " -> cleared=" .. tostring(cleared) ..
+                  " -> loaded=" .. tostring(loadedLen) .. " of " .. tostring(#ownerBytes) ..
+                  " for " .. tostring(ownerText))
+
+            pcall(function() origActor.UseAutoHatch = true end)
+            local armed = nil
+            pcall(function() armed = origActor.UseAutoHatch end)
             local ownerGuid = nil
             pcall(function() ownerGuid = sourceObject.BuildPlayerUId end)
             if ownerGuid == nil then
                 trace("orig: could not re-read BuildPlayerUId for " .. tostring(ownerText))
                 return
             end
+            inOurDelivery = true
             local ok, err = pcall(function() origActor:AutoHatch(ownerGuid) end)
-            trace("orig: AutoHatch(" .. tostring(ownerText) .. ") call_ok=" .. tostring(ok) ..
-                  (ok and "" or (" err=" .. tostring(err))))
+            inOurDelivery = false
+            pcall(function() origActor.UseAutoHatch = false end)
+            trace("orig: AutoHatch(" .. tostring(ownerText) .. ") armed=" .. tostring(armed) ..
+                  " call_ok=" .. tostring(ok) .. (ok and "" or (" err=" .. tostring(err))))
         end)
     end)
 end
@@ -555,7 +702,7 @@ local function summaryChanged(current, previous)
     if previous == nil then return true end
     return current.incubators ~= previous.incubators
         or current.ownersResolved ~= previous.ownersResolved
-        or current.ownersOnline ~= previous.ownersOnline
+        or current.incubatorsWithOnlineOwner ~= previous.incubatorsWithOnlineOwner
         or current.occupiedSlots ~= previous.occupiedSlots
         or current.completedSlots ~= previous.completedSlots
         or current.hatchesAttempted ~= previous.hatchesAttempted
@@ -594,7 +741,7 @@ local function sweepOnce(modActor)
 
     cycleCount = cycleCount + 1
     local summary = {
-        incubators = #eggs, ownersResolved = 0, ownersOnline = 0,
+        incubators = #eggs, ownersResolved = 0, incubatorsWithOnlineOwner = 0,
         occupiedSlots = 0, completedSlots = 0, hatchesAttempted = 0,
     }
     local detailLines = {}
@@ -603,7 +750,9 @@ local function sweepOnce(modActor)
     -- loader's own schedule, which is later than this mod's first cycles.
     local origActor = findOriginalModActor()
     if origActor ~= nil then
-        handOffToOriginal(origActor, getGameState(modActor))
+        local liveGameState = getGameState(modActor)
+        handOffToOriginal(origActor, liveGameState)
+        registerPlayerStatesWithOriginal(origActor, liveGameState)
     end
 
     for index = 1, #eggs do
@@ -638,7 +787,7 @@ local function sweepOnce(modActor)
             if owner ~= nil then
                 ownerPlayerId = playerIdForUid(modActor, owner)
                 ownerOnline = ownerPlayerId ~= nil
-                if ownerOnline then summary.ownersOnline = summary.ownersOnline + 1 end
+                if ownerOnline then summary.incubatorsWithOnlineOwner = summary.incubatorsWithOnlineOwner + 1 end
             end
             if ownerOnline and gateEnabled and probeTarget == nil then
                 probeTarget = { model = model, playerId = ownerPlayerId }
@@ -717,6 +866,11 @@ local function sweepOnce(modActor)
     -- Carry the GameState's own player count. owners_online=0 is ambiguous between "nobody is
     -- playing" and "the GameState lookup failed", and reading it as the former wasted a whole
     -- test round while a player was demonstrably connected.
+    -- How many players have taught the mod their archive. Delivery is impossible without one, so
+    -- a zero here explains an idle mod completely rather than looking like a failure.
+    local recordings = 0
+    for _ in pairs(archiveBytesByUid) do recordings = recordings + 1 end
+
     local gameState = getGameState(modActor)
     local connected = "no-gamestate"
     if gameState ~= nil then
@@ -726,8 +880,8 @@ local function sweepOnce(modActor)
         connected = tostring(count)
     end
     trace(string.format(
-        "poll.summary: incubators=%d owners_resolved=%d owners_online=%d occupied=%d completed=%d attempted=%d players_in_gamestate=%s",
-        summary.incubators, summary.ownersResolved, summary.ownersOnline,
+        "poll.summary: archives=%d incubators=%d owners_resolved=%d incubators_with_online_owner=%d occupied=%d completed=%d attempted=%d players_in_gamestate=%s",
+        recordings, summary.incubators, summary.ownersResolved, summary.incubatorsWithOnlineOwner,
         summary.occupiedSlots, summary.completedSlots, summary.hatchesAttempted, connected))
     lastSummaryCounts = summary
 end
@@ -858,12 +1012,16 @@ end
 local function RegisterObtainProbe()
     local ok = pcall(function()
         RegisterHook("/Script/Pal.PalMapObjectHatchingEggModelBase:ObtainHatchedCharacter_ServerInternal",
-          guarded("obtain", function(self, playerId)
+          guarded("obtain", function(self, playerId, archive)
             obtainFiresTotal = obtainFiresTotal + 1
             if inDoHatchCall then obtainFiresInsideCall = obtainFiresInsideCall + 1 end
             local recipient = nil
             pcall(function() recipient = playerId:get() end)
+            -- THE CAPTURE. A genuine player hatch passes a real Archive through here; that is the
+            -- only place a usable one ever exists. Observation only: nothing here alters the call.
+            captureArchiveFor(recipient, archive)
             trace("obtain: fired inside_do_hatch=" .. tostring(inDoHatchCall) ..
+                  " ours=" .. tostring(inOurDelivery) ..
                   " recipient=" .. tostring(recipient) ..
                   " total=" .. tostring(obtainFiresTotal))
             return false
