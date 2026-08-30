@@ -66,8 +66,11 @@ is the fix, and the stock file sits on the box as `main.lua.stock`.
 
 ## `AutoHatch-main.lua`
 
-A hardened `AutoHatch\Scripts\main.lua` for Nexus mod 1959 v0.9.9.6. **This is the file
-the server runs**, deployed to live C: and the D: UE4SS stage.
+A hardened `AutoHatch\Scripts\main.lua` for Nexus mod 1959 v0.9.9.6. **This is no longer
+the file the server runs.** `scripts/deploy-autohatch.ps1` now deploys
+`AutoHatchFix-main.lua` instead (see "Building a replacement mod" below); on this server
+the original mod's pak stays enabled as machinery AutoHatchFix drives, and this Lua stays
+disabled. Kept here as the hardened reference copy the replacement was built from.
 
 It did not fix the crash, and was never going to: the crash was a missing
 `MemberVariableLayout.ini` (AGENTS.md rule 6). What it does carry is one load-bearing
@@ -86,8 +89,13 @@ also derives the player state from the character's own controller rather than a
 module-level `playerState` that holds whichever state was created last server-wide; that
 dangling pointer was real, and is simply not what was crashing us.
 
-sha256 `30bfd5c8fee980d2d32ce3374c9e3df66e59166d60ae7df38a0cf21301338b28`, verified
-on the live box and required verbatim by `scripts/deploy-autohatch.ps1 -ExpectedSha256`.
+`deploy-autohatch.ps1 -ExpectedSha256` refuses to install whatever it fetched unless the
+hash matches exactly, so do not hardcode one here to go stale again: derive it fresh from
+the committed file before every deploy.
+
+```bash
+shasum -a 256 reference/AutoHatchFix-main.lua
+```
 
 Every change is a guard or a breadcrumb; no gameplay logic is altered. The substantive one
 is in the `OnCompleteInitializeParameter` hook: stock compares against a module-level
