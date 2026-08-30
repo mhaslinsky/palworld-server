@@ -1,0 +1,32 @@
+reference/AutoHatchFix-main.lua
+  s_2545e887ad9c5b::t_e1c4166c9f83d9 615,617
+  s_2545e887ad9c5b::t_21538643ba049e 582-589,606-608
+  s_2545e887ad9c5b::t_eb98b0e0cbd855 705,744,790
+  s_2545e887ad9c5b::t_58ba97a7cb3a36 1015,1020-1022,1024
+  s_2545e887ad9c5b::t_dd61d89b7b50d1 883-884
+  s_2545e887ad9c5b::t_8a36231309b3dd 132-200
+  s_2545e887ad9c5b::t_870e63ade0f79a 571-578
+  s_2545e887ad9c5b::t_71dbaa84d26052 590-605
+  s_2545e887ad9c5b::t_99747cb18e2f5e 618-620
+  s_2545e887ad9c5b::t_ba7bb4838be821 753-755
+  s_2545e887ad9c5b::t_2fe73f50646dc0 869-873
+  s_2545e887ad9c5b::t_8801aa08e62981 547-552
+  s_2545e887ad9c5b::t_0074d3e33379a0 506-509,512-546,553-555,559
+  s_2545e887ad9c5b::t_53a7fb12a5d5c0 16-36
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "5f547f2c8a4bcf78fd77e572d415901919450f19",
+  "prompts": {},
+  "sessions": {
+    "s_2545e887ad9c5b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c67a37fa-88b0-414f-8944-808d5d579ec3",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    }
+  }
+}
