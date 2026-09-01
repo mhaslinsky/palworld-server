@@ -25,7 +25,7 @@ Target folder: `...\Palworld\Pal\Binaries\Win64\ue4ss\Mods\`
 
 | Mod | Nexus | Version | Required? | Notes |
 |-----|-------|---------|-----------|-------|
-| **Building Restrictions Disabler** | [1898](https://www.nexusmods.com/palworld/mods/1898) | **1.82** (DLL, client+server) | **Required to build freely** | Folder `BuildingRestrictionsDisabler\` (has `enabled.txt` + `dlls\main.dll`). Must be on both sides (the server already has it). **Update to 1.82 for game 1.0.3**: 1.78 loads and then logs `Version pattern not found`, so building goes silently vanilla. Older still, 1.75 on 1.0.2 reported `Incompatible game client version`. |
+| **Building Restrictions Disabler** | [1898](https://www.nexusmods.com/palworld/mods/1898) | **1.88** (DLL, client+server) | **Required to build freely** | Folder `BuildingRestrictionsDisabler\` (has `enabled.txt` + `dlls\main.dll`). Must be on both sides (the server already has it). **The server runs 1.88 as of 2026-09-01**: match it. 1.88 also ships a real `dlls\Config.json` where earlier builds had a stub, which is what gives you the F7/F8 keybinds below. On game 1.0.3, 1.78 loads and then logs `Version pattern not found`, so building goes silently vanilla; older still, 1.75 on 1.0.2 reported `Incompatible game client version`. |
 | **FSS – Full Sphere Summon** | [3620](https://www.nexusmods.com/palworld/mods/3620) | 0.7.0 (UE4SS Lua) | Optional | Folder `FullSphereSummon\` (has `enabled.txt` + `Scripts\main.lua`). Client-only; restores throw-to-summon. |
 | **Max Stack Count** | [376](https://www.nexusmods.com/palworld/mods/376) | 1.3 (UE4SS Lua) | **Required for raised stacks** | Folder `MaxStackCount\` (has `enabled.txt` + `Scripts\main.lua`). Raises item stack caps from 9999 to 999,999,999. Must be on both sides (the server already has it): a vanilla client stays capped at 9999 even though the server allows more. Confirmed in-game by multiple players. |
 
@@ -44,6 +44,24 @@ it. The mod says so in chat when it hits that case.
 
 After copying, confirm the paths exist with **no extra nested folder**, e.g.
 `...\ue4ss\Mods\BuildingRestrictionsDisabler\dlls\main.dll`.
+
+**1898's in-game keys**, from the `Config.json` it ships: **F9** toggles the restrictions
+off and on, **F8** toggles building on steep ground, **F7** toggles snapping. The mod starts
+activated, so you do not need to press anything to build freely. Edit `dlls\Config.json` if
+a key clashes with something else you have bound.
+
+## Step 2b: Install the pak mods (different folder)
+
+Target folder: `...\Palworld\Pal\Content\Paks\~mods\` (**not** the `ue4ss\Mods\` folder
+above). Create `~mods` if it does not exist. These are `.pak` files, dropped in directly with
+no subfolder.
+
+| Mod | Nexus | Version | Required? | Notes |
+|-----|-------|---------|-----------|-------|
+| **Disassembly Conveyor 100 Slots** | [1672](https://www.nexusmods.com/palworld/mods/1672) | 7 (pak, client+server) | Optional | File `Pal Disassembly Conveyor 100 Slots_P.pak`. Raises the disassembly conveyor from its stock slot count to 100. Installed on the server as of 2026-09-01; install it locally too, per the mod's own instructions, or the extra slots may not show for you. |
+
+The warning below against running two building mods at once applies to the old building paks
+only; the conveyor pak does not touch building and does not conflict with 1898.
 
 ## Step 3: Verify in-game
 
@@ -96,7 +114,22 @@ If you previously had the old pak mods (`LessRestrictiveSettings_P`, `NoCollisio
 
 Tracked here so we know what's set. These live on the server / in Terraform:
 
-- **UE4SS + Building Restrictions Disabler (1898)**: installed on the Windows dedicated server.
+- **UE4SS + Building Restrictions Disabler (1898)**: installed on the Windows dedicated server,
+  on **1.88** since 2026-09-01. Verified on `v1.0.3.101283` by its own log, which reported
+  `Found all AOBs` for all 16 restrictions, including `Not connected to structure` (the one
+  1.78 legitimately missed on a build it otherwise supported).
+- **Disassembly Conveyor 100 Slots** ([1672](https://www.nexusmods.com/palworld/mods/1672), v7,
+  pak): installed on the Windows dedicated server 2026-09-01. Staged on `D:` and published to
+  `s3://<backups-bucket>/paks-stage/`, alongside `CreativeMenu_P.pak` and `z_BetterEggCake_P.pak`.
+
+**Installing a pak mod on the server: it goes on `D:`, never straight into `~mods`.**
+`palworld-launch.ps1` treats `D:\PalServer\paks-stage` as the master and, on every launch,
+**deletes any pak in `~mods` the stage does not list**. So a pak dropped directly into
+`Pal\Content\Paks\~mods\` survives exactly until the next restart, then vanishes with only an
+event-log line (id 115) to say so. Put it in the stage, publish the stage with
+`scripts/seed-paks-stage.ps1` so a rebuilt volume can restore it, and let the launcher mirror
+it into `~mods`. The paks are **only** copied on the path where the server is down, so a new
+pak goes live at the next restart, not immediately.
 - **MaxStackCount** ([376](https://www.nexusmods.com/palworld/mods/376), 1.3, UE4SS Lua): installed
   on the Windows dedicated server. Raises item stack caps from 9999 to 999,999,999. Enabled purely
   via `enabled.txt` (same override mechanism as Building Restrictions Disabler), not listed in
