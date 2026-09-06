@@ -1,0 +1,23 @@
+terraform/compute.tf
+  s_7f93ed14f9faa2::t_45ce68eeabce85 106-107
+terraform/world_volume.tf
+  s_7f93ed14f9faa2::t_ec778c2f38dcd6 26
+terraform/windows.tf
+  s_7f93ed14f9faa2::t_80d723e1df5cb0 324-325
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "d81fd9a69b919b4d20a3686e991e2f7fde002cca",
+  "prompts": {},
+  "sessions": {
+    "s_7f93ed14f9faa2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "38e02e3f-78c1-4a46-81a0-553795f7ddcb",
+        "model": "claude-fable-5-1"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    }
+  }
+}
