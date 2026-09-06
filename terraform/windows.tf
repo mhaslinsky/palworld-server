@@ -321,9 +321,8 @@ resource "aws_ebs_volume" "windows_save" {
 
   tags = { Name = "${local.windows_name}-save" }
 
-  lifecycle {
-    prevent_destroy = true
-  }
+  # prevent_destroy removed 2026-09-06 for the deliberate Phase 3 teardown; the
+  # final capture is snap-0b4afd2ff2f13283a plus the S3 zips.
 }
 
 # BLOCKER 4: the save volume needs its own backup — the existing DLM policy only

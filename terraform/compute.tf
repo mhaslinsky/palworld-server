@@ -103,13 +103,8 @@ resource "aws_instance" "server" {
   # on the box (SSM) or do a DELIBERATE, backup-first replacement.
   user_data_replace_on_change = false
 
-  lifecycle {
-    # Replacement is no longer world-destroying (the world is on its own volume),
-    # but it is still player-facing downtime plus an unplanned game update. Make
-    # Terraform refuse and error out rather than doing it quietly; removing this
-    # flag is the explicit, two-step opt-in required to rebuild the box on purpose.
-    prevent_destroy = true
-  }
+  # prevent_destroy removed 2026-09-06 for the deliberate Phase 3 teardown. The
+  # world is captured in S3 and snap-0b4afd2ff2f13283a; the box is being retired.
 
   tags = { Name = var.project_name }
 }

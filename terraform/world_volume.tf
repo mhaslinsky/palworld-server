@@ -23,9 +23,7 @@ resource "aws_ebs_volume" "world" {
 
   tags = { Name = "${var.project_name}-world" }
 
-  lifecycle {
-    prevent_destroy = true
-  }
+  # prevent_destroy removed 2026-09-06 for the deliberate Phase 3 teardown.
 }
 
 resource "aws_volume_attachment" "world" {
