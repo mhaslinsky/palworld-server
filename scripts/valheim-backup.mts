@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { spawn } from "node:child_process";
+import type { ChildProcess } from "node:child_process";
 import { promises as fsPromises } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join, resolve } from "node:path";
@@ -8,6 +9,7 @@ import { pathToFileURL } from "node:url";
 import {
   chooseKey,
   freshness,
+  parseMinBytes,
   parseConf,
   sizeGate,
   sizesMatch,
@@ -16,6 +18,10 @@ import {
 import type { BackupConfig } from "./backup-gates.mts";
 
 const CONFIG_PATH = "/etc/valheim/idle.conf";
+const DEFAULT_COMMAND_TIMEOUT_MS = 120_000;
+const TAR_COMMAND_TIMEOUT_MS = 300_000;
+const PROCESS_KILL_GRACE_MS = 5_000;
+const BACKUP_DEADLINE_MS = 240_000;
 const FRESHNESS_SLACK_SECONDS = 120;
 const OPTIONAL_ARCHIVE_FILES = ["adminlist.txt", "bannedlist.txt", "permittedlist.txt"];
 
@@ -23,6 +29,13 @@ interface CommandResult {
   exitCode: number;
   stdout: string;
   stderr: string;
+  failureReason: string | undefined;
+}
+
+interface CommandOptions {
+  captureStdout: boolean;
+  timeoutMs?: number;
+  deadlineAtMs?: number;
 }
 
 interface FreshnessScan {
@@ -37,6 +50,10 @@ interface BackupResult {
 }
 
 class BackupFailure extends Error {}
+
+let activeChildProcess: ChildProcess | undefined;
+let activeTemporaryDirectory: string | undefined;
+let shutdownRequested = false;
 
 function describeError(error: unknown): string {
   if (error instanceof Error && error.message !== "") {
@@ -58,16 +75,61 @@ function hasErrorCode(error: unknown, expectedCode: string): boolean {
   return (error as { code?: unknown }).code === expectedCode;
 }
 
-function runCommand(commandName: string, argumentsList: string[], captureStdout: boolean): Promise<CommandResult> {
+function runCommand(
+  commandName: string,
+  argumentsList: string[],
+  options: CommandOptions,
+): Promise<CommandResult> {
+  const requestedTimeoutMs = options.timeoutMs ?? DEFAULT_COMMAND_TIMEOUT_MS;
+  const remainingDeadlineMs = options.deadlineAtMs === undefined
+    ? requestedTimeoutMs
+    : options.deadlineAtMs - Date.now();
+  const timeoutMs = Math.min(requestedTimeoutMs, remainingDeadlineMs);
+
+  if (timeoutMs <= 0) {
+    return Promise.resolve({
+      exitCode: 124,
+      stdout: "",
+      stderr: "",
+      failureReason: `${commandName} timeout deadline exceeded before start`,
+    });
+  }
+
   return new Promise((resolveCommand) => {
     let stdoutText = "";
     let stderrText = "";
     let settled = false;
+    let timeoutReason: string | undefined;
+    let timeoutTimer: ReturnType<typeof setTimeout> | undefined;
+    let killTimer: ReturnType<typeof setTimeout> | undefined;
+    let forceResolveTimer: ReturnType<typeof setTimeout> | undefined;
     const childProcess = spawn(commandName, argumentsList, {
-      stdio: ["ignore", captureStdout ? "pipe" : "ignore", "pipe"],
+      stdio: ["ignore", options.captureStdout ? "pipe" : "ignore", "pipe"],
     });
+    activeChildProcess = childProcess;
 
-    if (captureStdout && childProcess.stdout !== null) {
+    const finishCommand = (result: CommandResult): void => {
+      if (settled) {
+        return;
+      }
+
+      settled = true;
+      if (timeoutTimer !== undefined) {
+        clearTimeout(timeoutTimer);
+      }
+      if (killTimer !== undefined) {
+        clearTimeout(killTimer);
+      }
+      if (forceResolveTimer !== undefined) {
+        clearTimeout(forceResolveTimer);
+      }
+      if (activeChildProcess === childProcess) {
+        activeChildProcess = undefined;
+      }
+      resolveCommand(result);
+    };
+
+    if (options.captureStdout && childProcess.stdout !== null) {
       childProcess.stdout.setEncoding("utf8");
       childProcess.stdout.on("data", (dataChunk: string) => {
         stdoutText += dataChunk;
@@ -83,26 +145,46 @@ function runCommand(commandName: string, argumentsList: string[], captureStdout:
 
     childProcess.once("error", (error: Error) => {
       stderrText = `${stderrText}${describeError(error)}`;
-      if (!settled) {
-        settled = true;
-        resolveCommand({ exitCode: 1, stdout: stdoutText, stderr: stderrText });
-      }
+      finishCommand({
+        exitCode: timeoutReason === undefined ? 1 : 124,
+        stdout: stdoutText,
+        stderr: stderrText,
+        failureReason: timeoutReason,
+      });
     });
 
     childProcess.once("close", (exitCode: number | null) => {
-      if (!settled) {
-        settled = true;
-        resolveCommand({
-          exitCode: exitCode ?? 1,
-          stdout: stdoutText,
-          stderr: stderrText,
-        });
-      }
+      finishCommand({
+        exitCode: timeoutReason === undefined ? (exitCode ?? 1) : 124,
+        stdout: stdoutText,
+        stderr: stderrText,
+        failureReason: timeoutReason,
+      });
     });
+
+    timeoutTimer = setTimeout(() => {
+      timeoutReason = `${commandName} timed out after ${Math.ceil(timeoutMs / 1000)}s`;
+      childProcess.kill("SIGTERM");
+      killTimer = setTimeout(() => {
+        childProcess.kill("SIGKILL");
+        forceResolveTimer = setTimeout(() => {
+          finishCommand({
+            exitCode: 124,
+            stdout: stdoutText,
+            stderr: stderrText,
+            failureReason: timeoutReason,
+          });
+        }, 1_000);
+      }, PROCESS_KILL_GRACE_MS);
+    }, timeoutMs);
   });
 }
 
 function commandFailure(result: CommandResult, action: string): BackupFailure {
+  if (result.failureReason !== undefined) {
+    return new BackupFailure(`${action}: ${result.failureReason}`);
+  }
+
   const detailText = normalizedReason(result.stderr);
   const suffix = detailText === "" ? ` (exit ${result.exitCode})` : ` (exit ${result.exitCode}): ${detailText}`;
   return new BackupFailure(`${action}${suffix}`);
@@ -207,20 +289,29 @@ async function archiveEntries(savedir: string, worldPath: string): Promise<strin
   return entries;
 }
 
-async function createArchive(archivePath: string, savedir: string, entries: string[]): Promise<void> {
+async function createArchive(
+  archivePath: string,
+  savedir: string,
+  entries: string[],
+  deadlineAtMs: number,
+): Promise<void> {
   const tarResult = await runCommand(
     "tar",
     ["-czf", archivePath, "-C", savedir, "--", ...entries],
-    false,
+    { captureStdout: false, timeoutMs: TAR_COMMAND_TIMEOUT_MS, deadlineAtMs },
   );
 
   if (!tarExitAcceptable(tarResult.exitCode)) {
-    throw commandFailure(tarResult, `tar failed`);
+    throw commandFailure(tarResult, "tar failed");
   }
 }
 
-async function verifyArchive(archivePath: string): Promise<void> {
-  const integrityResult = await runCommand("tar", ["-tzf", archivePath], false);
+async function verifyArchive(archivePath: string, deadlineAtMs: number): Promise<void> {
+  const integrityResult = await runCommand(
+    "tar",
+    ["-tzf", archivePath],
+    { captureStdout: false, timeoutMs: TAR_COMMAND_TIMEOUT_MS, deadlineAtMs },
+  );
   if (integrityResult.exitCode !== 0) {
     throw commandFailure(integrityResult, "archive fails integrity check");
   }
@@ -231,12 +322,25 @@ async function uploadAndVerify(
   archiveSize: number,
   config: BackupConfig,
   key: string,
+  deadlineAtMs: number,
 ): Promise<void> {
   const destination = `s3://${config.BACKUP_BUCKET}/${key}`;
   const uploadResult = await runCommand(
     "aws",
-    ["s3", "cp", archivePath, destination, "--region", config.AWS_REGION, "--only-show-errors"],
-    false,
+    [
+      "s3",
+      "cp",
+      archivePath,
+      destination,
+      "--region",
+      config.AWS_REGION,
+      "--cli-connect-timeout",
+      "10",
+      "--cli-read-timeout",
+      "60",
+      "--only-show-errors",
+    ],
+    { captureStdout: false, deadlineAtMs },
   );
   if (uploadResult.exitCode !== 0) {
     throw commandFailure(uploadResult, "s3 upload failed");
@@ -254,11 +358,15 @@ async function uploadAndVerify(
       "--region",
       config.AWS_REGION,
       "--query",
-      "Contents[0].Size",
+      `Contents[?Key=='${key}'].Size | [0]`,
       "--output",
       "text",
+      "--cli-connect-timeout",
+      "10",
+      "--cli-read-timeout",
+      "60",
     ],
-    true,
+    { captureStdout: true, deadlineAtMs },
   );
   if (listResult.exitCode !== 0) {
     throw commandFailure(listResult, "could not verify uploaded object");
@@ -275,14 +383,24 @@ export async function runBackup(): Promise<BackupResult> {
   const configText = await fsPromises.readFile(CONFIG_PATH, "utf8");
   const config = parseConf(configText);
   const saveIntervalSeconds = numericConfigValue(config, "SAVE_INTERVAL_SECONDS", 0);
-  const minimumBytes = numericConfigValue(config, "BACKUP_MIN_BYTES", 0);
+  const minimumBytes = parseMinBytes(config.BACKUP_MIN_BYTES);
   const relativeWorldPath = worldRelativePath(config.WORLD_NAME);
   const worldDirectory = join(config.SAVEDIR, relativeWorldPath);
-  const worldStats = await fsPromises.stat(worldDirectory);
+  let worldStats;
+  try {
+    worldStats = await fsPromises.stat(worldDirectory);
+  } catch (error) {
+    if (hasErrorCode(error, "ENOENT")) {
+      throw new BackupFailure(`world directory not found: ${worldDirectory}`);
+    }
+
+    throw error;
+  }
   if (!worldStats.isDirectory()) {
     throw new BackupFailure(`${worldDirectory} is not a directory`);
   }
 
+  const deadlineAtMs = Date.now() + BACKUP_DEADLINE_MS;
   const backupTimestamp = new Date();
   const freshnessScan = await inspectWorldDirectory(worldDirectory);
   const freshnessDecision = freshnessScan.failureReason === undefined
@@ -299,12 +417,14 @@ export async function runBackup(): Promise<BackupResult> {
   const key = chooseKey({ degraded: degradedReason !== undefined, timestamp: backupTimestamp });
 
   const temporaryDirectory = await fsPromises.mkdtemp(join(tmpdir(), "valheim-backup-"));
+  activeTemporaryDirectory = temporaryDirectory;
   const archivePath = join(temporaryDirectory, basename(key));
+  let operationFailed = false;
 
   try {
     const entries = await archiveEntries(config.SAVEDIR, relativeWorldPath);
-    await createArchive(archivePath, config.SAVEDIR, entries);
-    await verifyArchive(archivePath);
+    await createArchive(archivePath, config.SAVEDIR, entries, deadlineAtMs);
+    await verifyArchive(archivePath, deadlineAtMs);
 
     const archiveStats = await fsPromises.stat(archivePath);
     if (!sizeGate(archiveStats.size, minimumBytes)) {
@@ -313,14 +433,62 @@ export async function runBackup(): Promise<BackupResult> {
       );
     }
 
-    await uploadAndVerify(archivePath, archiveStats.size, config, key);
+    await uploadAndVerify(archivePath, archiveStats.size, config, key, deadlineAtMs);
     return { key, size: archiveStats.size, degradedReason };
+  } catch (error) {
+    operationFailed = true;
+    throw error;
   } finally {
-    await fsPromises.rm(temporaryDirectory, { recursive: true, force: true });
+    try {
+      await fsPromises.rm(temporaryDirectory, { recursive: true, force: true });
+      if (activeTemporaryDirectory === temporaryDirectory) {
+        activeTemporaryDirectory = undefined;
+      }
+    } catch (error) {
+      console.error(`BACKUP_CLEANUP_FAILED: ${normalizedReason(describeError(error))}`);
+      if (!operationFailed) {
+        throw new BackupFailure(`temporary directory cleanup failed: ${describeError(error)}`);
+      }
+    }
   }
 }
 
+function installSignalHandlers(): () => void {
+  const handleSignal = (signalName: "SIGTERM" | "SIGINT"): void => {
+    if (shutdownRequested) {
+      return;
+    }
+
+    shutdownRequested = true;
+    activeChildProcess?.kill("SIGTERM");
+    void (async () => {
+      if (activeTemporaryDirectory !== undefined) {
+        try {
+          await fsPromises.rm(activeTemporaryDirectory, { recursive: true, force: true });
+          activeTemporaryDirectory = undefined;
+        } catch (error) {
+          console.error(`BACKUP_CLEANUP_FAILED: ${normalizedReason(describeError(error))}`);
+        }
+      }
+
+      console.error(`BACKUP_FAILED: received ${signalName}`);
+      process.exit(1);
+    })();
+  };
+
+  const handleSigterm = (): void => handleSignal("SIGTERM");
+  const handleSigint = (): void => handleSignal("SIGINT");
+  process.once("SIGTERM", handleSigterm);
+  process.once("SIGINT", handleSigint);
+
+  return () => {
+    process.off("SIGTERM", handleSigterm);
+    process.off("SIGINT", handleSigint);
+  };
+}
+
 async function main(): Promise<void> {
+  const removeSignalHandlers = installSignalHandlers();
   try {
     const backupResult = await runBackup();
     if (backupResult.degradedReason === undefined) {
@@ -334,6 +502,8 @@ async function main(): Promise<void> {
     const reason = error instanceof BackupFailure ? error.message : describeError(error);
     console.error(`BACKUP_FAILED: ${normalizedReason(reason)}`);
     process.exitCode = 1;
+  } finally {
+    removeSignalHandlers();
   }
 }
 

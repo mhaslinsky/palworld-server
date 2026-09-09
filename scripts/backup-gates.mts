@@ -62,6 +62,16 @@ export function sizeGate(bytes: number, minBytes: number): boolean {
   return Number.isFinite(bytes) && Number.isFinite(minBytes) && minBytes >= 0 && bytes >= minBytes;
 }
 
+export function parseMinBytes(rawValue: string | undefined): number {
+  const configuredValue = rawValue ?? "200000";
+  const minBytes = Number(configuredValue);
+  if (configuredValue.trim() === "" || !Number.isFinite(minBytes) || minBytes <= 0) {
+    throw new Error("BACKUP_MIN_BYTES must be a positive number");
+  }
+
+  return minBytes;
+}
+
 export function chooseKey(input: KeyInput): string {
   const timestampDate = input.timestamp instanceof Date
     ? new Date(input.timestamp.getTime())
@@ -134,9 +144,12 @@ export function parseConf(text: string): BackupConfig {
     }
   }
 
-  return {
+  const backupConfig: BackupConfig = {
     ...parsedValues,
     AWS_REGION: parsedValues.AWS_REGION ?? "us-east-1",
     BACKUP_MIN_BYTES: parsedValues.BACKUP_MIN_BYTES ?? "200000",
   };
+
+  parseMinBytes(backupConfig.BACKUP_MIN_BYTES);
+  return backupConfig;
 }

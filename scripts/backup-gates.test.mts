@@ -5,6 +5,7 @@ import test from "node:test";
 import {
   chooseKey,
   freshness,
+  parseMinBytes,
   parseConf,
   sizeGate,
   sizesMatch,
@@ -49,6 +50,14 @@ test("freshness degrades when no regular file mtime is available", () => {
 test("size gate accepts the floor and rejects smaller archives", () => {
   assert.equal(sizeGate(200000, 200000), true);
   assert.equal(sizeGate(199999, 200000), false);
+});
+
+test("parseMinBytes requires a positive configured floor", () => {
+  assert.equal(parseMinBytes(undefined), 200000);
+  assert.equal(parseMinBytes("200001"), 200001);
+  assert.throws(() => parseMinBytes("0"), /positive number/);
+  assert.throws(() => parseMinBytes("-1"), /positive number/);
+  assert.throws(() => parseMinBytes("not-a-number"), /positive number/);
 });
 
 test("chooseKey selects the healthy and degraded prefixes", () => {
