@@ -109,7 +109,7 @@ resource "aws_lambda_function" "discord_bot" {
       DISCORD_PUBLIC_KEY = var.discord_public_key
       DISCORD_APP_ID     = var.discord_app_id
       INSTANCE_ID        = aws_instance.server.id
-      SERVER_ADDRESS     = "${aws_eip.server.public_ip}:8211"
+      SERVER_ADDRESS     = "${aws_eip.server.public_ip}:${var.game_port}"
       ALLOWED_USER_IDS   = join(",", var.discord_allowed_user_ids)
       ROSTER_PARAM       = local.roster_param_name
     }
