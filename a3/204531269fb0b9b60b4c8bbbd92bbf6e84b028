@@ -1,0 +1,24 @@
+scripts/valheim-backup.mts
+  s_fb80b5a40d5e72::t_e5a14643f6a24d 4,12,21-24,32-38,54-57,78-97,102-105,107,109-130,132,148-153,157-162,164-179,184-187,292-297,301,305,309-314,325,330-343,361,364-367,369,386,389-398,403,420,422,426-427,436,438-440,442-452,456-489,491,505-506
+scripts/backup-gates.mts
+  s_fb80b5a40d5e72::t_e5a14643f6a24d 65-74,147,152-154
+scripts/backup-gates.test.mts
+  s_fb80b5a40d5e72::t_e5a14643f6a24d 8,55-60
+  s_fb80b5a40d5e72::t_598e96b2afd28b 61-62
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "a3204531269fb0b9b60b4c8bbbd92bbf6e84b028",
+  "prompts": {},
+  "sessions": {
+    "s_fb80b5a40d5e72": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0882d-98af-77f0-9411-d1f5158e9a87",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    }
+  }
+}
