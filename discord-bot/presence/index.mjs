@@ -115,9 +115,12 @@ async function buildPresence() {
   }
 
   const plural = roster.count === 1 ? "player" : "players";
+  const playerNamesSuffix = typeof roster.names === "string" && roster.names.length > 0
+    ? ` - ${roster.names}`
+    : "";
   return {
     status: "online",
-    activities: customStatus(`🎮 ${roster.count} ${plural} online - ${roster.names}`),
+    activities: customStatus(`🎮 ${roster.count} ${plural} online${playerNamesSuffix}`),
   };
 }
 
@@ -182,9 +185,8 @@ function connect(token) {
           break;
         }
 
-        // NOT dead code: opcode 1 is Send/Receive. The gateway sends it to demand
-        // an immediate heartbeat, and failing to answer gets the connection
-        // dropped. (Flagged as unreachable in review 2026-07-18, it isn't.)
+        // The gateway sends opcode 1 to demand an immediate heartbeat, and failing
+        // to answer gets the connection dropped.
         case Op.HEARTBEAT:
           send({ op: Op.HEARTBEAT, d: lastSequence });
           break;
