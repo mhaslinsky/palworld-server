@@ -2,7 +2,7 @@
 
 import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { execFile } from "node:child_process";
-import { parseConf, decide, extractNames } from "./idle-logic.mts";
+import { parseConf, decide, extractNames, parseIdleSince } from "./idle-logic.mts";
 import { queryInfo } from "./a2s.mts";
 import type { IdleDecision } from "./idle-logic.mts";
 
@@ -12,6 +12,9 @@ const IDLE_SINCE_PATH = `${STATE_DIR}/idle_since`;
 const WARNED_PATH = `${STATE_DIR}/warned`;
 const ANNOUNCED_UP_PATH = `${STATE_DIR}/announced_up`;
 const QUERY_TIMEOUT_MS = 5000;
+type LoggedDecision = IdleDecision | "shutdown_cancelled";
+
+type ShutdownOutcome = { status: "shutdown" } | { status: "shutdown_cancelled"; count: number | null };
 
 interface IdleConfig {
   queryPort: number;
@@ -32,6 +35,8 @@ interface IdleState {
 
 interface CommandResult {
   code: number;
+  errorMessage: string;
+  signal: string | null;
   stdout: string;
   stderr: string;
 }
@@ -68,10 +73,16 @@ function loadConfig(): IdleConfig {
     throw new Error("QUERY_PORT must be between 1 and 65535");
   }
 
+  const thresholdMin = nonNegativeNumber(configuration, "THRESHOLD_MIN", 25);
+  const warnBeforeMin = nonNegativeNumber(configuration, "WARN_BEFORE_MIN", 5);
+  if (warnBeforeMin > thresholdMin) {
+    throw new Error("WARN_BEFORE_MIN must not exceed THRESHOLD_MIN");
+  }
+
   return {
     queryPort,
-    thresholdMin: nonNegativeNumber(configuration, "THRESHOLD_MIN", 25),
-    warnBeforeMin: nonNegativeNumber(configuration, "WARN_BEFORE_MIN", 5),
+    thresholdMin,
+    warnBeforeMin,
     serverLabel: configuration.SERVER_LABEL ?? "Valheim",
     serverAddress: configuration.SERVER_ADDRESS ?? "",
     awsRegion: configuration.AWS_REGION ?? "us-east-1",
@@ -87,11 +98,30 @@ function errorCode(error: unknown): number {
   return 1;
 }
 
+function errorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  if (typeof error === "object" && error !== null && "message" in error && typeof error.message === "string") {
+    return error.message;
+  }
+  return String(error);
+}
+
+function errorSignal(error: unknown): string | null {
+  if (typeof error === "object" && error !== null && "signal" in error && typeof error.signal === "string") {
+    return error.signal;
+  }
+  return null;
+}
+
 function runCommand(command: string, argumentsList: string[], timeoutMs: number): Promise<CommandResult> {
   return new Promise((resolve) => {
     execFile(command, argumentsList, { encoding: "utf8", timeout: timeoutMs }, (error, stdout, stderr) => {
       resolve({
         code: error === null ? 0 : errorCode(error),
+        errorMessage: error === null ? "" : errorMessage(error),
+        signal: error === null ? null : errorSignal(error),
         stdout: String(stdout),
         stderr: String(stderr),
       });
@@ -99,15 +129,29 @@ function runCommand(command: string, argumentsList: string[], timeoutMs: number)
   });
 }
 
+function commandFailureReason(result: CommandResult): string {
+  const details = [`exit ${result.code}`];
+  if (result.errorMessage !== "") {
+    details.push(result.errorMessage);
+  }
+  if (result.signal !== null) {
+    details.push(`signal=${result.signal}`);
+  }
+  const standardError = result.stderr.trim();
+  if (standardError !== "") {
+    details.push(standardError);
+  }
+  return details.join("; ");
+}
+
 function readIdleState(): IdleState {
   let idleSince: number | null = null;
   if (existsSync(IDLE_SINCE_PATH)) {
     const rawIdleSince = readFileSync(IDLE_SINCE_PATH, "utf8").trim();
-    const parsedIdleSince = Number(rawIdleSince);
-    if (!Number.isFinite(parsedIdleSince)) {
-      throw new Error("idle_since does not contain a timestamp");
+    idleSince = parseIdleSince(rawIdleSince);
+    if (idleSince === null) {
+      removeStateFile(IDLE_SINCE_PATH);
     }
-    idleSince = parsedIdleSince;
   }
   return {
     idleSince,
@@ -162,7 +206,7 @@ async function webhookUrl(config: IdleConfig): Promise<string | null> {
     QUERY_TIMEOUT_MS,
   );
   if (result.code !== 0) {
-    console.error(`webhook lookup failed: ${result.stderr.trim() || `exit ${result.code}`}`);
+    console.error(`webhook lookup failed: ${commandFailureReason(result)}`);
     return null;
   }
   const value = result.stdout.trim();
@@ -220,22 +264,34 @@ async function publishRoster(config: IdleConfig, count: number, names: string, u
     QUERY_TIMEOUT_MS,
   );
   if (result.code !== 0) {
-    console.error(`roster publish failed: ${result.stderr.trim() || `exit ${result.code}`}`);
+    console.error(`roster publish failed: ${commandFailureReason(result)}`);
   }
 }
 
-function logDecision(decision: IdleDecision, count: number | null): void {
+function logDecision(decision: LoggedDecision, count: number | null): void {
   console.log(`decision=${decision} players=${count === null ? "unknown" : count}`);
 }
 
-async function shutdown(config: IdleConfig, notifier: (content: string) => Promise<void>): Promise<void> {
+async function shutdown(config: IdleConfig, notifier: (content: string) => Promise<void>): Promise<ShutdownOutcome> {
   await notifier(
     `🛑 **${config.serverLabel}** has been empty for ${config.thresholdMin} min, shutting down to save money. Start it again with \`/valheim-start\`.`,
   );
+  let latestCount: number | null = null;
+  try {
+    latestCount = (await queryInfo("127.0.0.1", config.queryPort, QUERY_TIMEOUT_MS)).players;
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    console.error(`A2S shutdown recheck failed: ${reason}`);
+  }
+  if (latestCount === null || latestCount !== 0) {
+    return { status: "shutdown_cancelled", count: latestCount };
+  }
+
   const result = await runCommand("/sbin/shutdown", ["-h", "now", "valheim idle shutdown"], QUERY_TIMEOUT_MS);
   if (result.code !== 0) {
-    throw new Error(`shutdown failed: ${result.stderr.trim() || `exit ${result.code}`}`);
+    throw new Error(`shutdown failed: ${commandFailureReason(result)}`);
   }
+  return { status: "shutdown" };
 }
 
 export async function main(): Promise<void> {
@@ -256,7 +312,8 @@ export async function main(): Promise<void> {
 
   if (playerCount === null) {
     resetIdleState();
-    logDecision("reset", null);
+    logDecision("unknown", null);
+    process.exitCode = 1;
     return;
   }
 
@@ -267,7 +324,7 @@ export async function main(): Promise<void> {
   );
   const names = journalResult.code === 0 ? extractNames(journalResult.stdout) : "";
   if (journalResult.code !== 0) {
-    console.error(`journal lookup failed: ${journalResult.stderr.trim() || `exit ${journalResult.code}`}`);
+    console.error(`journal lookup failed: ${commandFailureReason(journalResult)}`);
   }
   await publishRoster(config, playerCount, names, nowSeconds);
 
@@ -295,7 +352,12 @@ export async function main(): Promise<void> {
       `⏰ **${config.serverLabel}** is empty, shutting down in about ${config.thresholdMin - Math.floor((nowSeconds - (state.idleSince ?? nowSeconds)) / 60)} min. Join now to keep it alive.`,
     );
   } else if (decision === "shutdown") {
-    await shutdown(config, notifier);
+    const shutdownOutcome = await shutdown(config, notifier);
+    if (shutdownOutcome.status === "shutdown_cancelled") {
+      resetIdleState();
+      logDecision("shutdown_cancelled", shutdownOutcome.count);
+      return;
+    }
   }
 
   logDecision(decision, playerCount);

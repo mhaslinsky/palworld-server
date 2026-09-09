@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-export type IdleDecision = "reset" | "start_clock" | "warn" | "shutdown" | "wait";
+export type IdleDecision = "unknown" | "reset" | "start_clock" | "warn" | "shutdown" | "wait";
 
 export interface DecideInput {
   count: number | null;
@@ -14,7 +14,10 @@ export interface DecideInput {
 const DEFAULT_NAME_PATTERNS = [/Got character ZDOID from ([^:\r\n]+?)\s*:/g];
 
 export function decide(input: DecideInput): IdleDecision {
-  if (input.count === null || input.count !== 0) {
+  if (input.count === null) {
+    return "unknown";
+  }
+  if (input.count !== 0) {
     return "reset";
   }
   if (input.idleSince === null) {
@@ -31,6 +34,15 @@ export function decide(input: DecideInput): IdleDecision {
     return "warn";
   }
   return "wait";
+}
+
+export function parseIdleSince(text: string): number | null {
+  const trimmedText = text.trim();
+  if (trimmedText === "") {
+    return null;
+  }
+  const parsedValue = Number(trimmedText);
+  return Number.isFinite(parsedValue) ? parsedValue : null;
 }
 
 export function parseConf(text: string): Record<string, string> {

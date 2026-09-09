@@ -1,6 +1,6 @@
 import { strict as assert } from "node:assert";
 import test from "node:test";
-import { decide, extractNames, parseConf } from "./idle-logic.mts";
+import { decide, extractNames, parseConf, parseIdleSince } from "./idle-logic.mts";
 
 const commonInput = {
   nowSeconds: 2000,
@@ -10,12 +10,14 @@ const commonInput = {
   warnBeforeMin: 5,
 };
 
-test("decide returns reset for a failed query", () => {
-  assert.equal(decide({ ...commonInput, count: null }), "reset");
+test("decide returns unknown for a failed query", () => {
+  assert.equal(decide({ ...commonInput, count: null }), "unknown");
 });
 
-test("decide returns reset when players are online", () => {
+test("decide returns reset only when the count is non-zero", () => {
   assert.equal(decide({ ...commonInput, count: 1 }), "reset");
+  assert.notEqual(decide({ ...commonInput, count: 0 }), "reset");
+  assert.notEqual(decide({ ...commonInput, count: null }), "reset");
 });
 
 test("decide starts the idle clock on the first empty observation", () => {
@@ -32,6 +34,12 @@ test("decide shuts down at the threshold", () => {
 
 test("decide waits after warning and before shutdown", () => {
   assert.equal(decide({ ...commonInput, count: 0, warned: true }), "wait");
+});
+
+test("parseIdleSince treats empty and invalid state as no clock", () => {
+  assert.equal(parseIdleSince(""), null);
+  assert.equal(parseIdleSince("abc"), null);
+  assert.equal(parseIdleSince("  12345  "), 12345);
 });
 
 test("parseConf accepts spaces inside single-quoted values", () => {

@@ -76,9 +76,7 @@ function closeSocket(socket: Socket): void {
   try {
     socket.close();
   } catch (error) {
-    if (!(error instanceof Error && "code" in error && error.code === "ERR_SOCKET_DGRAM_NOT_RUNNING")) {
-      throw error;
-    }
+    console.error(`A2S socket cleanup failed: ${asError(error).message}`);
   }
 }
 
@@ -114,11 +112,15 @@ export function queryInfo(host: string, port: number, timeoutMs: number): Promis
     };
 
     const sendRequest = (challenge?: Buffer): void => {
-      socket.send(buildInfoRequest(challenge), port, host, (sendError) => {
-        if (sendError !== null) {
-          finish(asError(sendError), undefined);
-        }
-      });
+      try {
+        socket.send(buildInfoRequest(challenge), (sendError) => {
+          if (sendError !== null) {
+            finish(asError(sendError), undefined);
+          }
+        });
+      } catch (error) {
+        finish(asError(error), undefined);
+      }
     };
 
     socket.on("error", (socketError) => finish(asError(socketError), undefined));
@@ -141,6 +143,10 @@ export function queryInfo(host: string, port: number, timeoutMs: number): Promis
     });
 
     timeoutHandle = setTimeout(() => finish(new Error(`A2S query timed out after ${timeoutMs} ms`), undefined), timeoutMs);
-    sendRequest();
+    try {
+      socket.connect(port, host, () => sendRequest());
+    } catch (error) {
+      finish(asError(error), undefined);
+    }
   });
 }
