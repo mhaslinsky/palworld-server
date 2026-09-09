@@ -1,14 +1,11 @@
 # Copy to terraform.tfvars (gitignored) and fill in. `terraform apply` reads it automatically.
 
-# Your IP for SSH access (admin + mod uploads). Get it with: curl -s ifconfig.me
+# Your IP for SSH access (admin uploads). Get it with: curl -s ifconfig.me
 # Append /32. Do NOT use 0.0.0.0/0.
 admin_cidr = "203.0.113.7/32"
 
 # Player-facing join password. "" = no password.
 server_password = "change-me-join-pw"
-
-# Server admin password. Also the RCON + REST API credential the idle watcher uses. Make it strong.
-admin_password = "change-me-strong-admin-pw"
 
 # Optional: post an idle-shutdown notice to Discord. Leave as "" to disable for now.
 discord_webhook_url = ""

@@ -70,7 +70,7 @@ data "aws_iam_policy_document" "backup_monitor" {
   statement {
     sid       = "ReadWebhookAndRoster"
     actions   = ["ssm:GetParameter"]
-    resources = [aws_ssm_parameter.discord_webhook_url.arn, aws_ssm_parameter.roster.arn, try(aws_ssm_parameter.roster_windows[0].arn, aws_ssm_parameter.roster.arn)]
+    resources = [aws_ssm_parameter.discord_webhook_url.arn, aws_ssm_parameter.roster.arn]
   }
 
   statement {
@@ -106,9 +106,9 @@ resource "aws_lambda_function" "backup_monitor" {
 
   environment {
     variables = {
-      INSTANCE_ID   = local.active_game_instance_id
+      INSTANCE_ID   = aws_instance.server.id
       BACKUP_BUCKET = aws_s3_bucket.backups.id
-      BACKUP_PREFIX = "world/windows/"
+      BACKUP_PREFIX = "world/linux/"
       # The job runs every 30 min, so a SINGLE miss leaves the newest healthy object
       # up to ~60 min old before the next run recovers it (30 min gap + up to a full
       # cycle before the replacement lands). 45 fired on every such single transient
@@ -122,7 +122,7 @@ resource "aws_lambda_function" "backup_monitor" {
 
       # Idle-watcher liveness. The watcher rewrites the roster every 2 min, so 10
       # tolerates four missed cycles before alerting.
-      ROSTER_PARAM         = local.windows_roster_param_name
+      ROSTER_PARAM         = local.roster_param_name
       ROSTER_STALE_MINUTES = "10"
       # A cold boot runs SteamCMD before the REST API answers, and the watcher
       # publishes nothing until it does. Suppress the alert until the instance has

@@ -97,13 +97,10 @@ data "aws_iam_policy_document" "presence" {
   statement {
     sid     = "ReadRosterAndToken"
     actions = ["ssm:GetParameter"]
-    # Post-cutover the live roster is the Windows watcher's param; keep the legacy
-    # main-roster ARN too so a Linux rollback (windows disabled) still reads. Mirrors
-    # discord.tf — the slash commands and this daemon must read the same roster.
+    # The slash commands and this daemon must read the same roster parameter.
     resources = [
       aws_ssm_parameter.roster.arn,
       aws_ssm_parameter.discord_bot_token.arn,
-      try(aws_ssm_parameter.roster_windows[0].arn, aws_ssm_parameter.roster.arn),
     ]
   }
 
@@ -158,8 +155,8 @@ resource "aws_instance" "presence" {
   }
 
   user_data = templatefile("${path.module}/presence_user_data.sh.tftpl", {
-    instance_id    = local.active_game_instance_id
-    roster_param   = local.windows_roster_param_name
+    instance_id    = aws_instance.server.id
+    roster_param   = local.roster_param_name
     server_address = "${aws_eip.server.public_ip}:8211"
     token_param    = aws_ssm_parameter.discord_bot_token.name
     aws_region     = var.aws_region

@@ -12,8 +12,7 @@ resource "aws_security_group" "server" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # SSH for admin + mod (UE4SS/.pak) uploads over SFTP. Locked to the operator's IP.
-  # RCON (25575) and the REST API (8212) are deliberately NOT opened — they stay localhost-only.
+  # SSH for admin uploads over SFTP. Locked to the operator's IP.
   ingress {
     description = "SSH (admin + mod uploads)"
     from_port   = 22
@@ -46,5 +45,5 @@ resource "aws_eip" "server" {
 
 resource "aws_eip_association" "server" {
   allocation_id = aws_eip.server.id
-  instance_id   = local.active_game_instance_id
+  instance_id   = aws_instance.server.id
 }

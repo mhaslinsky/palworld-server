@@ -29,7 +29,7 @@ variable "root_volume_gb" {
 }
 
 variable "admin_cidr" {
-  description = "CIDR allowed to SSH (port 22) for admin + mod (UE4SS/.pak) uploads. Set to your own IP, e.g. 'x.x.x.x/32' (get it with: curl -s ifconfig.me). Do NOT use 0.0.0.0/0."
+  description = "CIDR allowed to SSH (port 22) for admin uploads. Set to your own IP, e.g. 'x.x.x.x/32' (get it with: curl -s ifconfig.me). Do NOT use 0.0.0.0/0."
   type        = string
 }
 
@@ -43,24 +43,6 @@ variable "server_password" {
   description = "Password players must enter to join. Empty string = open server (still IP-gated by direct-connect)."
   type        = string
   sensitive   = true
-}
-
-variable "admin_password" {
-  description = "Server admin password. Also the credential for the RCON console AND the REST API that the idle-shutdown script polls."
-  type        = string
-  sensitive   = true
-}
-
-variable "rcon_port" {
-  description = "RCON port (TCP). Kept OFF the public security group — localhost/admin use only."
-  type        = number
-  default     = 25575
-}
-
-variable "rest_api_port" {
-  description = "Palworld REST API port (TCP). Kept OFF the public security group — the idle-shutdown script polls it on 127.0.0.1 only."
-  type        = number
-  default     = 8212
 }
 
 variable "idle_shutdown_minutes" {
@@ -131,28 +113,6 @@ variable "world_volume_gb" {
   default     = 20
 }
 
-# --- Windows migration (parallel build; see 2026-07-11-windows-migration-plan) ---
-# All Windows resources are gated on this flag so the default plan is a no-op and the
-# live Linux instance is never in Terraform's create/replace path. Flip to true in
-# terraform.tfvars only when standing up the parallel Windows box.
-variable "enable_windows_migration" {
-  description = "Create the parallel Windows Server 2022 game instance + its own save volume/SG. false = Linux-only, no Windows resources."
-  type        = bool
-  default     = false
-}
-
-variable "windows_root_volume_gb" {
-  description = "Windows game instance root EBS (GB). Bigger than Linux: OS + pagefile + game + UE4SS overhead."
-  type        = number
-  default     = 100
-}
-
-variable "windows_save_volume_gb" {
-  description = "Dedicated persistent EBS volume for SaveGames on the Windows box (survives instance replacement; prevent_destroy)."
-  type        = number
-  default     = 20
-}
-
 # --- Presence daemon (always-on t4g.nano) ---
 variable "enable_presence_bot" {
   description = "Run the always-on t4g.nano that holds Discord's Gateway socket (~$7.36/mo). false = no instance."
@@ -165,101 +125,4 @@ variable "discord_bot_token" {
   type        = string
   default     = ""
   sensitive   = true
-}
-
-# --- /ask Palworld Q&A bot ---
-variable "parallel_api_key" {
-  description = "Parallel AI Search API key for the /ask web-search tool. Seeded into SSM SecureString; rotate there, not here. Empty leaves a placeholder and disables search (the model answers from its own knowledge)."
-  type        = string
-  default     = ""
-  sensitive   = true
-}
-
-variable "parallel_search_url" {
-  description = "Parallel AI Search API endpoint. Confirmed against live Parallel docs + SDK source (see the change's tasks.md 1.2)."
-  type        = string
-  default     = "https://api.parallel.ai/v1/search"
-}
-
-variable "bedrock_model_id" {
-  description = "Bedrock model id the ask-worker invokes. Reached via a cross-region inference profile (us.anthropic.*), NOT the bare foundation-model id. VERIFY WITH A REAL invoke-model CALL before changing this, not with get-inference-profile: profiles are listed as ACTIVE regardless of whether the account is entitled to the model. Sonnet 5 listed ACTIVE here and returned `not available for this account` on the first real call, taking /ask down (2026-07-29). Sonnet 4.6 is invoke-verified on this account, including effort + tools in one body."
-  type        = string
-  default     = "us.anthropic.claude-sonnet-4-6"
-}
-
-variable "bedrock_inference_regions" {
-  description = "Regions the cross-region inference profile can route to. The ask-worker IAM must allow bedrock:InvokeModel on the foundation-model ARN in each, or InvokeModel returns AccessDenied. Confirmed via get-inference-profile for Sonnet 5 (2026-07-29) - the same three the Haiku 4.5 profile used, so the IAM local needed no change."
-  type        = list(string)
-  default     = ["us-east-1", "us-east-2", "us-west-2"]
-}
-
-variable "ask_effort" {
-  description = "Reasoning effort for the ask-worker, passed as output_config.effort. Sonnet 4.6 accepts low/medium/high/max (no xhigh, which arrived with 4.7) and defaults to high; medium is the deliberate step down for a Discord Q&A bot where latency is user-facing and the questions are not hard. Raise it if answers get shallow, do not raise it to make her chattier - effort does not reliably control response length."
-  type        = string
-  default     = "medium"
-
-  validation {
-    condition     = contains(["low", "medium", "high", "xhigh", "max"], var.ask_effort)
-    error_message = "ask_effort must be one of: low, medium, high, xhigh, max."
-  }
-}
-
-variable "ask_memory_turns" {
-  description = "How many prior question/answer pairs Sloot sees. Deliberately small: memory replays a poisoned search result for as long as it is retained, so the window is the blast radius. Zero disables memory entirely."
-  type        = number
-  default     = 3
-}
-
-variable "ask_memory_ttl_seconds" {
-  description = "How long a conversation is remembered. Short by design - this is conversational continuity for follow-up questions, not a knowledge store, and a short TTL bounds how long a bad turn can echo."
-  type        = number
-  default     = 1800
-}
-
-variable "ask_cooldown_seconds" {
-  description = "Per-user cooldown between accepted /ask questions."
-  type        = number
-  default     = 60
-}
-
-variable "ask_max_question_chars" {
-  description = "Reject an /ask question longer than this (caps input-token burn before the model runs)."
-  type        = number
-  default     = 300
-}
-
-variable "ask_max_tokens" {
-  description = "Max output tokens per model call. Held at 4000 rather than the original 700 so that enabling adaptive thinking later does not silently truncate her: on models where thinking is on, max_tokens caps thinking PLUS the answer. The worker currently sends no thinking field, which on Sonnet 4.6 means thinking is OFF, so today this is pure headroom. The answer is bounded separately by Discord's 2000-character clamp."
-  type        = number
-  default     = 4000
-}
-
-variable "ask_max_tool_turns" {
-  description = "Max model turns in the /ask tool-use loop before a final no-tool answer is forced."
-  type        = number
-  default     = 3
-}
-
-variable "ask_max_searches" {
-  description = "Max parallel_search calls per /ask question."
-  type        = number
-  default     = 2
-}
-
-variable "ask_max_result_bytes" {
-  description = "Cap on search-result bytes fed back to the model (re-billed every subsequent turn)."
-  type        = number
-  default     = 6000
-}
-
-variable "ask_parallel_timeout_ms" {
-  description = "Client-side timeout on the Parallel search fetch, so a hung search can't burn the whole Lambda timeout."
-  type        = number
-  default     = 8000
-}
-
-variable "ask_timeout_reserve_ms" {
-  description = "Milliseconds of the ask-worker's Lambda budget held back so it can still edit the Discord message after abandoning a slow answer. A Lambda timeout kills the process without running catch blocks, so without this reserve a slow model leaves the user on a permanent 'thinking...'. Must exceed one Discord PATCH round-trip."
-  type        = number
-  default     = 5000
 }

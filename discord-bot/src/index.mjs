@@ -1,10 +1,10 @@
-// Discord start-bot for the Palworld server.
+// Discord start bot for the Palworld server.
 //
 // One function, two entry paths:
 //   - HTTP path (Lambda Function URL): verify Ed25519, check the allowlist, ACK
 //     Discord with a deferred response, and async-invoke ourselves as a worker.
-//   - Worker path (async self-invoke): start the EC2 instance, then edit the
-//     deferred message into a real answer.
+//   - Worker path (async self-invoke): start or inspect the EC2 instance, then edit
+//     the deferred message with the result.
 //
 // Discord hard-fails an interaction that is not ACKed within 3s, so no AWS call
 // may sit on the HTTP path. The self-invoke keeps that path at signature-verify
@@ -16,20 +16,12 @@
 import { createPublicKey, verify as verifySignature } from "node:crypto";
 import { EC2Client, StartInstancesCommand, DescribeInstancesCommand } from "@aws-sdk/client-ec2";
 import { LambdaClient, InvokeCommand } from "@aws-sdk/client-lambda";
-import { SSMClient, GetParameterCommand, SendCommandCommand } from "@aws-sdk/client-ssm";
-import { DynamoDBClient, PutItemCommand, DeleteItemCommand, ConditionalCheckFailedException } from "@aws-sdk/client-dynamodb";
+import { SSMClient, GetParameterCommand } from "@aws-sdk/client-ssm";
 
 const DISCORD_PUBLIC_KEY = process.env.DISCORD_PUBLIC_KEY;
 const DISCORD_APP_ID = process.env.DISCORD_APP_ID;
 const INSTANCE_ID = process.env.INSTANCE_ID;
 const SERVER_ADDRESS = process.env.SERVER_ADDRESS;
-// /palworld-update: bucket holding scripts/windows/update-server.ps1. AWS_REGION is
-// set by the Lambda runtime; both feed the SSM RunPowerShellScript payload below.
-const BACKUP_BUCKET = process.env.BACKUP_BUCKET;
-const UPDATE_SCRIPT_KEY = "scripts/windows/update-server.ps1";
-// Mirrors update-server.ps1's ValidateSet. The interpolation into the SSM command is
-// only safe because the mods value is constrained to this set before it's used.
-const UPDATE_MODES = new Set(["keep", "vanilla", "restage"]);
 const ALLOWED_USER_IDS = new Set(
   (process.env.ALLOWED_USER_IDS ?? "").split(",").map((entry) => entry.trim()).filter(Boolean),
 );
@@ -51,21 +43,9 @@ const ROSTER_PARAM = process.env.ROSTER_PARAM;
 // every 2 minutes; past this the server is likely mid-shutdown or already gone.
 const ROSTER_MAX_AGE_SECONDS = 360;
 
-// --- /ask (Palworld Q&A) config ---
-const ASK_WORKER_FUNCTION_NAME = process.env.ASK_WORKER_FUNCTION_NAME;
-const COOLDOWN_TABLE = process.env.COOLDOWN_TABLE;
-// NaN-safe: a typo in the env var must not silently disable the cap or the cooldown.
-const intEnv = (name, fallback) => {
-  const parsed = Number.parseInt(process.env[name] ?? "", 10);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
-};
-const ASK_COOLDOWN_SECONDS = intEnv("ASK_COOLDOWN_SECONDS", 60);
-const ASK_MAX_QUESTION_CHARS = intEnv("ASK_MAX_QUESTION_CHARS", 300);
-
 const ec2 = new EC2Client({});
 const lambda = new LambdaClient({});
 const ssm = new SSMClient({});
-const ddb = new DynamoDBClient({});
 
 // Discord publishes the app's Ed25519 key as raw hex; node:crypto wants SPKI DER.
 // The 12-byte prefix is the fixed SubjectPublicKeyInfo header for Ed25519.
@@ -119,49 +99,8 @@ async function instanceState() {
   return described.Reservations?.[0]?.Instances?.[0]?.State?.Name ?? "unknown";
 }
 
-// Kick off the on-box updater via SSM RunPowerShellScript. The bootstrap here is
-// deliberately tiny - pull update-server.ps1 fresh from S3, then run it - so the real
-// logic (save, backup, watchdog, steamcmd, verify) lives in one BOM'd .ps1 in the
-// repo, not smeared into this string. The script runs inline for the SSM command's
-// duration (a few minutes) and reports its own progress/result to Discord's webhook,
-// so we do NOT wait on it: SendCommand returns as soon as the box accepts the command.
-async function sendUpdateCommand(mods) {
-  // mods is validated against UPDATE_MODES before we get here, so it is safe to
-  // interpolate into the -Mods argument below.
-  const awsExe = String.raw`C:\Program Files\Amazon\AWSCLIV2\aws.exe`;
-  const dest = String.raw`C:\PalServer\scripts\update-server.ps1`;
-  const s3uri = `s3://${BACKUP_BUCKET}/${UPDATE_SCRIPT_KEY}`;
-  // $ErrorActionPreference = 'Stop' does NOT cover the s3 cp below: in PowerShell 5.1
-  // it makes cmdlet errors terminating, but a native executable's non-zero exit is not
-  // an error at all, so without the explicit check the next line runs regardless. That
-  // fails two ways, both silent: a stale update-server.ps1 left from an earlier run
-  // executes instead of the fresh one (defeating the whole point of pulling it per-run),
-  // or nothing runs and no webhook ever fires while the user has been told it started.
-  // The boot path does the equivalent check against S3's ETag; see
-  // windows_user_data.ps1.tftpl.
-  const commands = [
-    "$ErrorActionPreference = 'Stop'",
-    `$aws = '${awsExe}'`,
-    "if (-not (Test-Path $aws)) { $aws = (Get-Command aws -ErrorAction SilentlyContinue).Source }",
-    `& $aws s3 cp '${s3uri}' '${dest}' --region ${process.env.AWS_REGION} --only-show-errors`,
-    `if ($LASTEXITCODE -ne 0 -or -not (Test-Path '${dest}')) { Write-Output 'FAILED: could not fetch update-server.ps1 from S3 - refusing to run a stale copy'; exit 1 }`,
-    `& powershell.exe -NoProfile -ExecutionPolicy Bypass -File '${dest}' -Mods ${mods}`,
-    "if ($LASTEXITCODE -ne 0) { Write-Output \"update-server.ps1 exited $LASTEXITCODE\"; exit $LASTEXITCODE }",
-  ];
-  await ssm.send(
-    new SendCommandCommand({
-      InstanceIds: [INSTANCE_ID],
-      DocumentName: "AWS-RunPowerShellScript",
-      Comment: "palworld-update via Discord",
-      TimeoutSeconds: 120, // delivery timeout only; the script's own runtime is separate
-      Parameters: { commands },
-    }),
-  );
-}
-
-// The roster is pushed here by the instance; the REST API it comes from is bound to
-// localhost and unreachable from Lambda by design. A stale or unreadable roster
-// degrades the reply rather than failing it.
+// The roster is pushed here by the instance and is unreachable from Lambda by design.
+// A stale or unreadable roster degrades the reply instead of failing it.
 async function readRoster() {
   if (!ROSTER_PARAM) return null;
   try {
@@ -180,9 +119,9 @@ async function readRoster() {
 
 function describePlayers(roster) {
   if (!roster) return ""; // no roster => say nothing rather than claim "0 online"
-  if (roster.count === 0) return " — nobody online";
+  if (roster.count === 0) return " - nobody online";
   const plural = roster.count === 1 ? "player" : "players";
-  return roster.names ? ` — ${roster.count} ${plural}: ${roster.names}` : ` — ${roster.count} ${plural}`;
+  return roster.names ? ` - ${roster.count} ${plural}: ${roster.names}` : ` - ${roster.count} ${plural}`;
 }
 
 // Replace the deferred placeholder with the real outcome.
@@ -198,7 +137,7 @@ async function editDeferredMessage(interactionToken, content) {
   }
 }
 
-async function runWorker({ command, interactionToken, mods }) {
+async function runWorker({ command, interactionToken }) {
   try {
     const state = await instanceState();
 
@@ -208,61 +147,18 @@ async function runWorker({ command, interactionToken, mods }) {
         const roster = await readRoster();
         detail = `🟢 **running**${describePlayers(roster)}\njoin at \`${SERVER_ADDRESS}\``;
       } else {
-        detail = `⚪ **${state}** — run \`/palworld-start\` to bring it up.`;
+        detail = `⚪ **${state}** - run \`/palworld-start\` to bring it up.`;
       }
       await editDeferredMessage(interactionToken, detail);
       return;
     }
 
-    if (command === "palworld-update") {
-      // SSM can't reach a stopped box, and a fresh start comes up on the SAME build
-      // anyway (boot never runs steamcmd) - so there's nothing to update until it's up.
-      if (state !== "running") {
-        await editDeferredMessage(
-          interactionToken,
-          `⚪ Server is **${state}** - run \`/palworld-start\` first, then \`/palworld-update\` once it's up.`,
-        );
-        return;
-      }
-      const mode = UPDATE_MODES.has(mods) ? mods : "keep";
-      try {
-        await sendUpdateCommand(mode);
-      } catch (error) {
-        console.error("update SendCommand failed", error);
-        await editDeferredMessage(interactionToken, "❌ Couldn't kick off the update (SSM SendCommand failed). Check the logs.");
-        return;
-      }
-      const modeNote =
-        mode === "vanilla"
-          ? " Mods will be **disabled** (vanilla) so it's joinable regardless of mod compatibility."
-          : mode === "restage"
-            ? " Pulling a matching UE4SS build from S3 onto the D: stage first."
-            : "";
-      // Name who is about to be kicked. AGENTS.md live-service etiquette asks to check
-      // the roster before a restart, and the person running this is the one who should
-      // see it: the on-box script gives players 60s in-game, but only this reply tells
-      // the operator that four people were mid-session when they typed it.
-      const roster = await readRoster();
-      const whoNote = roster?.count ? ` **${roster.count} online right now**${roster.names ? ` (${roster.names})` : ""}; they get a 60s in-game warning.` : "";
-      // NOT "I'll post here": progress and the result come from the on-box script, which
-      // posts to the status webhook, not to this interaction. Saying otherwise leaves a
-      // permanent "Updating..." that looks identical to an update still running.
-      await editDeferredMessage(
-        interactionToken,
-        "🔧 Updating **Palworld** to the latest Steam build." +
-          whoNote +
-          modeNote +
-          " The result (with the new version) posts to the server status channel, not here.",
-      );
-      return;
-    }
-
     if (state === "running") {
-      await editDeferredMessage(interactionToken, `🟢 Already running — join at \`${SERVER_ADDRESS}\`.`);
+      await editDeferredMessage(interactionToken, `🟢 Already running - join at \`${SERVER_ADDRESS}\`.`);
       return;
     }
     if (state === "pending") {
-      await editDeferredMessage(interactionToken, "⏳ Already starting — give it a minute.");
+      await editDeferredMessage(interactionToken, "⏳ Already starting, give it a minute.");
       return;
     }
     // 'stopping' is a real state and StartInstances rejects it; say so rather than fail opaquely.
@@ -274,102 +170,13 @@ async function runWorker({ command, interactionToken, mods }) {
     await ec2.send(new StartInstancesCommand({ InstanceIds: [INSTANCE_ID] }));
     await editDeferredMessage(
       interactionToken,
-      `🚀 Starting **Palworld** — ready in ~2 min at \`${SERVER_ADDRESS}\`.\n` +
+      `🚀 Starting **Palworld** - ready in ~2 min at \`${SERVER_ADDRESS}\`.\n` +
         "It shuts itself down automatically once everyone leaves.",
     );
   } catch (error) {
     console.error("worker failed", error);
     await editDeferredMessage(interactionToken, "❌ Something went wrong starting the server. Check the logs.");
   }
-}
-
-function optionValue(interaction, name) {
-  const option = (interaction.data?.options ?? []).find((entry) => entry.name === name);
-  return typeof option?.value === "string" ? option.value : null;
-}
-
-// Atomically claim the per-user cooldown BEFORE deferring, so a rejected request
-// never reaches the model. A conditional PutItem is the whole rate limiter: it writes
-// only if the user has no record, or their last accepted ask is older than the window.
-// ReturnValuesOnConditionCheckFailure gives us the existing timestamp on rejection in
-// the same call, so we can tell the user how long to wait without a second read.
-// Fail CLOSED: a store outage denies the request rather than letting an uncapped
-// (uncooled) model call through — the guarded resource here is spend.
-async function claimCooldown(userId) {
-  const now = Math.floor(Date.now() / 1000);
-  try {
-    await ddb.send(
-      new PutItemCommand({
-        TableName: COOLDOWN_TABLE,
-        Item: {
-          user_id: { S: userId },
-          last_ts: { N: String(now) },
-          ttl: { N: String(now + ASK_COOLDOWN_SECONDS) },
-        },
-        ConditionExpression: "attribute_not_exists(user_id) OR last_ts < :threshold",
-        ExpressionAttributeValues: { ":threshold": { N: String(now - ASK_COOLDOWN_SECONDS) } },
-        ReturnValuesOnConditionCheckFailure: "ALL_OLD",
-      }),
-    );
-    return { ok: true };
-  } catch (error) {
-    if (error instanceof ConditionalCheckFailedException) {
-      const lastTs = Number(error.Item?.last_ts?.N ?? now);
-      const remaining = Math.max(1, ASK_COOLDOWN_SECONDS - (now - lastTs));
-      return { ok: false, message: `⏳ Hang on — you can ask again in ${remaining}s.` };
-    }
-    console.error("cooldown store error", error?.name ?? error);
-    return { ok: false, message: "⚠️ Couldn't check the cooldown just now — try again in a moment." };
-  }
-}
-
-// Release a just-made cooldown claim. Called ONLY when dispatch failed before the
-// worker ran (so nothing was spent and there is no retry-spam to cap) — a user must
-// not eat the full window for our own infra hiccup. Best-effort: a failed release
-// just means they wait out the window, which is the pre-fix behaviour.
-async function releaseCooldown(userId) {
-  try {
-    await ddb.send(new DeleteItemCommand({ TableName: COOLDOWN_TABLE, Key: { user_id: { S: userId } } }));
-  } catch (error) {
-    console.error("cooldown release failed", error?.name ?? error);
-  }
-}
-
-// The /ask HTTP path: validate + gate + claim cooldown, then hand off to the
-// ask-worker. We AWAIT the async invoke before returning the deferred ACK — returning
-// first can let the frozen Lambda environment drop the in-flight invoke. If the invoke
-// fails we have not deferred yet, so we answer with an ephemeral error rather than
-// leaving a permanent "thinking…".
-async function handleAsk(interaction, userId) {
-  const question = optionValue(interaction, "question");
-  if (!question || !question.trim()) {
-    return httpResponse(200, ephemeral("Ask me something: `/ask <your Palworld question>`"));
-  }
-  if (question.length > ASK_MAX_QUESTION_CHARS) {
-    return httpResponse(200, ephemeral(`⚠️ That question is too long (max ${ASK_MAX_QUESTION_CHARS} characters).`));
-  }
-
-  const cooldown = await claimCooldown(userId);
-  if (!cooldown.ok) return httpResponse(200, ephemeral(cooldown.message));
-
-  try {
-    await lambda.send(
-      new InvokeCommand({
-        FunctionName: ASK_WORKER_FUNCTION_NAME,
-        InvocationType: "Event",
-        // userId rides along so the worker can key its conversational memory. It is the
-        // allowlist-checked caller id, not anything the interaction payload claims.
-        Payload: Buffer.from(JSON.stringify({ question: question.trim(), interactionToken: interaction.token, userId })),
-      }),
-    );
-  } catch (error) {
-    console.error("ask-worker invoke failed", error?.name ?? error);
-    // Dispatch failed => nothing ran => release the claim so the user isn't penalized.
-    await releaseCooldown(userId);
-    return httpResponse(200, ephemeral("❌ Couldn't start answering just now — try again in a moment."));
-  }
-
-  return httpResponse(200, { type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE });
 }
 
 export async function handler(event) {
@@ -406,25 +213,16 @@ export async function handler(event) {
 
   const command = interaction.data?.name;
 
-  // /ask has its own worker (Bedrock + web search) and its own cooldown gate.
-  if (command === "ask") {
-    return await handleAsk(interaction, userId);
-  }
-
-  if (command !== "palworld-start" && command !== "palworld-status" && command !== "palworld-update") {
+  if (command !== "palworld-start" && command !== "palworld-status") {
     return httpResponse(200, ephemeral(`Unknown command \`${command}\`.`));
   }
-
-  // /palworld-update carries a mods mode; the other commands ignore it. Validated in
-  // the worker, defaulted there too - this just forwards the raw choice.
-  const mods = command === "palworld-update" ? optionValue(interaction, "mods") : undefined;
 
   // Hand the slow work to ourselves so the ACK below is never late.
   await lambda.send(
     new InvokeCommand({
       FunctionName: process.env.AWS_LAMBDA_FUNCTION_NAME,
       InvocationType: "Event",
-      Payload: Buffer.from(JSON.stringify({ __worker: true, command, interactionToken: interaction.token, mods })),
+      Payload: Buffer.from(JSON.stringify({ __worker: true, command, interactionToken: interaction.token })),
     }),
   );
 
