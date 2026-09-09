@@ -1,19 +1,19 @@
 // Off-box observer for the rolling world backups.
 //
-// The backup job runs on the game box itself, so every way it can die -- dead
-// scheduled task, expired IAM, full disk, REST save failing, the box being replaced
-// -- is silent from the outside. Nobody learns backups stopped until they are
+// The backup job runs on the game server itself, so every way it can die, a dead
+// systemd timer, expired IAM, full disk, save failing, the server being replaced,
+// is silent from the outside. Nobody learns backups stopped until they are
 // needed. That is exactly how ~4.5h of the group's progress was lost on
 // 2026-07-18: the only surviving copy was one pulled off by hand that morning.
 //
 // Every check here keys off instance state first, because the box stops itself
 // when empty: "no backups while stopped" and "no roster while stopped" are both
 // correct behaviour, not faults. Alarming on either would train everyone to ignore
-// the alarm -- which is how the real one gets missed.
+// the alarm, which is how the real one gets missed.
 //
-// It also watches the PalworldIdle task, via the roster parameter that watcher
+// It also watches the valheim-idle.timer unit, via the roster parameter that watcher
 // rewrites every cycle. The watcher fails OPEN (any error counts as "players
-// present"), so a dead one never stops the box and never complains -- a stale
+// present"), so a dead one never stops the server and never complains, a stale
 // roster is the only evidence it leaves. See commit history for 2026-07-19.
 //
 // Distinguishes these states, never collapsing them into "fine":
@@ -52,7 +52,7 @@ const MIN_BYTES = minutesSetting(process.env.MIN_BYTES, 1_000_000);
 const WEBHOOK_PARAM = process.env.WEBHOOK_PARAM;
 const ROSTER_PARAM = process.env.ROSTER_PARAM;
 const ROSTER_STALE_MINUTES = minutesSetting(process.env.ROSTER_STALE_MINUTES, 10);
-// The watcher publishes nothing until the game's REST API answers, and a cold boot
+// The watcher publishes nothing until the game's query answers, and a cold boot
 // runs SteamCMD before that. Without this grace the monitor would cry wolf after
 // every single start - and an alarm that fires on normal operation gets muted.
 // The same grace covers backups: after a long stop the newest object is legitimately
@@ -81,14 +81,14 @@ async function notify(content) {
   // precisely so alerting does not depend on Discord never fired. The monitor
   // detected the fault and told nobody, successfully.
   if (!WEBHOOK_PARAM) {
-    throw new Error(`WEBHOOK_PARAM not set — alert NOT delivered: ${content}`);
+    throw new Error(`WEBHOOK_PARAM not set: alert NOT delivered: ${content}`);
   }
 
   const result = await ssm.send(new GetParameterCommand({Name: WEBHOOK_PARAM, WithDecryption: true}));
   const url = result.Parameter?.Value;
   // An unset SSM parameter comes back as the literal string "None".
   if (!url || url === "None") {
-    throw new Error(`no webhook configured at ${WEBHOOK_PARAM} — alert NOT delivered: ${content}`);
+    throw new Error(`no webhook configured at ${WEBHOOK_PARAM}: alert NOT delivered: ${content}`);
   }
 
   const response = await fetch(url, {
@@ -97,7 +97,7 @@ async function notify(content) {
     body: JSON.stringify({content}),
   });
   if (!response.ok) {
-    throw new Error(`webhook returned ${response.status} ${response.statusText} — alert NOT delivered`);
+    throw new Error(`webhook returned ${response.status} ${response.statusText}: alert NOT delivered`);
   }
 }
 
@@ -157,7 +157,7 @@ async function checkBackups(upMinutes) {
     newest = await newestBackup();
   } catch (error) {
     return {status: "UNKNOWN", reason: error.message,
-      alert: `⚠️ **Backup monitor could not run** — S3 list failed: ${error.message}`};
+      alert: `⚠️ **Backup monitor could not run**: S3 list failed: ${error.message}`};
   }
 
   if (!newest) {
@@ -171,7 +171,7 @@ async function checkBackups(upMinutes) {
   // has a size floor, but if it is ever bypassed this catches the empty-world class.
   if (newest.Size < MIN_BYTES) {
     return {status: "STALE", reason: "undersized", key: newest.Key, size: newest.Size,
-      alert: `🚨 **Latest world backup looks corrupt** — \`${newest.Key}\` is only ${newest.Size} bytes (floor ${MIN_BYTES}). Treat backups as unreliable until checked.`};
+      alert: `🚨 **Latest world backup looks corrupt**: \`${newest.Key}\` is only ${newest.Size} bytes (floor ${MIN_BYTES}). Treat backups as unreliable until checked.`};
   }
 
   if (ageMinutes > STALE_MINUTES) {
@@ -183,7 +183,7 @@ async function checkBackups(upMinutes) {
       return {status: "BOOTING", ageMinutes, key: newest.Key, upMinutes};
     }
     return {status: "STALE", ageMinutes, key: newest.Key,
-      alert: `🚨 **World backups have stopped** — newest is \`${newest.Key}\`, ${ageMinutes} min old (threshold ${STALE_MINUTES} min) while the server is running. Check the \`PalworldBackup\` scheduled task on the box (\`Get-ScheduledTaskInfo -TaskName PalworldBackup\`).`};
+      alert: `🚨 **World backups have stopped**: newest is \`${newest.Key}\`, ${ageMinutes} min old (threshold ${STALE_MINUTES} min) while the server is running. Check the \`valheim-backup.timer\` on the Linux server (\`systemctl list-timers\` and \`journalctl -u valheim-backup\`).`};
   }
 
   return {status: "OK", ageMinutes, key: newest.Key, size: newest.Size};
@@ -197,7 +197,7 @@ async function checkWatcher(launchTime) {
   // aggregation report a top-level OK that no check had earned.
   if (!ROSTER_PARAM) {
     return {status: "UNKNOWN", reason: "ROSTER_PARAM not set",
-      alert: "⚠️ **Idle-watcher check is not configured** — `ROSTER_PARAM` is unset on the monitor, so nothing is watching whether the box still shuts down when empty. This is deployment drift; Terraform sets it."};
+      alert: "⚠️ **Idle-watcher check is not configured**: `ROSTER_PARAM` is unset on the monitor, so nothing is watching whether the server still shuts down when empty. This is deployment drift; Terraform sets it."};
   }
 
   let ageMinutes;
@@ -205,7 +205,7 @@ async function checkWatcher(launchTime) {
     ageMinutes = await rosterAgeMinutes();
   } catch (error) {
     return {status: "UNKNOWN", reason: error.message,
-      alert: `⚠️ **Idle-watcher check could not run** — reading \`${ROSTER_PARAM}\` failed: ${error.message}`};
+      alert: `⚠️ **Idle-watcher check could not run**: reading \`${ROSTER_PARAM}\` failed: ${error.message}`};
   }
 
   const upMinutes = launchTime
@@ -217,12 +217,12 @@ async function checkWatcher(launchTime) {
 
   if (ageMinutes > ROSTER_STALE_MINUTES) {
     // Name BOTH causes. The watcher publishes the roster only after a successful
-    // REST poll, so a stale parameter means either the timer is dead OR the game
+    // game query, so a stale parameter means either the timer is dead OR the game
     // is hung and never answers - and the fail-open design means the box will not
     // stop when empty in either case. Naming only the timer would send whoever
     // responds at the wrong component during a live incident.
     return {status: "WATCHER_DEAD", rosterAgeMinutes: ageMinutes, upMinutes,
-      alert: `🚨 **Idle-shutdown is not publishing** — \`${ROSTER_PARAM}\` has not updated in ${ageMinutes} min (threshold ${ROSTER_STALE_MINUTES} min) while the server is up. The box will NOT stop when empty and is billing continuously. Either the \`PalworldIdle\` scheduled task is dead (check \`Get-ScheduledTaskInfo -TaskName PalworldIdle\`) or the game's REST API is hung (check the \`PalServer-Win64-Shipping\` process).`};
+      alert: `🚨 **Idle-shutdown is not publishing**: \`${ROSTER_PARAM}\` has not updated in ${ageMinutes} min (threshold ${ROSTER_STALE_MINUTES} min) while the server is up. The server will NOT stop when empty and is billing continuously. Either the \`valheim-idle.timer\` is dead (check \`systemctl list-timers\` and \`journalctl -u valheim-idle\`) or the game query is not answering (check the \`valheim_server.x86_64\` process).`};
   }
 
   return {status: "OK", rosterAgeMinutes: ageMinutes};
@@ -234,12 +234,12 @@ export const handler = async () => {
     instance = await instanceStatus();
   } catch (error) {
     // The check itself failed. Silence here would read as an all-clear.
-    await notify(`⚠️ **Backup monitor could not run** — EC2 lookup failed: ${error.message}`);
+    await notify(`⚠️ **Backup monitor could not run**: EC2 lookup failed: ${error.message}`);
     return {status: "UNKNOWN", reason: error.message};
   }
 
   if (instance.state !== "running") {
-    console.log(`instance ${instance.state} — neither timer expected to run`);
+    console.log(`instance ${instance.state}: neither timer expected to run`);
     return {status: "SLEEPING", state: instance.state};
   }
 
@@ -282,6 +282,6 @@ export const handler = async () => {
     ? (watcher.alert ? watcher.status : backups.status)
     : (inconclusive ? "BOOTING" : "OK");
 
-  console.log(`${status} — backups:${backups.status} watcher:${watcher.status}`);
+  console.log(`${status}: backups:${backups.status} watcher:${watcher.status}`);
   return {status, backups, watcher};
 };
