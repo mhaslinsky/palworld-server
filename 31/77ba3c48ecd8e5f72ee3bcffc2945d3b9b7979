@@ -1,0 +1,53 @@
+terraform/compute.tf
+  s_16f50daf57218b::t_fa5aad8786c60b 103-105
+terraform/outputs.tf
+  s_16f50daf57218b::t_fa5aad8786c60b 13,23,28,33
+terraform/discord.tf
+  s_16f50daf57218b::t_e30e1ede5b9452 46,70,72,111,114
+terraform/backups_s3.tf
+  s_16f50daf57218b::t_fa5aad8786c60b 111-112
+terraform/presence.tf
+  s_16f50daf57218b::t_fa5aad8786c60b 100,158-159
+terraform/backup_monitor.tf
+  s_16f50daf57218b::t_fa5aad8786c60b 73,109,111,125
+terraform/network.tf
+  s_16f50daf57218b::t_fa5aad8786c60b 15,48
+terraform/terraform.tfvars.example
+  s_16f50daf57218b::t_864313411b0467 3
+terraform/data.tf
+  s_16f50daf57218b::t_4feffae87e6d6e 15-18
+discord-bot/README.md
+  s_16f50daf57218b::t_281a36bf3f8712 1,5,18,20
+terraform/world_volume.tf
+  s_16f50daf57218b::t_fa5aad8786c60b 24-26
+  s_16f50daf57218b::t_00c6a814d2c87b 13
+discord-bot/package.json
+  s_16f50daf57218b::t_281a36bf3f8712 6
+terraform/variables.tf
+  s_16f50daf57218b::t_864313411b0467 32
+terraform/user_data.sh.tftpl
+  s_16f50daf57218b::t_864313411b0467 121,125,150,246
+palworld/README.md
+  s_16f50daf57218b::t_3091dc3e5b6e8f 1-14
+discord-bot/src/index.mjs
+  s_16f50daf57218b::t_83ab3da96d4b91 1,6,19
+  s_16f50daf57218b::t_e47eb08f334a9a 216,225
+  s_16f50daf57218b::t_fc6550c7d35a00 102,122,124,140,150,157,173
+  s_16f50daf57218b::t_3b634203db957a 7,103
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "3177ba3c48ecd8e5f72ee3bcffc2945d3b9b7979",
+  "prompts": {},
+  "sessions": {
+    "s_16f50daf57218b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0882d-2422-7702-b60b-f0a042940c3f",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": null
+    }
+  }
+}
