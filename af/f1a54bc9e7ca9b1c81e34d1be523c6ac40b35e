@@ -1,0 +1,20 @@
+discord-bot/presence/index.mjs
+  s_f7d49f3dc17b58::t_dfab64b291ef64 188-189
+  s_f7d49f3dc17b58::t_34b5e6f99d1338 118-120,123
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "aff1a54bc9e7ca9b1c81e34d1be523c6ac40b35e",
+  "prompts": {},
+  "sessions": {
+    "s_f7d49f3dc17b58": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0886d-4795-79f2-b132-5ff4e2aac294",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    }
+  }
+}
