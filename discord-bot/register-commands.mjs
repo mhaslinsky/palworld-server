@@ -1,15 +1,16 @@
-// One-time (idempotent) registration of the bot's slash commands with Discord.
+// One-time (idempotent) registration of the Valheim bot's slash commands with Discord.
 //
 //   DISCORD_APP_ID=... DISCORD_BOT_TOKEN=... node register-commands.mjs
 //
 // The bot token can be pulled from SSM if you don't want it in your shell history:
 //   export DISCORD_APP_ID=$(cd ../terraform && terraform output -raw discord_app_id 2>/dev/null || echo "<app-id>")
-//   export DISCORD_BOT_TOKEN=$(aws ssm get-parameter --name /palworld-server/discord_bot_token \
+//   export DISCORD_BOT_TOKEN_PARAM="/<project-name>/discord_bot_token"
+//   export DISCORD_BOT_TOKEN=$(aws ssm get-parameter --name "$DISCORD_BOT_TOKEN_PARAM" \
 //     --with-decryption --query Parameter.Value --output text --region us-east-1)
 //
 // This does a BULK OVERWRITE (PUT): the command set below becomes the exact set of
 // global commands. Editing this list and re-running is how you add/remove/change a
-// command — it is safe to run repeatedly. Registration authenticates with the BOT
+// command: it is safe to run repeatedly. Registration authenticates with the BOT
 // TOKEN (Authorization: Bot ...), NOT the interactions public key.
 //
 // Global commands can take up to ~1 hour to propagate the first time. For instant
@@ -25,8 +26,8 @@ if (!APP_ID || !BOT_TOKEN) {
 }
 
 const commands = [
-  { name: "palworld-start", description: "Start the Palworld server", type: 1 },
-  { name: "palworld-status", description: "Check if the Palworld server is up and who's online", type: 1 },
+  { name: "valheim-start", description: "Start the Valheim server", type: 1 },
+  { name: "valheim-status", description: "Check if the Valheim server is up and who's online", type: 1 },
 ];
 
 const url = GUILD_ID

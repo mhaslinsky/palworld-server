@@ -1,13 +1,13 @@
-// Discord Gateway presence daemon for the Palworld server.
+// Discord Gateway presence daemon for the Valheim server.
 //
-// Shows "Playing Palworld · 3 online" (or "sleeping") under the bot's name in the
+// Shows "Playing Valheim · 3 online" (or "sleeping") under the bot's name in the
 // member list. Discord only renders presence for a bot holding an open Gateway
 // WebSocket, which is why this cannot live in the Lambda: a Lambda is invoked,
 // responds, and dies, and its 15-minute ceiling forbids a long-lived socket.
 //
 // This process never talks to the game server. It reads the same two facts the
-// slash commands read — the EC2 instance state, and the roster the game box
-// publishes to SSM — so the Palworld REST port stays bound to localhost.
+// slash commands read, the EC2 instance state, and the roster the game box
+// publishes to SSM, so the Valheim REST port stays bound to localhost.
 //
 // Zero dependencies: Node 22 provides a global WebSocket and fetch, and the AWS
 // SDK v3 is installed alongside. No discord.js, no ws.
@@ -98,26 +98,26 @@ async function buildPresence() {
   const state = await instanceState();
 
   if (state === "pending") {
-    return { status: "idle", activities: customStatus("⏳ Server starting — ready in ~2 min") };
+    return { status: "idle", activities: customStatus("⏳ Server starting - ready in ~2 min") };
   }
   if (state !== "running") {
-    return { status: "idle", activities: customStatus("💤 Server offline — /palworld-start to wake it") };
+    return { status: "idle", activities: customStatus("💤 Server offline - /valheim-start to wake it") };
   }
 
   const roster = await readRoster();
   if (!roster) {
     // Instance is up but the box isn't publishing: booting, or the watcher is down.
     // Don't invent a player count.
-    return { status: "online", activities: customStatus(`🟢 Server up — ${SERVER_ADDRESS}`) };
+    return { status: "online", activities: customStatus(`🟢 Server up - ${SERVER_ADDRESS}`) };
   }
   if (roster.count === 0) {
-    return { status: "online", activities: customStatus(`🟢 Server up, nobody online — ${SERVER_ADDRESS}`) };
+    return { status: "online", activities: customStatus(`🟢 Server up, nobody online - ${SERVER_ADDRESS}`) };
   }
 
   const plural = roster.count === 1 ? "player" : "players";
   return {
     status: "online",
-    activities: customStatus(`🎮 ${roster.count} ${plural} online — ${roster.names}`),
+    activities: customStatus(`🎮 ${roster.count} ${plural} online - ${roster.names}`),
   };
 }
 
@@ -175,7 +175,7 @@ function connect(token) {
               token,
               // Zero intents: this bot receives nothing. It only publishes presence.
               intents: 0,
-              properties: { os: "linux", browser: "palworld-presence", device: "palworld-presence" },
+              properties: { os: "linux", browser: "valheim-presence", device: "valheim-presence" },
               presence: await buildPresence(),
             },
           });
@@ -184,7 +184,7 @@ function connect(token) {
 
         // NOT dead code: opcode 1 is Send/Receive. The gateway sends it to demand
         // an immediate heartbeat, and failing to answer gets the connection
-        // dropped. (Flagged as unreachable in review 2026-07-18 — it isn't.)
+        // dropped. (Flagged as unreachable in review 2026-07-18, it isn't.)
         case Op.HEARTBEAT:
           send({ op: Op.HEARTBEAT, d: lastSequence });
           break;
