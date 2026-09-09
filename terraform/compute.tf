@@ -1,4 +1,4 @@
-# SSH keypair — generated locally so `terraform apply` is self-contained.
+# SSH keypair, generated locally so `terraform apply` is self-contained.
 # The private key is written to ../secrets/<project>.pem (gitignored). Because it
 # lives in local (gitignored) state, this is acceptable for a solo hobby project;
 # do NOT reuse this pattern with remote/shared state.
@@ -46,43 +46,29 @@ resource "aws_instance" "server" {
   }
 
   user_data = templatefile("${path.module}/user_data.sh.tftpl", {
-    server_name     = var.server_name
-    server_password = var.server_password
-    idle_minutes    = var.idle_shutdown_minutes
+    server_name           = var.server_name
+    server_password       = var.server_password
+    world_name            = var.world_name
+    game_port             = var.game_port
+    query_port            = var.game_port + 1
+    save_interval_seconds = var.save_interval_seconds
+    idle_minutes          = var.idle_shutdown_minutes
 
     warn_before_minutes = var.idle_warn_before_minutes
     aws_region          = var.aws_region
 
-    # Reading the EIP here is only possible because the association was split into
-    # aws_eip_association — otherwise instance -> eip -> instance is a cycle.
-    server_address = "${aws_eip.server.public_ip}:8211"
+    # Reading the EIP here is only possible because the association is separate.
+    # The association lives in aws_eip_association; otherwise instance -> eip ->
+    # instance is a cycle.
+    server_address = "${aws_eip.server.public_ip}:${var.game_port}"
 
     # The watcher reads the webhook from SSM at runtime and publishes the roster back,
     # so neither value is baked into user_data (which would rebuild on every change).
     webhook_param = local.webhook_param_name
     roster_param  = local.roster_param_name
 
-    # The watcher and backup scripts are FETCHED from S3 at boot, not embedded:
-    # embedding both blew EC2's hard 16 KB user_data limit, and hosting them means
-    # a script fix no longer changes the user_data hash (so it cannot force a
-    # player-facing instance rebuild just to deploy a one-line change).
+    # The watcher and backup scripts are fetched from S3 at boot rather than embedded.
     backup_bucket = aws_s3_bucket.backups.id
-
-    # Game-balance settings belong in code, not applied by hand to a running box.
-    # These were runtime `sed` edits until 2026-07-18, so when the instance was
-    # replaced the server came back at ENGINE DEFAULTS - which drops the base Pal
-    # cap from 50 to 15 and ejects every Pal over it onto the ground. Everything
-    # here must end with a trailing comma: it is spliced in front of the rest of
-    # the single-line OptionSettings tuple.
-    game_settings = join("", [
-      "bAllowGlobalPalboxImport=True,",
-      "bAllowGlobalPalboxExport=True,",
-      "PalSpawnNumRate=2.000000,",
-      "BaseCampWorkerMaxNum=50,",
-      "BaseCampMaxNumInGuild=10,",
-      "DeathPenalty=Item,",
-      "PalEggDefaultHatchingTime=0.030000,",
-    ])
   })
 
   # Leave this false.

@@ -1,13 +1,13 @@
 resource "aws_security_group" "server" {
   name        = "${var.project_name}-sg"
-  description = "Palworld server: game traffic in, SSH from admin only."
+  description = "Valheim server: game traffic in, SSH from admin only."
   vpc_id      = data.aws_vpc.default.id
 
   # Game traffic. The ONLY port that must face the internet for players to connect.
   ingress {
-    description = "Palworld game traffic"
-    from_port   = 8211
-    to_port     = 8211
+    description = "Valheim game + Steam query"
+    from_port   = var.game_port
+    to_port     = var.game_port + 1
     protocol    = "udp"
     cidr_blocks = ["0.0.0.0/0"]
   }
@@ -34,8 +34,8 @@ resource "aws_security_group" "server" {
 
 # Stable public address so players never need a new IP after a stop/start cycle.
 #
-# The allocation deliberately does NOT set `instance` — the association lives in its
-# own resource below. Otherwise the EIP depends on the instance while the instance's
+# The allocation deliberately does NOT set `instance`; its association lives in
+# its own resource below. Otherwise the EIP depends on the instance while the instance's
 # user_data depends on the EIP's address (to announce the join address to Discord),
 # which is a dependency cycle. Splitting them lets user_data read the address.
 resource "aws_eip" "server" {

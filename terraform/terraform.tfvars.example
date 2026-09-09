@@ -7,15 +7,21 @@ admin_cidr = "203.0.113.7/32"
 # Player-facing join password. "" = no password.
 server_password = "change-me-join-pw"
 
+# World name used to select the save directory.
+world_name = "Valheim"
+
 # Optional: post an idle-shutdown notice to Discord. Leave as "" to disable for now.
 discord_webhook_url = ""
 
 # Optional overrides (defaults shown):
 # aws_profile           = "aidb-personal"
 # aws_region            = "us-east-1"
-# server_name           = "Palworld"
-# instance_type         = "t3.xlarge"
-# root_volume_gb        = 50
+# server_name           = "Valheim"
+# instance_type         = "t3.medium"
+# root_volume_gb        = 20
+# world_volume_gb       = 10
+# game_port             = 2456
+# save_interval_seconds = 600
 # idle_shutdown_minutes = 30
 
 # --- Discord start-bot ---
