@@ -1,4 +1,4 @@
-// Discord start bot for the Palworld server.
+// Discord start bot for the Valheim server.
 //
 // One function, two entry paths:
 //   - HTTP path (Lambda Function URL): verify Ed25519, check the allowlist, ACK
@@ -141,13 +141,13 @@ async function runWorker({ command, interactionToken }) {
   try {
     const state = await instanceState();
 
-    if (command === "palworld-status") {
+    if (command === "valheim-status") {
       let detail;
       if (state === "running") {
         const roster = await readRoster();
         detail = `🟢 **running**${describePlayers(roster)}\njoin at \`${SERVER_ADDRESS}\``;
       } else {
-        detail = `⚪ **${state}** - run \`/palworld-start\` to bring it up.`;
+        detail = `⚪ **${state}** - run \`/valheim-start\` to bring it up.`;
       }
       await editDeferredMessage(interactionToken, detail);
       return;
@@ -170,7 +170,7 @@ async function runWorker({ command, interactionToken }) {
     await ec2.send(new StartInstancesCommand({ InstanceIds: [INSTANCE_ID] }));
     await editDeferredMessage(
       interactionToken,
-      `🚀 Starting **Palworld** - ready in ~2 min at \`${SERVER_ADDRESS}\`.\n` +
+      `🚀 Starting **Valheim** - ready in ~2 min at \`${SERVER_ADDRESS}\`.\n` +
         "It shuts itself down automatically once everyone leaves.",
     );
   } catch (error) {
@@ -213,7 +213,7 @@ export async function handler(event) {
 
   const command = interaction.data?.name;
 
-  if (command !== "palworld-start" && command !== "palworld-status") {
+  if (command !== "valheim-start" && command !== "valheim-status") {
     return httpResponse(200, ephemeral(`Unknown command \`${command}\`.`));
   }
 

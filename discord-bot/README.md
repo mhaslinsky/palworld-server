@@ -1,24 +1,26 @@
-# Discord start bot, phase 2 (no deadline)
+# Valheim Discord bot
 
-The **start** half of the control plane. Lets a whitelisted friend bring the server
-back up from Discord. The **stop** half is already handled on the server itself
-(`scripts/idle-shutdown.sh` + systemd timer). See the repo README.
+The Discord control plane for the Valheim server. Whitelisted friends can wake a
+stopped server and inspect its state.
 
-Not built yet. Design is locked (see the AIDB decision doc referenced in the root
-README). Planned shape:
+## Commands
 
-- **Discord Application + slash command** (`/pow-start`, `/pow-status`) with an
-  **Interactions Endpoint URL** (NOT a webhook, NOT a Gateway socket).
-- **AWS Lambda (Function URL, `NONE` auth)** that:
-  1. Verifies the `X-Signature-Ed25519` header over `timestamp + raw body` using the
-     app's public key; rejects with 401 on failure; rejects if `|now - timestamp| > 5m`.
-  2. Checks the caller's `member.user.id` against a **snowflake allowlist** (env/SSM).
-  3. ACKs within Discord's 3-second window (deferred response), then calls
-     `ec2:StartInstances` on the single instance ARN and edits the follow-up message.
-- **IAM**: least-privilege, `ec2:StartInstances` + `ec2:DescribeInstances` on this
-  instance only.
-- **Guardrails**: per-user `/start` cooldown and CloudWatch billing alarm.
+- `/valheim-start` starts the server and reports when it should be ready.
+- `/valheim-status` reports whether the server is running and who is online.
 
-Will be added as a `terraform/discord/` module (or sibling stack) when built.
+## Register commands
 
----
+Set `DISCORD_APP_ID` and `DISCORD_BOT_TOKEN`, then run:
+
+```sh
+node register-commands.mjs
+```
+
+See `register-commands.mjs` for guild-scoped registration and SSM token lookup.
+
+## Test
+
+```sh
+npm install --no-audit --no-fund
+npm test
+```
