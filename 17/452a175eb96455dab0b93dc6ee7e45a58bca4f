@@ -1,0 +1,19 @@
+discord-bot/backup-monitor/index.mjs
+  s_8dbf46f8b812c1::t_b13bab6ea216df 3-5,12,14,16,55,84,91,100,160,174,186,200,208,220,225,237,242,285
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "17452a175eb96455dab0b93dc6ee7e45a58bca4f",
+  "prompts": {},
+  "sessions": {
+    "s_8dbf46f8b812c1": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0886d-8516-7953-a1ad-d42fc5907e8b",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    }
+  }
+}
