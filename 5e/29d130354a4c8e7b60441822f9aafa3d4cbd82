@@ -1,0 +1,28 @@
+scripts/a2s.test.mts
+  s_09994f475923a7::t_5fe88f96e8004f 1-79
+scripts/idle-logic.test.mts
+  s_09994f475923a7::t_a8fe0fa7c1bb4a 26
+  s_09994f475923a7::t_5fe88f96e8004f 1-25,27-58
+scripts/idle-logic.mts
+  s_09994f475923a7::t_5fe88f96e8004f 1-83
+scripts/valheim-idle.mts
+  s_09994f475923a7::t_5fe88f96e8004f 1-310
+scripts/a2s.mts
+  s_09994f475923a7::t_5fe88f96e8004f 1-146
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "5e29d130354a4c8e7b60441822f9aafa3d4cbd82",
+  "prompts": {},
+  "sessions": {
+    "s_09994f475923a7": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0882d-5de5-7ac3-91bf-29ae05ac1314",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    }
+  }
+}
