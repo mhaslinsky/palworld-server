@@ -10,7 +10,6 @@
 # survivable rather than merely unlikely: rebuild the box freely, the world does
 # not care.
 #
-# The separate volume makes an instance replacement survivable rather than merely unlikely.
 # ---------------------------------------------------------------------------
 
 resource "aws_ebs_volume" "world" {

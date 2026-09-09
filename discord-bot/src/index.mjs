@@ -158,7 +158,7 @@ async function runWorker({ command, interactionToken }) {
       return;
     }
     if (state === "pending") {
-      await editDeferredMessage(interactionToken, "⏳ Already starting — give it a minute.");
+      await editDeferredMessage(interactionToken, "⏳ Already starting, give it a minute.");
       return;
     }
     // 'stopping' is a real state and StartInstances rejects it; say so rather than fail opaquely.
