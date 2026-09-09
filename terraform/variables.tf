@@ -17,15 +17,15 @@ variable "project_name" {
 }
 
 variable "instance_type" {
-  description = "EC2 instance type. t3.xlarge = 4 vCPU / 16 GB, matches Pocketpair's recommended spec for a 5-10 player server."
+  description = "EC2 instance type for the Valheim server. Valheim is single-thread bound; 4 GB is enough for a small group. Switch to t3.large if CPUSurplusCreditsCharged appears."
   type        = string
-  default     = "t3.xlarge"
+  default     = "t3.medium"
 }
 
 variable "root_volume_gb" {
-  description = "Root EBS volume size (GB). Holds the OS, server binary, world save, and local backups."
+  description = "Root EBS volume size (GB). Holds the OS and server binary."
   type        = number
-  default     = 50
+  default     = 20
 }
 
 variable "admin_cidr" {
@@ -36,7 +36,7 @@ variable "admin_cidr" {
 variable "server_name" {
   description = "Display name of the server as it appears to players."
   type        = string
-  default     = "Palworld"
+  default     = "Valheim"
 }
 
 variable "server_password" {
@@ -49,6 +49,23 @@ variable "idle_shutdown_minutes" {
   description = "Minutes of zero connected players before the server self-shuts-down (OS shutdown -> AWS stops the instance, halting compute billing)."
   type        = number
   default     = 30
+}
+
+variable "game_port" {
+  description = "Valheim game port; the game uses this port and the Steam query uses ports 2456-2457."
+  type        = number
+  default     = 2456
+}
+
+variable "world_name" {
+  description = "Valheim world name used to select the save directory."
+  type        = string
+}
+
+variable "save_interval_seconds" {
+  description = "Seconds between Valheim world saves."
+  type        = number
+  default     = 600
 }
 
 variable "discord_webhook_url" {
@@ -73,7 +90,7 @@ variable "discord_public_key" {
 }
 
 variable "discord_app_id" {
-  description = "Discord application (client) ID — the snowflake used to edit deferred interaction responses."
+  description = "Discord application (client) ID, the snowflake used to edit deferred interaction responses."
   type        = string
   default     = ""
 }
@@ -110,7 +127,7 @@ variable "alert_email" {
 variable "world_volume_gb" {
   description = "Dedicated EBS volume for the Linux world save. Separate from the root volume so an instance replacement cannot delete the world (see AIDB postmortem 2026-07-18). The world is ~80 MB; the size is for headroom and local backups, not need."
   type        = number
-  default     = 20
+  default     = 10
 }
 
 # --- Presence daemon (always-on t4g.nano) ---
@@ -121,7 +138,7 @@ variable "enable_presence_bot" {
 }
 
 variable "discord_bot_token" {
-  description = "Discord bot token. A full takeover of the bot identity — treat as a credential. Seeded into SSM; rotate there, not here."
+  description = "Discord bot token. A full takeover of the bot identity, so treat it as a credential. Seeded into SSM; rotate there, not here."
   type        = string
   default     = ""
   sensitive   = true

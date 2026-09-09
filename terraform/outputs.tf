@@ -4,12 +4,12 @@ output "server_ip" {
 }
 
 output "connect_address" {
-  description = "Direct-connect address to paste into Palworld (Join via IP)."
-  value       = "${aws_eip.server.public_ip}:8211"
+  description = "Direct-connect address to paste into Valheim."
+  value       = "${aws_eip.server.public_ip}:${var.game_port}"
 }
 
 output "instance_id" {
-  description = "EC2 instance ID — used by the Discord start bot (phase 2) and for manual start/stop."
+  description = "EC2 instance ID, used by the Discord start bot and for manual start/stop."
   value       = aws_instance.server.id
 }
 

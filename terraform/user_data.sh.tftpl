@@ -1,56 +1,50 @@
 #!/usr/bin/env bash
-# cloud-init: provision the Palworld dedicated server on first boot.
+# cloud-init: provision the Valheim dedicated server on first boot.
 # NOTE: this file is rendered by Terraform's templatefile(). $${...} escapes a
-# literal bash brace-expansion; the idle-shutdown script is injected verbatim as
-# a value (its own bash $${...} is safe — not re-processed by the template).
+# literal bash brace expansion. user_data runs on FIRST BOOT ONLY; a stop/start
+# never re-runs it, and editing it stop/starts the live box (AGENTS.md rule 5).
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
 
 # --- 1. Base packages + 32-bit + multiverse (SteamCMD lives in multiverse) ---
 apt-get update -y
-apt-get install -y software-properties-common
+apt-get install -y software-properties-common ca-certificates gnupg
 dpkg --add-architecture i386
 add-apt-repository -y multiverse
 apt-get update -y
 
-# Preseed the SteamCMD license prompt so the install is non-interactive.
 echo steam steam/question select "I AGREE" | debconf-set-selections
 echo steam steam/license note '' | debconf-set-selections
-# awscli: the idle watcher reads the Discord webhook and publishes the player
-# roster via SSM Parameter Store.
-apt-get install -y curl jq lib32gcc-s1 steamcmd awscli
+# libatomic1 + libpulse: the Valheim server binary exits immediately without them.
+# awscli: the idle watcher and backup read/publish via SSM and S3.
+apt-get install -y curl jq lib32gcc-s1 steamcmd awscli libatomic1 libpulse-dev libpulse0
+
+# Node 22 for the idle watcher and backup (.mts, type-stripped by Node itself).
+# Ubuntu 22.04's own nodejs package is 12.x and cannot run them.
+curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+apt-get install -y nodejs
 
 # --- 2. Dedicated 'steam' user + install dir ---
 id -u steam >/dev/null 2>&1 || useradd -m -s /bin/bash steam
-install -d -o steam -g steam /home/steam/palworld
+install -d -o steam -g steam /home/steam/valheim
 
 # --- 2b. Mount the dedicated world volume BEFORE anything writes a save ---
-#
-# The world must not live on the root volume: on 2026-07-18 an instance
-# replacement deleted the root volume and took ~4.5h of the group's progress with
-# it. The volume is created and attached by Terraform (world_volume.tf); this is
-# the half that makes it actually hold the world on a rebuilt box.
-#
-# Ordering matters - this runs before SteamCMD so the save directory is already
-# the mount point the first time the server writes to it.
-SAVEDIR=/home/steam/palworld/Pal/Saved/SaveGames
-install -d -o steam -g steam /home/steam/palworld/Pal/Saved
+# The save root is Valheim's default -savedir on Linux. worlds_local/<World>/ (a
+# directory of chunk files since 1.0), adminlist.txt, bannedlist.txt, and
+# permittedlist.txt all live under it, so mounting here keeps every file that
+# matters off the disposable root volume.
+SAVEDIR=/home/steam/.config/unity3d/IronGate/Valheim
+install -d -o steam -g steam /home/steam/.config/unity3d/IronGate
 install -d -o steam -g steam "$${SAVEDIR}"
 
-# The attachment can lag instance boot, so wait rather than racing it. Nitro
-# exposes the volume as an NVMe device, so the /dev/xvdf request name does not
-# appear - find the attached, unmounted, unformatted disk instead.
 world_dev=""
 for wait_attempt in $(seq 1 30); do
   for candidate in $(lsblk -dpno NAME); do
-    # Skip anything mounted, holding a filesystem, or carrying partitions: this
-    # must never select the root disk.
     [ -n "$(lsblk -no MOUNTPOINT "$${candidate}" | tr -d ' \n')" ] && continue
     [ "$(lsblk -no NAME "$${candidate}" | wc -l)" -ne 1 ] && continue
     cand_fstype="$(lsblk -dno FSTYPE "$${candidate}" 2>/dev/null || true)"
     cand_label="$(lsblk -dno LABEL "$${candidate}" 2>/dev/null | tr -d ' ' || true)"
-    # Either a blank disk (first boot) or one we formatted on a previous boot.
-    if [ -z "$${cand_fstype}" ] || [ "$${cand_label}" = "palworld-world" ]; then
+    if [ -z "$${cand_fstype}" ] || [ "$${cand_label}" = "valheim-world" ]; then
       world_dev="$${candidate}"
       break
     fi
@@ -61,85 +55,89 @@ for wait_attempt in $(seq 1 30); do
 done
 
 if [ -z "$${world_dev}" ]; then
-  # Fail the bootstrap rather than starting a server that would write a brand new
-  # world to the root disk and look perfectly healthy while doing it.
   echo "FATAL: world volume never appeared; refusing to start on root-volume storage" >&2
   exit 1
 fi
 
-# Format ONLY a blank disk. A disk that already carries the label holds the world
-# and must never be reformatted - that would be the data loss this prevents.
+# Format ONLY a blank disk. A labelled disk holds the world.
 if [ -z "$(lsblk -dno FSTYPE "$${world_dev}" 2>/dev/null)" ]; then
   echo "formatting blank world volume $${world_dev}" >&2
-  mkfs.ext4 -q -L palworld-world "$${world_dev}"
+  mkfs.ext4 -q -L valheim-world "$${world_dev}"
 fi
 
 world_uuid="$(blkid -s UUID -o value "$${world_dev}")"
-if [ -z "$${world_uuid}" ]; then
-  echo "FATAL: no UUID for $${world_dev} after mkfs" >&2
-  exit 1
-fi
-# By UUID, not device name: NVMe device ordering is not stable across reboots.
-# NOT nofail - an unmounted world volume must stop the boot, not silently fall
-# back to the root disk.
+[ -n "$${world_uuid}" ] || { echo "FATAL: no UUID for $${world_dev} after mkfs" >&2; exit 1; }
+# Mount by UUID and omit nofail: an unmounted world volume must stop the boot.
 grep -q "$${world_uuid}" /etc/fstab || \
   echo "UUID=$${world_uuid} $${SAVEDIR} ext4 defaults 0 2" >> /etc/fstab
 mountpoint -q "$${SAVEDIR}" || mount "$${SAVEDIR}"
 mountpoint -q "$${SAVEDIR}" || { echo "FATAL: $${SAVEDIR} did not mount" >&2; exit 1; }
-chown -R steam:steam "$${SAVEDIR}"
+chown -R steam:steam /home/steam/.config
 echo "world volume mounted: $$(findmnt -no SOURCE,TARGET "$${SAVEDIR}")" >&2
 
-# --- 3. Install the Palworld dedicated server (SteamCMD app 2394010) ---
-# SteamCMD self-updates and re-execs on its first run; an +app_update issued in
-# that same invocation races the restart and dies with "Missing configuration".
-# Burn one throwaway run to absorb the bootstrap, then retry the real install:
-# the update can also fail transiently against Steam's CDN.
+# --- 3. Install the Valheim dedicated server (SteamCMD app 896660) ---
+# Throwaway first run absorbs SteamCMD's self-update re-exec, then retries the install.
 sudo -u steam /usr/games/steamcmd +quit || true
 
 steam_install_ok=0
 for steam_attempt in 1 2 3; do
-  if sudo -u steam /usr/games/steamcmd +force_install_dir /home/steam/palworld \
-      +login anonymous +app_update 2394010 validate +quit; then
+  if sudo -u steam /usr/games/steamcmd +force_install_dir /home/steam/valheim \
+      +login anonymous +app_update 896660 validate +quit; then
     steam_install_ok=1
     break
   fi
   echo "steamcmd app_update attempt $${steam_attempt} failed; retrying in 15s" >&2
   sleep 15
 done
+[ "$${steam_install_ok}" -eq 1 ] || { echo "FATAL: steamcmd could not install app 896660 after 3 attempts" >&2; exit 1; }
 
-# Fail loudly rather than proceeding to configure a server that isn't installed.
-if [ "$${steam_install_ok}" -ne 1 ]; then
-  echo "FATAL: steamcmd could not install app 2394010 after 3 attempts" >&2
-  exit 1
-fi
-
-# --- 4. Steamworks SDK shim the server expects at ~/.steam/sdk64 ---
+# --- 4. Steamworks SDK shim ---
 install -d -o steam -g steam /home/steam/.steam/sdk64
-cp /home/steam/palworld/linux64/steamclient.so /home/steam/.steam/sdk64/steamclient.so || true
+cp /home/steam/valheim/linux64/steamclient.so /home/steam/.steam/sdk64/steamclient.so || true
 chown steam:steam /home/steam/.steam/sdk64/steamclient.so || true
 
-# --- 5. Server config ---
-install -d -o steam -g steam /home/steam/palworld/Pal/Saved/Config/LinuxServer
-cat > /home/steam/palworld/Pal/Saved/Config/LinuxServer/PalWorldSettings.ini <<EOF
-[/Script/Pal.PalGameWorldSettings]
-OptionSettings=(${game_settings}ServerName="${server_name}",ServerPassword="${server_password}",PublicPort=8211)
+# --- 5. Server environment (root-only: carries the join password) ---
+# Valheim takes every setting on argv; there is no config file. The password
+# therefore appears in the unit's ExecStart and in /proc for local users, which
+# on this box means root and steam. The shipped start_server.sh is NOT used:
+# Steam resets it on every update.
+install -d -m 0755 /etc/valheim
+cat > /etc/valheim/server.env <<'EOF'
+SteamAppId=892970
+LD_LIBRARY_PATH=/home/steam/valheim/linux64
+VALHEIM_NAME=${server_name}
+VALHEIM_WORLD=${world_name}
+VALHEIM_PASSWORD=${server_password}
+VALHEIM_PORT=${game_port}
+VALHEIM_SAVE_INTERVAL=${save_interval_seconds}
 EOF
-chown -R steam:steam /home/steam/palworld/Pal/Saved
+chmod 0600 /etc/valheim/server.env
 
-# --- 6. systemd unit for the server (auto-updates on each start) ---
-cat > /etc/systemd/system/palworld.service <<'EOF'
+# --- 6. systemd unit for the server ---
+# ExecStartPre updates on every start, so a box woken by /valheim-start is on the
+# current build. KillSignal=SIGINT is how Valheim saves and exits cleanly; SIGTERM
+# would drop the last save interval. ExecStopPost then takes the session's final
+# backup from the quiescent world. The idle path ends in `shutdown -h now`, which
+# stops this unit before the network goes down (After=network-online.target), so
+# the upload has network. TimeoutStopSec covers save + tar + upload.
+cat > /etc/systemd/system/valheim.service <<'EOF'
 [Unit]
-Description=Palworld Dedicated Server
+Description=Valheim Dedicated Server
 After=network-online.target
 Wants=network-online.target
+RequiresMountsFor=/home/steam/.config/unity3d/IronGate/Valheim
 
 [Service]
 Type=simple
 User=steam
 Group=steam
-WorkingDirectory=/home/steam/palworld
-ExecStartPre=/usr/games/steamcmd +force_install_dir /home/steam/palworld +login anonymous +app_update 2394010 validate +quit
-ExecStart=/home/steam/palworld/PalServer.sh -useperfthreads -NoAsyncLoadingThread -UseMultithreadForDS
+WorkingDirectory=/home/steam/valheim
+EnvironmentFile=/etc/valheim/server.env
+ExecStartPre=/usr/games/steamcmd +force_install_dir /home/steam/valheim +login anonymous +app_update 896660 validate +quit
+ExecStart=/home/steam/valheim/valheim_server.x86_64 -nographics -batchmode -name "$${VALHEIM_NAME}" -port $${VALHEIM_PORT} -world "$${VALHEIM_WORLD}" -password "$${VALHEIM_PASSWORD}" -public 0 -saveinterval $${VALHEIM_SAVE_INTERVAL} -backups 4
+ExecStopPost=/usr/bin/node /opt/valheim/valheim-backup.mts
+KillSignal=SIGINT
+TimeoutStopSec=300
 Restart=on-failure
 RestartSec=10
 
@@ -147,19 +145,11 @@ RestartSec=10
 WantedBy=multi-user.target
 EOF
 
-# --- 7. Idle-shutdown config ---
-# The watcher `.`-sources this file, so every value is single-quoted: an unquoted
-# value containing a space (SERVER_LABEL="Pal World") is parsed as a command, and
-# the watcher dies 127 before it can ever poll. Single quotes also neutralize
-# $, backticks, and \ in a generated password.
-# The terminator is quoted so bash performs NO expansion when writing the file:
-# templatefile() has already substituted the values, and a '$' surviving inside a
-# generated password would otherwise be expanded away here.
-#
-# The webhook URL is deliberately NOT here — it lives in SSM and is fetched at
-# runtime, so rotating it doesn't rebuild the instance (user_data_replace_on_change).
-install -d -m 0755 /etc/palworld
-cat > /etc/palworld/idle.conf <<'EOF'
+# --- 7. Idle-watcher / backup config (root-readable by design; no secrets now) ---
+# The webhook URL lives in SSM and is fetched at runtime, so rotating it never
+# touches user_data.
+cat > /etc/valheim/idle.conf <<'EOF'
+QUERY_PORT='${query_port}'
 THRESHOLD_MIN='${idle_minutes}'
 WARN_BEFORE_MIN='${warn_before_minutes}'
 SERVER_LABEL='${server_name}'
@@ -168,17 +158,16 @@ AWS_REGION='${aws_region}'
 WEBHOOK_PARAM='${webhook_param}'
 ROSTER_PARAM='${roster_param}'
 BACKUP_BUCKET='${backup_bucket}'
+SAVEDIR='/home/steam/.config/unity3d/IronGate/Valheim'
+WORLD_NAME='${world_name}'
+SAVE_INTERVAL_SECONDS='${save_interval_seconds}'
+BACKUP_MIN_BYTES='200000'
 EOF
-chmod 0600 /etc/palworld/idle.conf
+chmod 0644 /etc/valheim/idle.conf
 
 # --- 8. Bootstrap scripts (fetched from S3, not embedded) ---
-# Embedding them here blew EC2's hard 16 KB user_data limit once the backup script
-# joined the watcher. Fetching also means a script fix does not change the
-# user_data hash, so it never forces an instance rebuild to deploy.
-#
-# A missing script is FATAL: without the watcher the box never idle-shuts-down and
-# bills around the clock, and without the backup script there are no recovery
-# points - both of which are invisible until the bill or the next incident.
+# A missing script is FATAL: without the watcher the box bills around the clock;
+# without the backup there are no recovery points.
 fetch_script() {
   script_name="$1"
   dest="$2"
@@ -195,22 +184,24 @@ fetch_script() {
   return 1
 }
 
-fetch_script idle-shutdown.sh /usr/local/bin/palworld-idle.sh || exit 1
-fetch_script backup-to-s3.sh /usr/local/bin/palworld-backup.sh || exit 1
+install -d -m 0755 /opt/valheim
+for script_name in a2s.mts idle-logic.mts valheim-idle.mts backup-gates.mts valheim-backup.mts; do
+  fetch_script "$${script_name}" "/opt/valheim/$${script_name}" || exit 1
+done
 
 # --- 9. Idle timer: first check 5 min after boot, then every 2 min ---
-cat > /etc/systemd/system/palworld-idle.service <<'EOF'
+cat > /etc/systemd/system/valheim-idle.service <<'EOF'
 [Unit]
-Description=palworld idle-shutdown check
+Description=valheim idle-shutdown check
 
 [Service]
 Type=oneshot
-ExecStart=/usr/local/bin/palworld-idle.sh
+ExecStart=/usr/bin/node /opt/valheim/valheim-idle.mts
 EOF
 
-cat > /etc/systemd/system/palworld-idle.timer <<'EOF'
+cat > /etc/systemd/system/valheim-idle.timer <<'EOF'
 [Unit]
-Description=Run the palworld idle check periodically
+Description=Run the valheim idle check periodically
 
 [Timer]
 OnBootSec=5min
@@ -220,51 +211,36 @@ OnUnitActiveSec=2min
 WantedBy=timers.target
 EOF
 
-# --- 9b. Rolling off-box backup: script + 30-minute timer ---
-# Without this a rebuilt box produces NO backups. The freshness monitor would
-# alert, but the recovery points would already have stopped - and the whole point
-# of this system is that the box is disposable.
-
-cat > /etc/systemd/system/palworld-backup.service <<'EOF'
+# --- 9b. Rolling off-box backup every 30 min while up ---
+cat > /etc/systemd/system/valheim-backup.service <<'EOF'
 [Unit]
-Description=Palworld world backup to S3
+Description=Valheim world backup to S3
 After=network-online.target
-# The world lives on the mounted volume; backing up an unmounted path would
-# archive an empty directory and publish it as a healthy backup.
-RequiresMountsFor=/home/steam/palworld/Pal/Saved/SaveGames
+RequiresMountsFor=/home/steam/.config/unity3d/IronGate/Valheim
 
 [Service]
 Type=oneshot
-ExecStart=/usr/local/bin/palworld-backup.sh
+User=steam
+Group=steam
+ExecStart=/usr/bin/node /opt/valheim/valheim-backup.mts
 EOF
 
-cat > /etc/systemd/system/palworld-backup.timer <<'EOF'
+cat > /etc/systemd/system/valheim-backup.timer <<'EOF'
 [Unit]
-Description=Palworld world backup every 30 minutes
+Description=Valheim world backup every 30 minutes
 
 [Timer]
-# First run a few minutes after boot so the server is up, then every 30 min.
-OnBootSec=3min
+OnBootSec=15min
 OnUnitActiveSec=30min
 AccuracySec=1min
-Unit=palworld-backup.service
+Unit=valheim-backup.service
 
 [Install]
 WantedBy=timers.target
 EOF
 
-# --- 9c. The game server must not start without its world volume ---
-# If the volume ever fails to mount, the server would otherwise start on an empty
-# directory and generate a brand new world - looking entirely healthy while
-# serving nothing anyone recognises. That is the empty-world failure mode.
-install -d /etc/systemd/system/palworld.service.d
-cat > /etc/systemd/system/palworld.service.d/10-world-mount.conf <<'EOF'
-[Unit]
-RequiresMountsFor=/home/steam/palworld/Pal/Saved/SaveGames
-EOF
-
 # --- 10. Enable + start ---
 systemctl daemon-reload
-systemctl enable --now palworld.service
-systemctl enable --now palworld-idle.timer
-systemctl enable --now palworld-backup.timer
+systemctl enable --now valheim.service
+systemctl enable --now valheim-idle.timer
+systemctl enable --now valheim-backup.timer

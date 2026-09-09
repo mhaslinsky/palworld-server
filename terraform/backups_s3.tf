@@ -85,17 +85,41 @@ resource "aws_s3_bucket_lifecycle_configuration" "backups" {
 # player-facing event.
 resource "aws_s3_object" "linux_idle_script" {
   bucket       = aws_s3_bucket.backups.id
-  key          = "scripts/linux/idle-shutdown.sh"
-  source       = "${path.module}/../scripts/idle-shutdown.sh"
-  etag         = filemd5("${path.module}/../scripts/idle-shutdown.sh")
+  key          = "scripts/linux/a2s.mts"
+  source       = "${path.module}/../scripts/a2s.mts"
+  etag         = filemd5("${path.module}/../scripts/a2s.mts")
   content_type = "text/plain"
 }
 
 resource "aws_s3_object" "linux_backup_script" {
   bucket       = aws_s3_bucket.backups.id
-  key          = "scripts/linux/backup-to-s3.sh"
-  source       = "${path.module}/../scripts/backup-to-s3.sh"
-  etag         = filemd5("${path.module}/../scripts/backup-to-s3.sh")
+  key          = "scripts/linux/idle-logic.mts"
+  source       = "${path.module}/../scripts/idle-logic.mts"
+  etag         = filemd5("${path.module}/../scripts/idle-logic.mts")
+  content_type = "text/plain"
+}
+
+resource "aws_s3_object" "linux_valheim_idle_script" {
+  bucket       = aws_s3_bucket.backups.id
+  key          = "scripts/linux/valheim-idle.mts"
+  source       = "${path.module}/../scripts/valheim-idle.mts"
+  etag         = filemd5("${path.module}/../scripts/valheim-idle.mts")
+  content_type = "text/plain"
+}
+
+resource "aws_s3_object" "linux_backup_gates_script" {
+  bucket       = aws_s3_bucket.backups.id
+  key          = "scripts/linux/backup-gates.mts"
+  source       = "${path.module}/../scripts/backup-gates.mts"
+  etag         = filemd5("${path.module}/../scripts/backup-gates.mts")
+  content_type = "text/plain"
+}
+
+resource "aws_s3_object" "linux_valheim_backup_script" {
+  bucket       = aws_s3_bucket.backups.id
+  key          = "scripts/linux/valheim-backup.mts"
+  source       = "${path.module}/../scripts/valheim-backup.mts"
+  etag         = filemd5("${path.module}/../scripts/valheim-backup.mts")
   content_type = "text/plain"
 }
 
