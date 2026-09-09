@@ -1,0 +1,41 @@
+terraform/outputs.tf
+  s_58a45e5efc4c6a::t_dffb985eb69c3c 7-8,12
+terraform/network.tf
+  s_58a45e5efc4c6a::t_9d9a2347e50d8e 37-38
+  s_58a45e5efc4c6a::t_dffb985eb69c3c 3,8-10
+terraform/compute.tf
+  s_58a45e5efc4c6a::t_5388db97596704 1
+  s_58a45e5efc4c6a::t_9d9a2347e50d8e 60-61,70
+  s_58a45e5efc4c6a::t_89a783bd8d0a10 62
+  s_58a45e5efc4c6a::t_dffb985eb69c3c 49-55,63
+terraform/terraform.tfvars.example
+  s_58a45e5efc4c6a::t_dffb985eb69c3c 10-12,19-24
+terraform/presence.tf
+  s_58a45e5efc4c6a::t_dffb985eb69c3c 160
+terraform/variables.tf
+  s_58a45e5efc4c6a::t_dffb985eb69c3c 20,22,26,28,39,54-70,93
+  s_58a45e5efc4c6a::t_96af8c51247c91 130
+  s_58a45e5efc4c6a::t_5388db97596704 141
+terraform/backups_s3.tf
+  s_58a45e5efc4c6a::t_dffb985eb69c3c 88-90,96-122
+terraform/user_data.sh.tftpl
+  s_58a45e5efc4c6a::t_1bf467a7a29868 2,5,11,18-25,29,32,34-37,47,62,65,69,75,78,84-85,92,94,96,99-112,114-123,125,128,134-140,148-152,161-164,166,170,187-190,193,195,199,202,204,214-215,217,219,223-225,228,230,233,236,244-246
+  s_58a45e5efc4c6a::t_89a783bd8d0a10 33,79,169
+  s_58a45e5efc4c6a::t_9d9a2347e50d8e 4,70
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "c0449a8c4d713a002ebeb57e030ec587167c7459",
+  "prompts": {},
+  "sessions": {
+    "s_58a45e5efc4c6a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a08881-6ee8-76c3-852a-0f2338a08f2f",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    }
+  }
+}
