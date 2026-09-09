@@ -10,9 +10,7 @@
 # survivable rather than merely unlikely: rebuild the box freely, the world does
 # not care.
 #
-# The Windows box has had this arrangement since it was built, and its world
-# survived four instance replacements in one evening without a scratch. This gives
-# the Linux box the same property.
+# The separate volume makes an instance replacement survivable rather than merely unlikely.
 # ---------------------------------------------------------------------------
 
 resource "aws_ebs_volume" "world" {
@@ -23,7 +21,9 @@ resource "aws_ebs_volume" "world" {
 
   tags = { Name = "${var.project_name}-world" }
 
-  # prevent_destroy removed 2026-09-06 for the deliberate Phase 3 teardown.
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "aws_volume_attachment" "world" {

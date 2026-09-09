@@ -12,6 +12,10 @@ data "aws_subnets" "default" {
   }
 }
 
+data "aws_subnet" "selected" {
+  id = data.aws_subnets.default.ids[0]
+}
+
 # Canonical's official Ubuntu 22.04 LTS (jammy) AMI — most-documented base for SteamCMD + Palworld.
 #
 # PINNED to the id the live instance was launched from. With most_recent=true this

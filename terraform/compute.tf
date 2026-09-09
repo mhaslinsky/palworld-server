@@ -48,9 +48,6 @@ resource "aws_instance" "server" {
   user_data = templatefile("${path.module}/user_data.sh.tftpl", {
     server_name     = var.server_name
     server_password = var.server_password
-    admin_password  = var.admin_password
-    rcon_port       = var.rcon_port
-    rest_api_port   = var.rest_api_port
     idle_minutes    = var.idle_shutdown_minutes
 
     warn_before_minutes = var.idle_warn_before_minutes
@@ -103,8 +100,9 @@ resource "aws_instance" "server" {
   # on the box (SSM) or do a DELIBERATE, backup-first replacement.
   user_data_replace_on_change = false
 
-  # prevent_destroy removed 2026-09-06 for the deliberate Phase 3 teardown. The
-  # world is captured in S3 and snap-0b4afd2ff2f13283a; the box is being retired.
+  lifecycle {
+    prevent_destroy = true
+  }
 
   tags = { Name = var.project_name }
 }

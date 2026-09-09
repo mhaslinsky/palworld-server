@@ -108,10 +108,8 @@ data "aws_iam_policy_document" "instance_backups" {
     resources = ["${aws_s3_bucket.backups.arn}/scripts/linux/*"]
   }
 
-  # Scoped to the LINUX prefixes, not all of world/*. Both instances share this
-  # role, so a broad grant would let the Windows box write into the Linux backup
-  # path - where a buggy script could publish junk that passes every freshness and
-  # size check the monitor makes. Windows gets world/windows/* in windows.tf.
+  # Scoped to the LINUX prefixes, not all of world/*. A broad grant could publish
+  # junk that passes every freshness and size check the monitor makes.
   #
   # linux-degraded/ is where a capture whose save could not be PROVEN goes: kept,
   # because on-disk state beats nothing, but deliberately outside the prefix the

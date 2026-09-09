@@ -118,11 +118,11 @@ install -d -o steam -g steam /home/steam/.steam/sdk64
 cp /home/steam/palworld/linux64/steamclient.so /home/steam/.steam/sdk64/steamclient.so || true
 chown steam:steam /home/steam/.steam/sdk64/steamclient.so || true
 
-# --- 5. Server config (RCON + REST API enabled; REST is what the idle watcher polls) ---
+# --- 5. Server config ---
 install -d -o steam -g steam /home/steam/palworld/Pal/Saved/Config/LinuxServer
 cat > /home/steam/palworld/Pal/Saved/Config/LinuxServer/PalWorldSettings.ini <<EOF
 [/Script/Pal.PalGameWorldSettings]
-OptionSettings=(${game_settings}ServerName="${server_name}",ServerPassword="${server_password}",AdminPassword="${admin_password}",PublicPort=8211,RCONEnabled=True,RCONPort=${rcon_port},RESTAPIEnabled=True,RESTAPIPort=${rest_api_port})
+OptionSettings=(${game_settings}ServerName="${server_name}",ServerPassword="${server_password}",PublicPort=8211)
 EOF
 chown -R steam:steam /home/steam/palworld/Pal/Saved
 
@@ -147,7 +147,7 @@ RestartSec=10
 WantedBy=multi-user.target
 EOF
 
-# --- 7. Idle-shutdown config (root-only; carries the REST admin password) ---
+# --- 7. Idle-shutdown config ---
 # The watcher `.`-sources this file, so every value is single-quoted: an unquoted
 # value containing a space (SERVER_LABEL="Pal World") is parsed as a command, and
 # the watcher dies 127 before it can ever poll. Single quotes also neutralize
@@ -160,8 +160,6 @@ EOF
 # runtime, so rotating it doesn't rebuild the instance (user_data_replace_on_change).
 install -d -m 0755 /etc/palworld
 cat > /etc/palworld/idle.conf <<'EOF'
-REST_PORT='${rest_api_port}'
-ADMIN_PASSWORD='${admin_password}'
 THRESHOLD_MIN='${idle_minutes}'
 WARN_BEFORE_MIN='${warn_before_minutes}'
 SERVER_LABEL='${server_name}'
@@ -245,8 +243,7 @@ cat > /etc/systemd/system/palworld-backup.timer <<'EOF'
 Description=Palworld world backup every 30 minutes
 
 [Timer]
-# First run a few minutes after boot so the server is up and the REST force-save
-# can succeed, then every 30 min.
+# First run a few minutes after boot so the server is up, then every 30 min.
 OnBootSec=3min
 OnUnitActiveSec=30min
 AccuracySec=1min
