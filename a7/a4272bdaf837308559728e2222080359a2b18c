@@ -1,0 +1,49 @@
+scripts/valheim-idle.mts
+  s_09994f475923a7::t_161ae840862d23 315-316,357,359-360
+  s_09994f475923a7::t_7e2f1f1357fd33 17,275,279-289,294,355-356,358
+  s_09994f475923a7::t_d42eba913bd1c0 209,267,271,327
+  s_09994f475923a7::t_2430fae4c09a89 292
+  s_09994f475923a7::t_2a805eb7785744 5,15,38-39,76-81,84-85,101-117,123-124,132-146,151-153
+  s_f7d49f3dc17b58::t_ef86d926d24f38 16
+scripts/idle-logic.mts
+  s_09994f475923a7::t_b6d1837243dff8 3,17-20,39-45
+  s_09994f475923a7::t_1f79939ed88ada 46-47
+scripts/a2s.mts
+  s_09994f475923a7::t_b6d1837243dff8 79,115-123,146-150
+scripts/idle-logic.test.mts
+  s_09994f475923a7::t_6234a4c12c6a60 3,14,17,19-20,39-42
+  s_09994f475923a7::t_5c80e3e97cac21 13
+  s_66dd7053d61c3c::t_2463e5972d898f 43-44
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "a7a4272bdaf837308559728e2222080359a2b18c",
+  "prompts": {},
+  "sessions": {
+    "s_09994f475923a7": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0882d-5de5-7ac3-91bf-29ae05ac1314",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    },
+    "s_66dd7053d61c3c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "112cd7f5-616a-46f8-9554-6424e2dfb005",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    },
+    "s_f7d49f3dc17b58": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0886d-4795-79f2-b132-5ff4e2aac294",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    }
+  }
+}
