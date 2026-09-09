@@ -1,0 +1,19 @@
+terraform/discord.tf
+  s_58a45e5efc4c6a::t_5e3d947cd5a720 112
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "52d3984525ce4b3cc366ef4f86b06d31e3b9f9b1",
+  "prompts": {},
+  "sessions": {
+    "s_58a45e5efc4c6a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a08881-6ee8-76c3-852a-0f2338a08f2f",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    }
+  }
+}
