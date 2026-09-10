@@ -1,0 +1,27 @@
+terraform/discord.tf
+  s_d754489e664bc4::t_e26939da5aa3c9 175-176
+  s_d754489e664bc4::t_492804575d92e3 185-186
+  s_d754489e664bc4::t_825cc275595c94 138-139,141
+  s_d754489e664bc4::t_ff4b67088b2832 131,133,135-136,140,143-145
+  s_d754489e664bc4::t_0c7b9d5f73eae3 70-71
+  s_d754489e664bc4::t_e7b24040ddd4d9 2
+  s_d754489e664bc4::t_d59f778e930ca3 158-174,177-184,187-195
+  s_d754489e664bc4::t_c90a8fa0262656 102
+  s_d754489e664bc4::t_dbd373b276a8db 206
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "e670861ddb7b746d789a6ddabc75f559d8ff31af",
+  "prompts": {},
+  "sessions": {
+    "s_d754489e664bc4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "98bd2d64-2c4d-4152-9d68-f266c6ccb81a",
+        "model": "claude-opus-5"
+      },
+      "human_author": null
+    }
+  }
+}
