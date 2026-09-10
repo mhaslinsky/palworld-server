@@ -1,5 +1,5 @@
 # Discord start-bot: the START half of the control plane.
-# (The STOP half runs on the instance itself — see scripts/idle-shutdown.sh.)
+# (The STOP half runs on the instance itself: see scripts/valheim-idle.mts.)
 #
 # Function URL auth is NONE because Discord cannot sign SigV4; the Lambda instead
 # verifies every request's Ed25519 signature against the app's public key. That
@@ -67,8 +67,8 @@ data "aws_iam_policy_document" "discord_bot" {
 
   # Read-only: the instance owns this value, the bot only reports it.
   statement {
-    sid     = "ReadRoster"
-    actions = ["ssm:GetParameter"]
+    sid       = "ReadRoster"
+    actions   = ["ssm:GetParameter"]
     resources = [aws_ssm_parameter.roster.arn]
   }
 }
@@ -99,7 +99,7 @@ resource "aws_lambda_function" "discord_bot" {
   # far quicker. 15s covers the slow path with room to spare.
   timeout = 15
 
-  # Observed 120 MB peak at the 128 MB default — 94%, and an OOM would strand the
+  # Observed 120 MB peak at the 128 MB default (94%); an OOM would strand the
   # interaction at "thinking" forever. Billing is GB-seconds and more memory buys
   # proportionally more CPU, so at this volume the raise is ~free.
   memory_size = 256
@@ -128,18 +128,21 @@ resource "aws_lambda_function_url" "discord_bot" {
 # with only the first it answers 403 (AccessDeniedException) and never invokes the
 # function. See https://docs.aws.amazon.com/lambda/latest/dg/urls-auth.html
 #
-#   1. lambda:InvokeFunctionUrl  — created automatically by aws_lambda_function_url
+#   1. lambda:InvokeFunctionUrl, created automatically by aws_lambda_function_url
 #      above, as sid "FunctionURLAllowPublicAccess". Not managed here.
-#   2. lambda:InvokeFunction, Condition Bool lambda:InvokedViaFunctionUrl=true —
+#   2. lambda:InvokeFunction, Condition Bool lambda:InvokedViaFunctionUrl=true,
 #      sid "FunctionURLInvokeAllowPublicAccess". NOT expressible in aws provider 5.x
-#      (`invoked_via_function_url` first appears in 6.x), so it is applied out of band:
+#      (`invoked_via_function_url` first appears in 6.x), so terraform_data below
+#      applies it through the CLI as part of the apply.
 #
-#        aws lambda add-permission --function-name palworld-server-discord-bot \
-#          --statement-id FunctionURLInvokeAllowPublicAccess \
-#          --action lambda:InvokeFunction --principal '*' --invoked-via-function-url
+# Statement 2 used to be a manual post-apply step and was missed: after the
+# 2026-09-10T00:05Z apply, the bot answered 403 to every caller, including Discord's
+# endpoint validation, and logged zero invocations for six hours before anyone noticed.
+# A step that relies on human memory eventually does not run.
 #
-# TODO: upgrade the aws provider to ~> 6.0 and bring statement 2 under terraform.
-# Do that as its own change — a v6 bump re-plans the whole stack, EC2 included.
+# TODO: upgrade the aws provider to ~> 6.0 and declare statement 2 as a real
+# aws_lambda_permission. Do that as its own change: a v6 bump re-plans the whole
+# stack, EC2 included.
 #
 # This statement duplicates the action in (1) and grants nothing new. It is kept only
 # so terraform holds a handle on the function's resource policy; delete it once the
@@ -152,6 +155,44 @@ resource "aws_lambda_permission" "discord_bot_url" {
   function_url_auth_type = "NONE"
 }
 
+resource "terraform_data" "discord_bot_url_invoke" {
+  # Re-run when either the function or its URL is replaced: both start life with a
+  # fresh resource policy that does not carry this statement.
+  triggers_replace = [
+    aws_lambda_function.discord_bot.function_name,
+    aws_lambda_function_url.discord_bot.function_arn,
+  ]
+
+  provisioner "local-exec" {
+    interpreter = ["/bin/bash", "-c"]
+    command     = <<-EOT
+      set -euo pipefail
+      profile_flag=""
+      if [ -n "${var.aws_profile}" ]; then
+        profile_flag="--profile ${var.aws_profile}"
+      fi
+
+      # An add that fails because the statement already exists is the standard
+      # re-apply path, so ignore its exit code.
+      aws lambda add-permission $profile_flag \
+        --region ${var.aws_region} \
+        --function-name ${aws_lambda_function.discord_bot.function_name} \
+        --statement-id FunctionURLInvokeAllowPublicAccess \
+        --action lambda:InvokeFunction \
+        --principal '*' \
+        --invoked-via-function-url >/dev/null 2>&1 || true
+
+      # Reading the policy back is the gate. Any other failure surfaces here as a
+      # failed apply, rather than passing as success and leaving the bot returning 403.
+      aws lambda get-policy $profile_flag \
+        --region ${var.aws_region} \
+        --function-name ${aws_lambda_function.discord_bot.function_name} \
+        --query Policy --output text \
+        | grep -q FunctionURLInvokeAllowPublicAccess
+    EOT
+  }
+}
+
 # --- Guardrail: catch a runaway bill regardless of what the bot does ---
 resource "aws_cloudwatch_metric_alarm" "estimated_charges" {
   count = var.billing_alarm_usd > 0 ? 1 : 0
@@ -162,7 +203,7 @@ resource "aws_cloudwatch_metric_alarm" "estimated_charges" {
   evaluation_periods  = 1
   metric_name         = "EstimatedCharges"
   namespace           = "AWS/Billing"
-  period              = 21600 # 6h — the fastest EstimatedCharges actually publishes
+  period              = 21600 # 6h, the fastest EstimatedCharges actually publishes
   statistic           = "Maximum"
   dimensions          = { Currency = "USD" }
 
