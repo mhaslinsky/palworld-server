@@ -1,0 +1,24 @@
+terraform/discord.tf
+  s_d754489e664bc4::t_0c7b9d5f73eae3 70-71
+  s_d754489e664bc4::t_d59f778e930ca3 158-196
+  s_d754489e664bc4::t_ff4b67088b2832 131,133,135-136,138-141,143-145
+  s_d754489e664bc4::t_e7b24040ddd4d9 2
+  s_d754489e664bc4::t_dbd373b276a8db 207
+  s_d754489e664bc4::t_c51ca3eb90789a 102
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "96e1ae63728266eacd52f0634c2cbfca3dd30b5f",
+  "prompts": {},
+  "sessions": {
+    "s_d754489e664bc4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "98bd2d64-2c4d-4152-9d68-f266c6ccb81a",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    }
+  }
+}
