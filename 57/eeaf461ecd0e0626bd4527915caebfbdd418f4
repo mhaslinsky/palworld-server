@@ -1,0 +1,49 @@
+scripts/modpack.mts
+  s_9da828f798540b::t_35b586f9bc1b10 105-106
+  s_9da828f798540b::t_8389e062504fb1 5-6
+  s_9da828f798540b::t_c4ef34fb4aa728 1-4,7-29,35-104,107-183,185-208
+  s_9da828f798540b::t_9a52a285bb6f05 30-34
+  s_9da828f798540b::t_4acd2e3eb46b9b 184
+scripts/modpack-build.test.mts
+  s_9da828f798540b::t_03e96abe4d1b90 1-113
+scripts/modpack-build.mts
+  s_9da828f798540b::t_70a20521f8c059 11
+  s_9da828f798540b::t_58c516c8bcb8fb 37-39
+  s_9da828f798540b::t_b4d79f36ccb188 1-10,12-36,40-174
+scripts/mods-verify.mts
+  s_9da828f798540b::t_89170492f3991c 1-24,27-177
+  s_9da828f798540b::t_b04ba236314959 25-26
+scripts/mods-verify.test.mts
+  s_9da828f798540b::t_e14016c366afe9 1-195
+mods/README.md
+  s_9da828f798540b::t_d5cb803ecb8ddd 1-90
+mods/manifest.json
+  s_9da828f798540b::t_e496454c76cbf3 30-32,44-46,55-56,65-66,72-74,80-81,87-88,94-95,101-102,114-116
+  s_9da828f798540b::t_7a2cc61d7e856d 1-2,4-29,33-43,47-54,57-64,67-71,75-79,82-86,89-93,96-100,103-113,117-119
+  s_9da828f798540b::t_79be5f6a4ef872 3
+.gitignore
+  s_9da828f798540b::t_a96b98a92a4a41 39
+  s_9da828f798540b::t_6f40771941d0c4 37-38,40
+scripts/png.mts
+  s_9da828f798540b::t_da68b8515d84ea 1-174
+scripts/png.test.mts
+  s_9da828f798540b::t_aac3ba6e07a44c 1-103
+scripts/modpack.test.mts
+  s_9da828f798540b::t_06eb1fe2f44d20 1-205
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "57eeaf461ecd0e0626bd4527915caebfbdd418f4",
+  "prompts": {},
+  "sessions": {
+    "s_9da828f798540b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ba64f8e7-9037-4fcb-9ed5-70053ff5bae5",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    }
+  }
+}
