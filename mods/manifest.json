@@ -5,7 +5,7 @@
   "game_version": "1.0.12",
   "network_version": 40,
   "modpack": {
-    "namespace": "REPLACE_WITH_THUNDERSTORE_TEAM",
+    "namespace": "valheimsquad",
     "name": "Utgarde_Client_Pack",
     "version_number": "1.0.0",
     "website_url": "https://github.com/mhaslinsky/palworld-server",
