@@ -7,7 +7,7 @@
   "modpack": {
     "namespace": "valheimsquad",
     "name": "Utgarde_Client_Pack",
-    "version_number": "1.0.0",
+    "version_number": "1.1.0",
     "website_url": "https://github.com/mhaslinsky/palworld-server",
     "description": "Client mods for the Utgarde Valheim server, pinned to the versions the server runs."
   },
@@ -113,6 +113,14 @@
         "FeedingTrough.dll": "540930f5134b54e3ba4e567788c0fdcc279a389669646e38e598aa6b7e34aa18"
       },
       "plugin_name": "Animal Feeding Trough"
+    },
+    {
+      "thunderstore": "Azumatt-Unshamed",
+      "version": "1.0.3",
+      "side": "client",
+      "why": "Valheim 1.0 blocks Steam achievements for anyone running mods, so this pack is what disables them. Unshamed restores them and returns the ones already earned, granting no free unlocks. It is here because the pack causes the problem it fixes. Client-only: achievements are a Steam client concern and the server has no use for it.",
+      "plugin_name": null,
+      "plugin_name_note": "client-side only, so it never appears in the server's load log"
     }
   ]
 }
