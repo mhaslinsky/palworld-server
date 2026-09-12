@@ -79,7 +79,7 @@ so an unverifiable mod never contributes to a pass.
 | `side` | `both`, `server` or `client`. The pack is built from `both` and `client`. |
 | `version` | What Thunderstore calls the release. This is what the pack pins. |
 | `upstream_version` | The author's own version where it differs, e.g. ValheimPlus 0.10.1.0 is Thunderstore 10.1.0. |
-| `plugin_name` / `plugin_version` | What BepInEx prints in its log, which is what the verifier compares. The loader is packaged as 5.4.2350 and logs 5.4.23.5. |
+| `plugin_name` / `plugin_version` | What BepInEx prints in its log, which is what the verifier compares. Neither matches the packaged version reliably: the loader ships as 5.4.2350 and logs 5.4.23.5, and the YamlDotNet shim ships as 16.3.1 and logs 1.0.0. The name can differ too, since ValheimPlus logs as `Valheim Plus` with a space. All three were read off the box rather than guessed, and two of the three guesses were wrong. |
 | `enforced` | The server kicks clients on a different version. |
 | `artifact_sha256` | Hashes of specific DLLs, not of the Thunderstore zip. Do not compare them against an archive. |
 | `verified` | When each side was last actually read, and how. |
