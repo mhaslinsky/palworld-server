@@ -95,6 +95,21 @@ Exit codes are 0 for clean, 1 for drift, and 2 for a log it could not read. A ma
 with no `plugin_name` fails the run rather than riding along on someone else's match: leaving
 it out of the matched set would let "I could not check this" read as a pass.
 
+## What is installed where
+
+```bash
+node scripts/mods-list.mts               # readable
+node scripts/mods-list.mts --markdown    # paste into Discord or a doc
+```
+
+Three buckets: what every player installs through the pack, what runs on the server only,
+and what is client-side but cannot ship in the pack because it is not on Thunderstore.
+Anything a player adds beyond that is theirs and unmanaged, and it is the first thing to
+suspect when one person has a problem nobody else has.
+
+It is a rendering of `manifest.json`, not a second list, so it cannot drift. Changing a
+mod's `side` moves it between buckets with no edit to the renderer.
+
 ## Is anything out of date?
 
 ```bash
