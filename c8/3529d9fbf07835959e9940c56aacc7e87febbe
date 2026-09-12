@@ -1,0 +1,21 @@
+scripts/modpack-publish.mts
+  s_9da828f798540b::t_c15e75a9cd3fce 248-254,256
+  s_9da828f798540b::t_3c6853fab1080c 22,180-184
+  s_9da828f798540b::t_e4e2b3e710ea7c 229,234-236
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "c83529d9fbf07835959e9940c56aacc7e87febbe",
+  "prompts": {},
+  "sessions": {
+    "s_9da828f798540b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ba64f8e7-9037-4fcb-9ed5-70053ff5bae5",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    }
+  }
+}
