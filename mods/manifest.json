@@ -1,0 +1,118 @@
+{
+  "_comment": "Pinned source of truth for every mod on the Valheim estate. The server install, Mike's client, and the published client modpack are all generated from or checked against this file. Edit it FIRST, then deploy; never the other way round.",
+  "_versions": "`version` is what Thunderstore calls the release and is what the modpack pins. `plugin_name` and `plugin_version` are what BepInEx prints in LogOutput.log, which is what scripts/mods-verify.mts compares against. They differ: the loader is packaged as 5.4.2350 and logs 5.4.23.5. A null plugin_name means the entry cannot be verified from the log, and the verifier reports that rather than passing it.",
+  "world": "Utgarde",
+  "game_version": "1.0.12",
+  "network_version": 40,
+  "modpack": {
+    "namespace": "valheimsquad",
+    "name": "Utgarde_Client_Pack",
+    "version_number": "1.0.0",
+    "website_url": "https://github.com/mhaslinsky/palworld-server",
+    "description": "Client mods for the Utgarde Valheim server, pinned to the versions the server runs."
+  },
+  "verified": {
+    "server": {
+      "at": "2026-09-12T19:39:38Z",
+      "method": "scripts/mods-verify.mts against BepInEx/LogOutput.log fetched over SSM; 9 plugins plus the loader, all matching",
+      "game": "l-1.0.12, network version 40"
+    },
+    "client_jetragon": {
+      "at": "2026-09-12T05:42:00Z",
+      "method": "hand install into D:\\SteamLibrary\\steamapps\\common\\Valheim, hashes compared against the server copies"
+    }
+  },
+  "mods": [
+    {
+      "thunderstore": "denikson-BepInExPack_Valheim",
+      "version": "5.4.2350",
+      "side": "both",
+      "why": "The BepInEx loader itself. Everything below is inert without it.",
+      "plugin_name": "BepInEx",
+      "plugin_version": "5.4.23.5"
+    },
+    {
+      "thunderstore": "Grantapher-ValheimPlus_Grantapher_Temporary",
+      "version": "10.1.0",
+      "upstream_version": "0.10.1.0",
+      "upstream": "https://github.com/Grantapher/ValheimPlus/releases/tag/0.10.1.0",
+      "side": "both",
+      "enforced": true,
+      "why": "Craft-from-chest, map sharing, smelter tuning, build and taming settings. The server sets enforceMod = true, so a client on any other version is kicked at connect.",
+      "artifact_sha256": {
+        "ValheimPlus.dll": "1201a63e6bade41f8845e4f27484461584b314e2c125d2f84ec313bca5d6728f"
+      },
+      "plugin_name": "Valheim Plus",
+      "plugin_version": "0.10.1.0"
+    },
+    {
+      "thunderstore": "ValheimModding-Jotunn",
+      "version": "2.30.0",
+      "side": "both",
+      "why": "Mod library. Server-side it backs ServersideQoL; client-side it is required by Animal Feeding Trough, which is why clients carry it at all.",
+      "artifact_sha256": {
+        "Jotunn.dll": "51d32cfbe2db5c203ffb8855c155d185d572dda72db49066905679d8ec5e3c46"
+      },
+      "plugin_name": "Jotunn"
+    },
+    {
+      "thunderstore": "Advize-PlantEverything",
+      "version": "1.21.1",
+      "side": "both",
+      "why": "Berry bushes, thistle, dandelions, mushrooms and several trees on the cultivator. Degrades rather than blocking: a client without it still sees what others plant.",
+      "artifact_sha256": {
+        "PlantEverything.dll": "444837d1ff46fcc68340299f34841d27713e066fd540c64dd992343ac26e051a"
+      },
+      "plugin_name": "PlantEverything"
+    },
+    {
+      "thunderstore": "ValheimModding-YamlDotNet",
+      "version": "16.3.1",
+      "side": "server",
+      "why": "ServersideQoL dependency.",
+      "plugin_name": "YamlDotNet Detector",
+      "plugin_version": "1.0.0"
+    },
+    {
+      "thunderstore": "ArgusMagnus-ServersideQoL",
+      "version": "2.0.7",
+      "side": "server",
+      "why": "Framework the four ServersideQoL modules below plug into. 2.0.4 silently stopped on the 1.0.12 network-version bump and took PortalProgression down with it, so this pin is load-bearing after every game patch.",
+      "plugin_name": "ServersideQoL"
+    },
+    {
+      "thunderstore": "ArgusMagnus-ServersideQoL_PortalProgression",
+      "version": "2.0.0",
+      "side": "server",
+      "why": "Boss-gated ore through portals. The group voted for progression gating over free teleporting.",
+      "plugin_name": "ServersideQoL.PortalProgression"
+    },
+    {
+      "thunderstore": "ArgusMagnus-ServersideQoL_AutoStore",
+      "version": "2.0.0",
+      "side": "server",
+      "why": "Auto-sort, auto-pickup, and stack-into-nearby-chests on the Cheer emote.",
+      "plugin_name": "ServersideQoL.AutoStore"
+    },
+    {
+      "thunderstore": "ArgusMagnus-ServersideQoL_ContainerSigns",
+      "version": "2.0.7",
+      "side": "server",
+      "why": "Content signs on chests, and how a chest is designated for other ServersideQoL modules.",
+      "plugin_name": "ServersideQoL.ContainerSigns"
+    },
+    {
+      "thunderstore": null,
+      "name": "Animal Feeding Trough",
+      "version": "1.0.3",
+      "side": "server",
+      "source": "nexus",
+      "upstream": "https://www.nexusmods.com/valheim/mods/3593",
+      "why": "Not on Thunderstore, so it can never be part of the client pack. Server-side only, but it is the reason Jotunn has to be on every client.",
+      "artifact_sha256": {
+        "FeedingTrough.dll": "540930f5134b54e3ba4e567788c0fdcc279a389669646e38e598aa6b7e34aa18"
+      },
+      "plugin_name": "Animal Feeding Trough"
+    }
+  ]
+}
