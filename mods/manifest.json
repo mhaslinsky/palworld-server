@@ -13,8 +13,8 @@
   },
   "verified": {
     "server": {
-      "at": "2026-09-12T19:39:38Z",
-      "method": "scripts/mods-verify.mts against BepInEx/LogOutput.log fetched over SSM; 9 plugins plus the loader, all matching",
+      "at": "2026-09-12T21:56:22Z",
+      "method": "scripts/mods-verify.mts against BepInEx/LogOutput.log fetched over SSM after the 0.10.1.1 upgrade; 9 plugins plus the loader",
       "game": "l-1.0.12, network version 40"
     },
     "client_jetragon": {
@@ -33,17 +33,17 @@
     },
     {
       "thunderstore": "Grantapher-ValheimPlus_Grantapher_Temporary",
-      "version": "10.1.0",
-      "upstream_version": "0.10.1.0",
-      "upstream": "https://github.com/Grantapher/ValheimPlus/releases/tag/0.10.1.0",
+      "version": "10.1.1",
+      "upstream_version": "0.10.1.1",
+      "upstream": "https://github.com/Grantapher/ValheimPlus/releases/tag/0.10.1.1",
       "side": "both",
       "enforced": true,
       "why": "Craft-from-chest, map sharing, smelter tuning, build and taming settings. The server sets enforceMod = true, so a client on any other version is kicked at connect.",
       "artifact_sha256": {
-        "ValheimPlus.dll": "1201a63e6bade41f8845e4f27484461584b314e2c125d2f84ec313bca5d6728f"
+        "ValheimPlus.dll": "0d7faa2e866fe27dd159cb4a477a951e4f14be52ac3b11f765e029ae653735ea"
       },
       "plugin_name": "Valheim Plus",
-      "plugin_version": "0.10.1.0"
+      "plugin_version": "0.10.1.1"
     },
     {
       "thunderstore": "ValheimModding-Jotunn",
