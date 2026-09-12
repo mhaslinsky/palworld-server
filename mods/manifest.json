@@ -105,14 +105,15 @@
       "thunderstore": null,
       "name": "Animal Feeding Trough",
       "version": "1.0.3",
-      "side": "server",
+      "side": "both",
       "source": "nexus",
       "upstream": "https://www.nexusmods.com/valheim/mods/3593",
-      "why": "Not on Thunderstore, so it can never be part of the client pack. Server-side only, but it is the reason Jotunn has to be on every client.",
+      "why": "Boss-free feeding for tamed animals. Clients MUST have it: the server rejects a connection with \"Missing mods: Animal Feeding Trough 1.0.3\", observed 2026-09-12. It is Nexus-only, so the pack cannot carry it and every player installs it by hand. Replace it with a Thunderstore equivalent when a maintained one appears; the AutoFeed family is the closest, but every candidate wants an older Jotunn or BepInEx than this estate runs.",
       "artifact_sha256": {
         "FeedingTrough.dll": "540930f5134b54e3ba4e567788c0fdcc279a389669646e38e598aa6b7e34aa18"
       },
-      "plugin_name": "Animal Feeding Trough"
+      "plugin_name": "Animal Feeding Trough",
+      "hand_install": true
     },
     {
       "thunderstore": "Azumatt-Unshamed",

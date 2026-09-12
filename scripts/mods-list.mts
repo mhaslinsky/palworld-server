@@ -13,7 +13,8 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { isClientSide, type EstateManifest, type EstateMod } from "./modpack.mts";
+import { isClientSide } from "./modpack.mts";
+import type { EstateManifest, EstateMod } from "./modpack.mts";
 
 export interface Buckets {
   serverOnly: EstateMod[];
@@ -30,6 +31,7 @@ export function bucket(manifest: EstateManifest): Buckets {
     clientByHand: clientSide.filter((mod) => mod.thunderstore === null),
   };
 }
+
 
 export function label(mod: EstateMod): string {
   return mod.thunderstore ?? mod.name ?? "an unnamed mod";
