@@ -251,6 +251,38 @@ That topic has two subscribers, and knowing which covers what matters:
 The forwarder has no alarm on its own errors on purpose: it would route through the
 topic it subscribes to. It is best-effort, and email is the guarantee.
 
+### 7d. `mods/manifest.json` is the only record of what runs; three things can drift
+
+Every mod on the estate is pinned there, server and client. Edit it FIRST, then deploy.
+The reverse makes it a second opinion rather than a record, which is the failure it was
+added to end.
+
+Three things drift apart, and each has its own check. Run all three before saying the mod
+state is fine, because each is blind to the others:
+
+| Drift | Check |
+|---|---|
+| the box stops matching the manifest | `ssh <box> 'cat /home/steam/valheim/BepInEx/LogOutput.log' \| node scripts/mods-verify.mts` |
+| a mod ships a new version upstream | `node scripts/mods-upstream.mts` |
+| the published pack stops matching the manifest | the same command; it checks both |
+
+**A matching version does not mean a plugin is working.** BepInEx prints its load line when
+it constructs a plugin, before that plugin's own startup runs, so one that loads and then
+disables itself still appears at the right version. That is precisely what ServersideQoL
+2.0.4 did on the 1.0.12 network bump, and the ore flowed through portals for a day.
+`mods-verify.mts` scans separately for the phrases a plugin prints when it has stopped
+acting; do not weaken that into a version comparison.
+
+**Upgrading a client-side mod is a two-sided operation with a window in the middle.**
+ValheimPlus runs `enforceMod = true`, so the server and every client must match exactly.
+Deploy to the box, verify CLEAN, bump `modpack.version_number`, rebuild, publish. Between
+the deploy and the publish the two disagree, and anyone who updates in that window is
+kicked with a message that does not explain itself. Keep the window short and say in chat
+that it is open.
+
+**Never hand-edit anything under `mods/modpack/`.** It is generated, and it is gitignored
+for that reason. Change `mods/manifest.json` and rebuild.
+
 ### 8. Verify on the box, not by exit code
 
 This codebase has produced several failures that reported success:
