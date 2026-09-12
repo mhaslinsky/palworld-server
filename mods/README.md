@@ -44,9 +44,22 @@ there, because a zip exiting 0 is not evidence that the file on disk is the pack
 `-UNVERIFIED.zip` so an unchecked pack cannot be mistaken for a checked one or handed to
 someone as though it had been.
 
-Then upload `mods/modpack/dist/<name>-<version>.zip` at
-<https://thunderstore.io/c/valheim/create/>. Players' managers offer the update on their
-next launch.
+Then publish:
+
+```bash
+node scripts/modpack-publish.mts             # --dry-run stops before the first write
+```
+
+It uploads through Thunderstore's API and then asks Thunderstore what it actually holds,
+because a 2xx on submit is not the same as the version being live for a player's mod
+manager. On any failure mid-upload it aborts the upload rather than leaving a half-stored
+file behind. Players' managers offer the update on their next launch.
+
+The token is a **service account** token belonging to the team, created in team settings on
+thunderstore.io. It is not tied to a person, so revoking it costs one re-issue. Put it in
+SSM at `/palworld-server/thunderstore_token` as a SecureString, or set `THUNDERSTORE_TOKEN`
+in the environment, which wins when both are present. Uploading by hand through the website
+still works and is the fallback if the token is ever unavailable.
 
 `manifest.json`, `README.md` and `icon.png` under `mods/modpack/` are generated. Do not
 hand-edit them; change `manifest.json` at the top of this directory and rebuild. The icon
@@ -81,6 +94,20 @@ phrases a plugin prints when it has stopped acting, and any hit fails the run.
 Exit codes are 0 for clean, 1 for drift, and 2 for a log it could not read. A manifest entry
 with no `plugin_name` fails the run rather than riding along on someone else's match: leaving
 it out of the matched set would let "I could not check this" read as a pass.
+
+## Is anything out of date?
+
+```bash
+node scripts/mods-upstream.mts
+```
+
+Two questions the box cannot answer, because both are about the outside world: has any
+pinned mod shipped a newer version, and is the published pack still the version the manifest
+names. The second is the quiet one. A manifest bumped without a publish leaves players on
+the old pack until somebody is kicked.
+
+Exit 0 means current, 1 means something drifted, and 2 means a lookup failed so the answer
+is unknown rather than fine.
 
 ## Fields in manifest.json
 

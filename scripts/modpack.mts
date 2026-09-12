@@ -68,17 +68,27 @@ export interface ParsedDependency {
 /**
  * Splits from the RIGHT. A Thunderstore team namespace may contain hyphens while a package
  * name may not: across all 10,898 Valheim packages, three teams (`sinai-dev`, `LVH-IT`) carry
- * one and zero names do. Splitting from the left rejects `sinai-dev-UnityExplorer-4.8.2` as
- * malformed.
+ * one and zero names do. Splitting from the left reads `sinai-dev-UnityExplorer` as the team
+ * `sinai` owning `dev-UnityExplorer`, which is a package that does not exist.
  */
+export function parsePackageIdentifier(
+  identifier: string,
+): { namespace: string; name: string } | null {
+  const parts = identifier.split("-");
+  if (parts.length < 2) return null;
+  const namespace = parts.slice(0, -1).join("-");
+  const name = parts[parts.length - 1];
+  if (!namespace || !name) return null;
+  return { namespace, name };
+}
+
 export function parseDependency(dependency: string): ParsedDependency | null {
   const parts = dependency.split("-");
   if (parts.length < 3) return null;
-  const namespace = parts.slice(0, -2).join("-");
-  const name = parts[parts.length - 2];
   const version = parts[parts.length - 1];
-  if (!namespace || !name || !version) return null;
-  return { namespace, name, version };
+  const owner = parsePackageIdentifier(parts.slice(0, -1).join("-"));
+  if (owner === null || !version) return null;
+  return { ...owner, version };
 }
 
 export function isClientSide(mod: EstateMod): boolean {
