@@ -266,6 +266,17 @@ state is fine, because each is blind to the others:
 | a mod ships a new version upstream | `node scripts/mods-upstream.mts` |
 | the published pack stops matching the manifest | the same command; it checks both |
 
+The last two are also watched off-box by `palworld-server-mod-monitor`, a Lambda on a
+six-hour schedule that posts to Discord and re-nags every run until somebody acts. It gets
+its pins from Terraform rendering `mods/manifest.json`, so it cannot hold an opinion the
+committed manifest does not, and a failed Thunderstore lookup alerts as UNKNOWN rather than
+passing quietly. The first drift is NOT watched: it needs the box running and the box
+sleeps most of the time, so run the verifier by hand after any server-side mod change.
+
+Publish with `node scripts/modpack-publish.mts`, which needs a team service account token
+in SSM at `/palworld-server/thunderstore_token`. Uploading through the website still works
+and is the fallback.
+
 **A matching version does not mean a plugin is working.** BepInEx prints its load line when
 it constructs a plugin, before that plugin's own startup runs, so one that loads and then
 disables itself still appears at the right version. That is precisely what ServersideQoL
