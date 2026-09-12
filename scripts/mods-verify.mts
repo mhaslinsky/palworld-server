@@ -8,9 +8,13 @@
  *   node scripts/mods-verify.mts path/to/LogOutput.log
  *
  * Reads the load log rather than listing the plugins folder, because a DLL on disk that
- * failed to load looks identical to one that worked, and this estate has already been
- * bitten by exactly that (ServersideQoL 2.0.4 sat in the folder logging a version-check
- * failure every five seconds while PortalProgression silently did nothing).
+ * failed to load looks identical to one that worked.
+ *
+ * A load line is NOT proof the plugin is working. BepInEx prints it when it constructs the
+ * plugin, before that plugin's own Awake runs, so one that loads and then disables itself
+ * still appears. ServersideQoL 2.0.4 did exactly that on the 1.0.12 network-version bump:
+ * it logged a load, then refused to act while ore flowed through portals. Version matching
+ * alone cannot see that, which is why `SELF_DISABLED_PATTERNS` is scanned separately.
  */
 
 import { readFileSync } from "node:fs";
@@ -18,16 +22,43 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { EstateManifest, EstateMod } from "./modpack.mts";
 
-const LOADING_PATTERN = /Loading \[(.+) ([0-9]+(?:\.[0-9]+)+)\]/;
+// Anchored on BepInEx's own logger tag so a mod printing "Loading [...]" in its own output
+// cannot be mistaken for a loaded plugin.
+const LOADING_PATTERN = /:\s*BepInEx\]\s*Loading \[(.+) ([0-9]+(?:\.[0-9]+)+)\]/;
 const LOADER_PATTERN = /BepInEx ([0-9]+(?:\.[0-9]+)+) - /;
+// A new banner means a new boot, so anything gathered before it belongs to a previous run.
+const BOOT_BANNER_PATTERN = /BepInEx ([0-9]+(?:\.[0-9]+)+) - \S+ \(/;
+
+/** Phrases a plugin prints when it has loaded and then stopped acting. */
+const SELF_DISABLED_PATTERNS: { pattern: RegExp; meaning: string }[] = [
+  {
+    pattern: /Unsupported network version/i,
+    meaning: "a plugin refused the game's network version",
+  },
+  {
+    pattern: /Version checks? failed/i,
+    meaning: "a plugin's version check failed",
+  },
+  {
+    pattern: /Mod execution is stopped/i,
+    meaning: "a plugin stopped executing after loading",
+  },
+];
 
 /**
- * Later entries win, so a log spanning two boots reports the most recent entry rather
- * than a stale line from before a restart.
+ * Reports the newest boot only. A boot banner CLEARS what came before rather than letting
+ * later lines overwrite it: a plugin present in an earlier boot and absent from the newest
+ * one would otherwise survive in the map and satisfy the manifest, which is a false pass.
  */
 export function parseLoadedPlugins(logText: string): Map<string, string> {
-  const loaded = new Map<string, string>();
+  let loaded = new Map<string, string>();
   for (const line of logText.split(/\r?\n/)) {
+    const banner = BOOT_BANNER_PATTERN.exec(line);
+    if (banner) {
+      loaded = new Map<string, string>();
+      loaded.set("BepInEx", banner[1]);
+      continue;
+    }
     const loading = LOADING_PATTERN.exec(line);
     if (loading) {
       loaded.set(loading[1].trim(), loading[2]);
@@ -41,6 +72,20 @@ export function parseLoadedPlugins(logText: string): Map<string, string> {
   return loaded;
 }
 
+/** Lines showing a plugin that loaded and then stopped acting, which version matching cannot see. */
+export function findSelfDisabled(logText: string): string[] {
+  const hits: string[] = [];
+  for (const line of logText.split(/\r?\n/)) {
+    for (const { pattern, meaning } of SELF_DISABLED_PATTERNS) {
+      if (pattern.test(line)) {
+        hits.push(`${meaning}: ${line.trim()}`);
+        break;
+      }
+    }
+  }
+  return hits;
+}
+
 export function expectedPluginVersion(mod: EstateMod): string {
   return mod.plugin_version ?? mod.version;
 }
@@ -51,11 +96,13 @@ export interface Comparison {
   notLoaded: string[];
   unverifiable: { label: string; reason: string }[];
   unexpected: { plugin: string; version: string }[];
+  selfDisabled: string[];
 }
 
 export function compare(
   manifest: EstateManifest,
   loaded: Map<string, string>,
+  selfDisabled: string[] = [],
 ): Comparison {
   const comparison: Comparison = {
     matched: [],
@@ -63,10 +110,15 @@ export function compare(
     notLoaded: [],
     unverifiable: [],
     unexpected: [],
+    selfDisabled,
   };
   const accountedFor = new Set<string>();
 
-  for (const mod of manifest.mods) {
+  // A client-only mod is absent from a server's log by design, so checking for it here would
+  // fail a verification that is actually correct.
+  const onTheServer = manifest.mods.filter((mod) => mod.side !== "client");
+
+  for (const mod of onTheServer) {
     const label = mod.thunderstore ?? mod.name ?? "an unnamed mod";
     if (!mod.plugin_name) {
       comparison.unverifiable.push({
@@ -100,15 +152,18 @@ export function compare(
 }
 
 /**
- * An empty log yields no matches and no mismatches, which must not read as a pass.
- * Anything other than at least one match plus zero discrepancies is a failure.
+ * An empty log yields no matches and no mismatches, which must not read as a pass. An entry
+ * that could not be checked is not a pass either: leaving it out of `matched` would otherwise
+ * let it ride along on someone else's match, which is the opposite of reporting it.
  */
 export function isClean(comparison: Comparison): boolean {
   return (
     comparison.matched.length > 0 &&
     comparison.mismatched.length === 0 &&
     comparison.notLoaded.length === 0 &&
-    comparison.unexpected.length === 0
+    comparison.unexpected.length === 0 &&
+    comparison.unverifiable.length === 0 &&
+    comparison.selfDisabled.length === 0
   );
 }
 
@@ -130,18 +185,31 @@ export function report(comparison: Comparison): string {
     );
   }
   for (const entry of comparison.unverifiable) {
-    lines.push(`  unchecked ${entry.label}: ${entry.reason}`);
+    lines.push(`  UNCHECKED ${entry.label}: ${entry.reason}`);
+  }
+  for (const entry of comparison.selfDisabled) {
+    lines.push(`  SELF-DISABLED ${entry}`);
   }
 
   lines.push("");
+  if (isClean(comparison)) {
+    lines.push(
+      `CLEAN: ${comparison.matched.length} plugins match the manifest, and none reported stopping after load.`,
+    );
+    return lines.join("\n");
+  }
+
   lines.push(
-    isClean(comparison)
-      ? `CLEAN: ${comparison.matched.length} plugins match the manifest.`
-      : "DRIFT: the box and mods/manifest.json disagree. Neither is automatically right; decide which, then fix the other.",
+    "DRIFT: the box and mods/manifest.json disagree. Neither is automatically right; decide which, then fix the other.",
   );
   if (comparison.unverifiable.length > 0) {
     lines.push(
-      `${comparison.unverifiable.length} entries could not be checked from the log and are NOT covered by the verdict above.`,
+      `${comparison.unverifiable.length} manifest entries could not be checked from the log. Fill in their plugin_name.`,
+    );
+  }
+  if (comparison.selfDisabled.length > 0) {
+    lines.push(
+      `${comparison.selfDisabled.length} log lines show a plugin that loaded and then stopped acting. A matching version does not mean it is working.`,
     );
   }
   return lines.join("\n");
@@ -167,7 +235,11 @@ function main(): number {
     return 2;
   }
 
-  const comparison = compare(manifest, parseLoadedPlugins(logText));
+  const comparison = compare(
+    manifest,
+    parseLoadedPlugins(logText),
+    findSelfDisabled(logText),
+  );
   console.log(report(comparison));
   return isClean(comparison) ? 0 : 1;
 }

@@ -74,6 +74,73 @@ test("a pixel buffer of the wrong size is refused rather than padded", () => {
   );
 });
 
+test("a non-positive or fractional dimension is refused", () => {
+  // A zero-by-zero image satisfies the buffer-length check with an empty buffer and would
+  // otherwise emit a PNG the specification forbids.
+  for (const [width, height] of [
+    [0, 0],
+    [0, 4],
+    [4, 0],
+    [-1, 4],
+    [2.5, 4],
+  ]) {
+    assert.throws(
+      () => encodePng(width, height, Buffer.alloc(Math.max(0, width * height * 4))),
+      /dimensions must be positive integers/,
+      `expected ${width}x${height} to be refused`,
+    );
+  }
+});
+
+/**
+ * Property: for any positive width and height, inflating IDAT and stripping the per-scanline
+ * filter byte returns the pixels exactly, and IHDR carries the dimensions it was given.
+ * Oracle: node:zlib inflate plus the identity on the input buffer.
+ */
+test("property: the round trip holds across generated sizes and pixel data", () => {
+  let seed = 20260912;
+  const nextByte = (): number => {
+    // Deterministic so a failure is reproducible from the seed alone.
+    seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+    return (seed >>> 16) & 0xff;
+  };
+
+  for (let iteration = 0; iteration < 200; iteration++) {
+    const width = 1 + (nextByte() % 23);
+    const height = 1 + (nextByte() % 23);
+    const rgba = Buffer.alloc(width * height * 4);
+    for (let index = 0; index < rgba.length; index++) rgba[index] = nextByte();
+
+    const png = encodePng(width, height, rgba);
+
+    const ihdrStart = 8 + 8;
+    assert.equal(png.readUInt32BE(ihdrStart), width);
+    assert.equal(png.readUInt32BE(ihdrStart + 4), height);
+
+    const idatLength = png.readUInt32BE(8 + 8 + 13 + 4);
+    const idatStart = 8 + 8 + 13 + 4 + 8;
+    const raw = inflateSync(png.subarray(idatStart, idatStart + idatLength));
+
+    const rowLength = width * 4;
+    assert.equal(raw.length, height * (rowLength + 1));
+    const recovered = Buffer.alloc(rgba.length);
+    for (let row = 0; row < height; row++) {
+      assert.equal(raw[row * (rowLength + 1)], 0, "filter byte");
+      raw.copy(
+        recovered,
+        row * rowLength,
+        row * (rowLength + 1) + 1,
+        (row + 1) * (rowLength + 1),
+      );
+    }
+    assert.deepEqual(
+      recovered,
+      rgba,
+      `round trip failed at ${width}x${height} on iteration ${iteration}`,
+    );
+  }
+});
+
 test("the icon fills the buffer and uses both the ground and the rune colour", () => {
   const size = 64;
   const pixels = renderAlgizIcon(size);

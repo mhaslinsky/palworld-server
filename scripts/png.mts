@@ -46,6 +46,18 @@ export function encodePng(
   height: number,
   rgba: Buffer,
 ): Buffer {
+  // The PNG specification requires both dimensions to be nonzero, and a zero-by-zero image
+  // otherwise satisfies the buffer-length check below with an empty buffer.
+  if (
+    !Number.isInteger(width) ||
+    !Number.isInteger(height) ||
+    width < 1 ||
+    height < 1
+  ) {
+    throw new Error(
+      `dimensions must be positive integers, got ${width}x${height}`,
+    );
+  }
   const expected = width * height * 4;
   if (rgba.length !== expected) {
     throw new Error(
@@ -82,9 +94,9 @@ export function encodePng(
 }
 
 export interface Rgb {
-  r: number;
-  g: number;
-  b: number;
+  red: number;
+  green: number;
+  blue: number;
 }
 
 function distanceToSegment(
@@ -119,8 +131,8 @@ function distanceToSegment(
  * stroke geometry so the icon is reproducible and has no binary source asset.
  */
 export function renderAlgizIcon(size: number): Buffer {
-  const background: Rgb = { r: 27, g: 34, b: 40 };
-  const foreground: Rgb = { r: 198, g: 154, b: 88 };
+  const background: Rgb = { red: 27, green: 34, blue: 40 };
+  const foreground: Rgb = { red: 198, green: 154, blue: 88 };
   const unit = size / 256;
   const strokeRadius = 11 * unit;
   const borderInset = 12 * unit;
@@ -141,10 +153,10 @@ export function renderAlgizIcon(size: number): Buffer {
   );
 
   const pixels = Buffer.alloc(size * size * 4);
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
-      const centreX = x + 0.5;
-      const centreY = y + 0.5;
+  for (let row = 0; row < size; row++) {
+    for (let column = 0; column < size; column++) {
+      const centreX = column + 0.5;
+      const centreY = row + 0.5;
 
       const onBorder =
         centreX >= borderInset &&
@@ -163,10 +175,10 @@ export function renderAlgizIcon(size: number): Buffer {
       );
 
       const colour = onBorder || onRune ? foreground : background;
-      const offset = (y * size + x) * 4;
-      pixels[offset] = colour.r;
-      pixels[offset + 1] = colour.g;
-      pixels[offset + 2] = colour.b;
+      const offset = (row * size + column) * 4;
+      pixels[offset] = colour.red;
+      pixels[offset + 1] = colour.green;
+      pixels[offset + 2] = colour.blue;
       pixels[offset + 3] = 255;
     }
   }

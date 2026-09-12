@@ -33,10 +33,16 @@ Every time after that:
 node scripts/modpack-build.mts          # writes mods/modpack/ and a zip under dist/
 ```
 
-The build confirms every pinned version actually exists on Thunderstore before writing
-anything, so a typo in a version becomes a failed build rather than a pack that resolves
-to nothing on a player's machine. `--offline` skips that check and says loudly that it
-did.
+Before writing anything the build confirms each pinned version exists on Thunderstore, and
+that the response actually describes the package asked for rather than merely answering 200.
+A typo in a version becomes a failed build instead of a pack that resolves to nothing on a
+player's machine. It also refuses a pack version already published, since Thunderstore would
+reject that at upload. Afterwards it reopens the archive and confirms the three files are
+there, because a zip exiting 0 is not evidence that the file on disk is the package.
+
+`--offline` skips the Thunderstore checks. It warns, and it names the artifact
+`-UNVERIFIED.zip` so an unchecked pack cannot be mistaken for a checked one or handed to
+someone as though it had been.
 
 Then upload `mods/modpack/dist/<name>-<version>.zip` at
 <https://thunderstore.io/c/valheim/create/>. Players' managers offer the update on their
@@ -63,14 +69,18 @@ ssh <box> 'cat /home/steam/valheim/BepInEx/LogOutput.log' | node scripts/mods-ve
 ```
 
 It reads the load log rather than listing the plugins folder, because a DLL sitting on
-disk having failed to load looks exactly like one that worked. That is not hypothetical
-here: ServersideQoL 2.0.4 sat in the folder logging a version-check failure every five
-seconds while PortalProgression silently did nothing and ore flowed through portals
-freely.
+disk having failed to load looks exactly like one that worked.
 
-Exit codes are 0 for clean, 1 for drift, and 2 for a log it could not read. Entries with
-no `plugin_name` are reported as unchecked and are deliberately excluded from the verdict,
-so an unverifiable mod never contributes to a pass.
+**A load line is not proof a plugin is working.** BepInEx prints it when it constructs the
+plugin, before that plugin's own startup runs, so one that loads and then disables itself
+still appears with the right version. That is exactly what ServersideQoL 2.0.4 did on the
+1.0.12 network-version bump: it logged a load, then refused to act while ore flowed through
+portals. Version matching alone cannot see that, so the verifier separately scans for the
+phrases a plugin prints when it has stopped acting, and any hit fails the run.
+
+Exit codes are 0 for clean, 1 for drift, and 2 for a log it could not read. A manifest entry
+with no `plugin_name` fails the run rather than riding along on someone else's match: leaving
+it out of the matched set would let "I could not check this" read as a pass.
 
 ## Fields in manifest.json
 

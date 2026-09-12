@@ -5,20 +5,25 @@ import test from "node:test";
 import {
   compare,
   expectedPluginVersion,
+  findSelfDisabled,
   isClean,
   parseLoadedPlugins,
   report,
 } from "./mods-verify.mts";
 import type { EstateManifest, EstateMod } from "./modpack.mts";
 
-const SAMPLE_LOG = `[Message:   BepInEx] BepInEx 5.4.23.5 - valheim (9/12/2026 5:40:11 AM)
+// Copied from the real box on 2026-09-12. The names matter: ValheimPlus logs with a space,
+// YamlDotNet's shim logs two words, and a first-token parser would pass a fixture without them.
+const SAMPLE_LOG = `[Message:   BepInEx] BepInEx 5.4.23.5 - valheim_server (09/10/2026 00:08:00)
 [Info   :   BepInEx] Running under Unity v2022.3.54.8993681
 [Info   :   BepInEx] 9 plugins to load
-[Info   :   BepInEx] Loading [ValheimPlus 0.10.1.0]
+[Info   :   BepInEx] Loading [Valheim Plus 0.10.1.0]
 [Info   :   BepInEx] Loading [Jotunn 2.30.0]
 [Info   :   BepInEx] Loading [ServersideQoL 2.0.7]
 [Info   :   BepInEx] Loading [ServersideQoL.PortalProgression 2.0.0]
 [Info   :   BepInEx] Loading [PlantEverything 1.21.1]
+[Info   :   BepInEx] Loading [YamlDotNet Detector 1.0.0]
+[Info   :   BepInEx] Loading [Animal Feeding Trough 1.0.3]
 [Info   :    Jotunn] Initializing Jotunn
 `;
 
@@ -51,7 +56,7 @@ function manifest(mods: EstateMod[]): EstateManifest {
 
 test("plugin names and versions are read out of the load lines", () => {
   const loaded = parseLoadedPlugins(SAMPLE_LOG);
-  assert.equal(loaded.get("ValheimPlus"), "0.10.1.0");
+  assert.equal(loaded.get("Valheim Plus"), "0.10.1.0");
   assert.equal(loaded.get("Jotunn"), "2.30.0");
   assert.equal(loaded.get("ServersideQoL.PortalProgression"), "2.0.0");
 });
@@ -63,13 +68,13 @@ test("the loader's own version comes from its banner, not a load line", () => {
 test("lines that are not plugin loads are ignored", () => {
   const loaded = parseLoadedPlugins(SAMPLE_LOG);
   assert.equal(loaded.has("Initializing Jotunn"), false);
-  assert.equal(loaded.size, 6, "five plugins plus the loader");
+  assert.equal(loaded.size, 8, "seven plugins plus the loader");
 });
 
-test("a log spanning two boots reports the later one", () => {
-  const twoBoots = `[Info   :   BepInEx] Loading [ServersideQoL 2.0.4]
+test("a later load line within one boot wins", () => {
+  const oneBoot = `[Info   :   BepInEx] Loading [ServersideQoL 2.0.4]
 [Info   :   BepInEx] Loading [ServersideQoL 2.0.7]`;
-  assert.equal(parseLoadedPlugins(twoBoots).get("ServersideQoL"), "2.0.7");
+  assert.equal(parseLoadedPlugins(oneBoot).get("ServersideQoL"), "2.0.7");
 });
 
 test("an empty log parses to nothing", () => {
@@ -152,7 +157,10 @@ test("a plugin on the box that nobody recorded is reported", () => {
   assert.equal(isClean(comparison), false);
 });
 
-test("an entry with no plugin name is unchecked, and excluded from the verdict", () => {
+test("an entry with no plugin name is unchecked, and that is not a pass", () => {
+  // Test contract corrected because: the previous version asserted isClean stayed true with an
+  // unchecked entry. Leaving it out of `matched` does not prevent a pass, it lets the entry ride
+  // along on someone else's match, so "I could not check this" was rendering as a clean exit 0.
   const input = manifest([
     mod({ plugin_name: "Jotunn", version: "2.30.0" }),
     mod({
@@ -169,8 +177,69 @@ test("an entry with no plugin name is unchecked, and excluded from the verdict",
       reason: "log name not read off the box yet",
     },
   ]);
-  assert.equal(isClean(comparison), true, "unchecked entries do not fail it");
-  assert.match(report(comparison), /are NOT covered by the verdict above/);
+  assert.equal(isClean(comparison), false, "an unchecked entry must not pass");
+  assert.match(report(comparison), /could not be checked from the log/);
+});
+
+test("a client-only mod is not sought in the server's log", () => {
+  const input = manifest([
+    mod({ plugin_name: "Jotunn", version: "2.30.0" }),
+    mod({ plugin_name: "ClientOnlyThing", version: "1.0.0", side: "client" }),
+  ]);
+  const comparison = compare(input, new Map([["Jotunn", "2.30.0"]]));
+  assert.deepEqual(comparison.notLoaded, []);
+  assert.equal(isClean(comparison), true);
+});
+
+test("a plugin from an earlier boot does not satisfy the newest one", () => {
+  const twoBoots = `[Message:   BepInEx] BepInEx 5.4.23.5 - valheim_server (09/10/2026 00:08:00)
+[Info   :   BepInEx] Loading [ServersideQoL 2.0.7]
+[Info   :   BepInEx] Loading [Jotunn 2.30.0]
+[Message:   BepInEx] BepInEx 5.4.23.5 - valheim_server (09/11/2026 00:08:00)
+[Info   :   BepInEx] Loading [Jotunn 2.30.0]`;
+  const loaded = parseLoadedPlugins(twoBoots);
+  assert.equal(loaded.has("ServersideQoL"), false, "dropped with its boot");
+  assert.equal(loaded.get("Jotunn"), "2.30.0");
+
+  const input = manifest([
+    mod({ plugin_name: "ServersideQoL", version: "2.0.7" }),
+    mod({ plugin_name: "Jotunn", version: "2.30.0" }),
+  ]);
+  const comparison = compare(input, loaded);
+  assert.deepEqual(comparison.notLoaded, ["ServersideQoL"]);
+  assert.equal(isClean(comparison), false);
+});
+
+test("a Loading line from a mod's own output is not counted as a plugin", () => {
+  const noisy = `[Info   :   BepInEx] Loading [Jotunn 2.30.0]
+[Info   :SomeOtherMod] Loading [PretendPlugin 9.9.9]`;
+  const loaded = parseLoadedPlugins(noisy);
+  assert.equal(loaded.has("PretendPlugin"), false);
+  assert.equal(loaded.get("Jotunn"), "2.30.0");
+});
+
+test("a plugin that loaded and then stopped acting fails the verdict", () => {
+  // The ServersideQoL 2.0.4 outage: the load line appears and the version matches, while the
+  // plugin does nothing. Version matching alone cannot see this.
+  const disabledLog = `[Info   :   BepInEx] Loading [ServersideQoL 2.0.4]
+[Error  :ServersideQoL] Unsupported network version: 40, expected: 39
+[Error  :ServersideQoL] Version checks failed. Mod execution is stopped`;
+  const hits = findSelfDisabled(disabledLog);
+  assert.equal(hits.length, 2);
+
+  const input = manifest([mod({ plugin_name: "ServersideQoL", version: "2.0.4" })]);
+  const comparison = compare(
+    input,
+    parseLoadedPlugins(disabledLog),
+    hits,
+  );
+  assert.deepEqual(comparison.mismatched, [], "the version genuinely matches");
+  assert.equal(isClean(comparison), false, "and it still must not pass");
+  assert.match(report(comparison), /SELF-DISABLED/);
+});
+
+test("a healthy log reports nothing self-disabled", () => {
+  assert.deepEqual(findSelfDisabled(SAMPLE_LOG), []);
 });
 
 test("zero matches is never clean, however empty the discrepancy lists are", () => {
