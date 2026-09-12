@@ -122,6 +122,14 @@
       "why": "Valheim 1.0 blocks Steam achievements for anyone running mods, so this pack is what disables them. Unshamed restores them and returns the ones already earned, granting no free unlocks. It is here because the pack causes the problem it fixes. Client-only: achievements are a Steam client concern and the server has no use for it.",
       "plugin_name": null,
       "plugin_name_note": "client-side only, so it never appears in the server's load log"
+    },
+    {
+      "thunderstore": "MagiCorp-RememberServerPassword",
+      "version": "1.2.4",
+      "side": "client",
+      "why": "Saves the server password and adds a quick-connect button for the last server, so nobody retypes it every session. Chosen over Dedryx-QuickServerConnect because it covers both jobs in one mod: two mods hooking the same join dialog and both storing passwords is a conflict waiting to happen. Client-only and purely convenience, so dropping it breaks nothing. Published 2026-09-12 and therefore unproven here; remove it if it misbehaves.",
+      "plugin_name": null,
+      "plugin_name_note": "client-side only, so it never appears in the server's load log"
     }
   ]
 }
