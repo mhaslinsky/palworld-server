@@ -284,6 +284,23 @@ disables itself still appears at the right version. That is precisely what Serve
 `mods-verify.mts` scans separately for the phrases a plugin prints when it has stopped
 acting; do not weaken that into a version comparison.
 
+**A config value read back from the file is not a config value in effect.** PlantEverything
+gates whole sections behind an `Enable*Overrides` boolean that ships `false`:
+`EnableCropOverrides`, `EnableSeedOverrides`, `EnableVineOverrides`. With the gate off the
+values are parsed and ignored, so `grep` returns exactly what you wrote while the game runs
+vanilla. On 2026-09-13 the crop grow times were set to 900/1200, read back correct, reported
+applied, and did nothing; a player noticing a turnip still at an hour is what caught it.
+Before reporting any setting as live, find the gate that governs its section, and prefer a
+check the game itself produces: PlantEverything's `[UI]` timers show a planted crop's real
+growth time in seconds. Note the neighbouring sections (`[Berries]`, `[Mushrooms]`,
+`[Saplings]`, `[Flowers]`, `[Debris]`) have NO gate, which is why one half of the same change
+worked and the other did not.
+
+**PlantEverything's units differ by key and the file says so, per setting.** Crop and sapling
+growth times are SECONDS; every pickable `*RespawnTime` is MINUTES, matching vanilla's
+`Pickable.m_respawnTimeMinutes`. A berry bush at 300 is five hours, not five minutes. Read
+the comment above the key rather than comparing two numbers.
+
 **Upgrading a client-side mod is a two-sided operation with a window in the middle.**
 ValheimPlus runs `enforceMod = true`, so the server and every client must match exactly.
 Deploy to the box, verify CLEAN, bump `modpack.version_number`, rebuild, publish. Between
