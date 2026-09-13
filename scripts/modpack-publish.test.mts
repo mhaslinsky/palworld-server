@@ -42,9 +42,29 @@ test("the submission names the team as author and the Valheim community", () => 
   const metadata = buildSubmissionMetadata(manifest(), "abc-123");
   assert.equal(metadata.author_name, "valheimsquad");
   assert.deepEqual(metadata.communities, ["valheim"]);
-  assert.deepEqual(metadata.categories, ["modpacks"]);
   assert.equal(metadata.has_nsfw_content, false);
   assert.equal(metadata.upload_uuid, "abc-123");
+});
+
+test("categories are sent keyed by community, which is the field that takes effect", () => {
+  const metadata = buildSubmissionMetadata(manifest(), "abc-123");
+  assert.deepEqual(metadata.community_categories, {
+    valheim: ["modpacks", "deep-north-update"],
+  });
+  // The flat list rides along, but 1.2.0 shipped with only this set and the categories
+  // were dropped, so asserting it alone would pass for a submission that loses them again.
+  assert.deepEqual(metadata.categories, ["modpacks", "deep-north-update"]);
+});
+
+test("every category is an API slug, never a display name", () => {
+  const metadata = buildSubmissionMetadata(manifest(), "abc-123");
+  for (const category of metadata.community_categories.valheim) {
+    assert.match(
+      category,
+      /^[a-z0-9-]+$/,
+      `"${category}" is not a slug; Thunderstore matches "deep-north-update", not "Deep North Update"`,
+    );
+  }
 });
 
 test("parts are sliced at the offsets Thunderstore asked for", () => {

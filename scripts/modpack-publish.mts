@@ -23,7 +23,10 @@ import { checkDependencyExists } from "./modpack-build.mts";
 
 const API = "https://thunderstore.io/api/experimental";
 const COMMUNITY = "valheim";
-const CATEGORIES = ["modpacks"];
+// Slugs, not display names: the API matches "deep-north-update", never "Deep North Update".
+// "deep-north-update" is a game-version category and states that the pack targets Valheim 1.0;
+// "modpacks" is the content category people filter on to find a pack at all.
+const CATEGORIES = ["modpacks", "deep-north-update"];
 const TOKEN_PARAMETER = "/palworld-server/thunderstore_token";
 const REQUEST_TIMEOUT_MS = 60_000;
 
@@ -43,10 +46,19 @@ export interface SubmissionMetadata {
   author_name: string;
   categories: string[];
   communities: string[];
+  community_categories: Record<string, string[]>;
   has_nsfw_content: boolean;
   upload_uuid: string;
 }
 
+/**
+ * `community_categories` is what actually assigns categories; the flat `categories` is
+ * not keyed by community and did not stick. Measured 2026-09-13: 1.2.0 was submitted with
+ * `categories: ["modpacks"]` alone and the listing came back carrying only "Deep North
+ * Update", so the pack was missing the one category people filter on to find a modpack.
+ * Both are sent because the API accepts both and only one of them is the documented
+ * per-community mapping.
+ */
 export function buildSubmissionMetadata(
   manifest: EstateManifest,
   uploadUuid: string,
@@ -55,6 +67,7 @@ export function buildSubmissionMetadata(
     author_name: manifest.modpack.namespace,
     categories: CATEGORIES,
     communities: [COMMUNITY],
+    community_categories: { [COMMUNITY]: CATEGORIES },
     has_nsfw_content: false,
     upload_uuid: uploadUuid,
   };
