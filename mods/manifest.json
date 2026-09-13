@@ -7,14 +7,14 @@
   "modpack": {
     "namespace": "valheimsquad",
     "name": "Utgarde_Client_Pack",
-    "version_number": "1.1.0",
+    "version_number": "1.2.0",
     "website_url": "https://github.com/mhaslinsky/palworld-server",
     "description": "Client mods for the Utgarde Valheim server, pinned to the versions the server runs."
   },
   "verified": {
     "server": {
-      "at": "2026-09-12T21:56:22Z",
-      "method": "scripts/mods-verify.mts against BepInEx/LogOutput.log fetched over SSM after the 0.10.1.1 upgrade; 9 plugins plus the loader",
+      "at": "2026-09-13T01:43:00Z",
+      "method": "scripts/mods-verify.mts against BepInEx/LogOutput.log fetched over SSM after the PlantEverything 1.21.2 upgrade and the camera/growth config restart; CLEAN at 10 plugins",
       "game": "l-1.0.12, network version 40"
     },
     "client_jetragon": {
@@ -57,11 +57,11 @@
     },
     {
       "thunderstore": "Advize-PlantEverything",
-      "version": "1.21.1",
+      "version": "1.21.2",
       "side": "both",
       "why": "Berry bushes, thistle, dandelions, mushrooms and several trees on the cultivator. Degrades rather than blocking: a client without it still sees what others plant.",
       "artifact_sha256": {
-        "PlantEverything.dll": "444837d1ff46fcc68340299f34841d27713e066fd540c64dd992343ac26e051a"
+        "PlantEverything.dll": "0969f4f8b949eb7ce4f271166ad63167f408f75657c47761e8f91acd379698b7"
       },
       "plugin_name": "PlantEverything"
     },
