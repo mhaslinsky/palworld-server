@@ -52,8 +52,8 @@ export interface SubmissionMetadata {
 }
 
 /**
- * `community_categories` is what actually assigns categories; the flat `categories` is
- * not keyed by community and did not stick. Measured 2026-09-13: 1.2.0 was submitted with
+ * `community_categories` assigns the categories; the flat `categories` is not keyed by
+ * community and was ignored. Measured 2026-09-13: 1.2.0 was submitted with
  * `categories: ["modpacks"]` alone and the listing came back carrying only "Deep North
  * Update", so the pack was missing the one category people filter on to find a modpack.
  * Both are sent because the API accepts both and only one of them is the documented
