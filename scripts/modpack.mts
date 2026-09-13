@@ -32,6 +32,11 @@ export interface EstateMod {
   /** Only when the logged version differs from `version`, as it does for the loader. */
   plugin_version?: string;
   plugin_name_note?: string;
+  /**
+   * Opt-in: this client mod cannot ship in the pack (it is not on Thunderstore) and every
+   * player installs it themselves. Without the flag, a missing id is treated as a mistake.
+   */
+  hand_install?: boolean;
 }
 
 export interface ModpackSettings {
@@ -96,18 +101,26 @@ export function isClientSide(mod: EstateMod): boolean {
 }
 
 /**
- * A client-side mod that is not on Thunderstore cannot be expressed as a dependency,
- * so it would be silently dropped from the pack and players would be short a mod with
- * nothing reporting it. Callers must treat a non-empty `unpackageable` as fatal.
+ * A client-side mod that is not on Thunderstore cannot be expressed as a dependency, so it
+ * would be silently dropped from the pack and players would be short a mod with nothing
+ * reporting it. That stays fatal.
+ *
+ * `handInstall` is the deliberate exception: a mod we KNOW the pack cannot carry, opted in
+ * with `hand_install: true`, which the generated page then tells players to install
+ * themselves. The flag exists so the exception has to be written down rather than inferred
+ * from a missing id, which is indistinguishable from the mistake.
  */
 export function selectClientMods(manifest: EstateManifest): {
   included: EstateMod[];
   unpackageable: EstateMod[];
+  handInstall: EstateMod[];
 } {
   const clientMods = manifest.mods.filter(isClientSide);
+  const offThunderstore = clientMods.filter((mod) => mod.thunderstore === null);
   return {
     included: clientMods.filter((mod) => mod.thunderstore !== null),
-    unpackageable: clientMods.filter((mod) => mod.thunderstore === null),
+    unpackageable: offThunderstore.filter((mod) => mod.hand_install !== true),
+    handInstall: offThunderstore.filter((mod) => mod.hand_install === true),
   };
 }
 
@@ -220,7 +233,7 @@ function displayName(mod: EstateMod): string {
 }
 
 export function buildReadme(manifest: EstateManifest): string {
-  const { included } = selectClientMods(manifest);
+  const { included, handInstall } = selectClientMods(manifest);
   const enforced = included.filter((mod) => mod.enforced);
   const serverOnly = manifest.mods.filter((mod) => mod.side === "server");
 
@@ -236,6 +249,15 @@ export function buildReadme(manifest: EstateManifest): string {
         )
         .join("\n\n")
     : "No mod in this pack is version-enforced.";
+
+  const handInstallSection = handInstall.length
+    ? `\n## You must install these yourself\n\nThe server requires ${handInstall.length === 1 ? "this mod" : "these mods"} and will refuse your connection without ${handInstall.length === 1 ? "it" : "them"}, but ${handInstall.length === 1 ? "it is" : "they are"} not on Thunderstore, so this pack cannot carry ${handInstall.length === 1 ? "it" : "them"}.\n\n${handInstall
+        .map(
+          (mod) =>
+            `- **${displayName(mod)} ${mod.version}**${mod.upstream ? ` (${mod.upstream})` : ""}. Drop the DLL into this profile's \`BepInEx/plugins\` folder.`,
+        )
+        .join("\n")}\n`
+    : "";
 
   // Derived from the manifest rather than written out, so this paragraph cannot drift from
   // the pinned record the way a hand-maintained list would.
@@ -256,7 +278,7 @@ Install this pack in [Gale](https://github.com/Kesomannen/gale) or [r2modman](ht
 ${rows}
 
 ${enforcedNote}
-
+${handInstallSection}
 ## What is not in it
 
 ${serverSentence}

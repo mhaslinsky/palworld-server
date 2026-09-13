@@ -19,11 +19,14 @@ import { existsSync, readFileSync, statSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { EstateManifest } from "./modpack.mts";
-import { fetchLatestVersion } from "./mods-upstream.mts";
+import { checkDependencyExists } from "./modpack-build.mts";
 
 const API = "https://thunderstore.io/api/experimental";
 const COMMUNITY = "valheim";
-const CATEGORIES = ["modpacks"];
+// Slugs, not display names: the API matches "deep-north-update", never "Deep North Update".
+// "deep-north-update" is a game-version category and states that the pack targets Valheim 1.0;
+// "modpacks" is the content category people filter on to find a pack at all.
+const CATEGORIES = ["modpacks", "deep-north-update"];
 const TOKEN_PARAMETER = "/palworld-server/thunderstore_token";
 const REQUEST_TIMEOUT_MS = 60_000;
 
@@ -43,10 +46,19 @@ export interface SubmissionMetadata {
   author_name: string;
   categories: string[];
   communities: string[];
+  community_categories: Record<string, string[]>;
   has_nsfw_content: boolean;
   upload_uuid: string;
 }
 
+/**
+ * `community_categories` assigns the categories; the flat `categories` is not keyed by
+ * community and was ignored. Measured 2026-09-13: 1.2.0 was submitted with
+ * `categories: ["modpacks"]` alone and the listing came back carrying only "Deep North
+ * Update", so the pack was missing the one category people filter on to find a modpack.
+ * Both are sent because the API accepts both and only one of them is the documented
+ * per-community mapping.
+ */
 export function buildSubmissionMetadata(
   manifest: EstateManifest,
   uploadUuid: string,
@@ -55,6 +67,7 @@ export function buildSubmissionMetadata(
     author_name: manifest.modpack.namespace,
     categories: CATEGORIES,
     communities: [COMMUNITY],
+    community_categories: { [COMMUNITY]: CATEGORIES },
     has_nsfw_content: false,
     upload_uuid: uploadUuid,
   };
@@ -177,10 +190,11 @@ async function main(): Promise<number> {
     return 1;
   }
 
-  // Thunderstore rejects a version it already holds, and finding that out here costs one
-  // request instead of a failed upload.
-  const published = await fetchLatestVersion(`${namespace}-${name}`);
-  if (published.latest === version) {
+  // Ask whether THIS version already exists rather than whether it is the newest: the
+  // listing's `latest` lags a fresh publish, so a newest-check misses a version that is
+  // already there and the upload fails at submit with a 400 instead.
+  const published = await checkDependencyExists(`${namespace}-${name}-${version}`);
+  if (published.status === "present") {
     console.error(
       `${namespace}/${name} ${version} is already published. Bump modpack.version_number and rebuild.`,
     );
@@ -225,11 +239,14 @@ async function main(): Promise<number> {
     await postJson(`usermedia/${uploadUuid}/finish-upload/`, token, {
       parts: completed,
     });
-    await postJson(
+    const submitted = await postJson(
       "submission/submit/",
       token,
       buildSubmissionMetadata(manifest, uploadUuid),
     );
+    // Print what Thunderstore said. A 2xx here does not mean the version is live, and
+    // discarding this response is what made the first failure unexplainable.
+    console.log(`submit response: ${JSON.stringify(submitted)?.slice(0, 600)}`);
   } catch (error) {
     // Leaving a half-uploaded media behind would sit in the team's storage doing nothing.
     await postJson(`usermedia/${uploadUuid}/abort-upload/`, token, {}).catch(
@@ -241,12 +258,15 @@ async function main(): Promise<number> {
     return 1;
   }
 
-  // Ask Thunderstore what it actually holds. A 2xx on submit is not the same as the
-  // version being live and resolvable for a player's mod manager.
-  const confirmed = await fetchLatestVersion(`${namespace}-${name}`);
-  if (confirmed.latest !== version) {
+  // Ask whether THIS VERSION exists, not whether it is the newest. The package listing's
+  // `latest` field lags behind a fresh publish, so checking it reported a successful upload
+  // as a failure (observed 2026-09-12, on the very first real run).
+  const confirmed = await checkDependencyExists(
+    `${namespace}-${name}-${version}`,
+  );
+  if (confirmed.status !== "present") {
     console.error(
-      `Submitted, but Thunderstore reports ${confirmed.latest ?? confirmed.error} as latest rather than ${version}. Check the package page before telling anyone it shipped.`,
+      `Submitted, but Thunderstore does not yet report ${namespace}/${name} ${version} as present (${confirmed.status}: ${confirmed.detail}). Check the package page before telling anyone it shipped.`,
     );
     return 1;
   }

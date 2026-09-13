@@ -7,14 +7,14 @@
   "modpack": {
     "namespace": "valheimsquad",
     "name": "Utgarde_Client_Pack",
-    "version_number": "1.0.0",
+    "version_number": "1.2.0",
     "website_url": "https://github.com/mhaslinsky/palworld-server",
     "description": "Client mods for the Utgarde Valheim server, pinned to the versions the server runs."
   },
   "verified": {
     "server": {
-      "at": "2026-09-12T19:39:38Z",
-      "method": "scripts/mods-verify.mts against BepInEx/LogOutput.log fetched over SSM; 9 plugins plus the loader, all matching",
+      "at": "2026-09-13T01:43:00Z",
+      "method": "scripts/mods-verify.mts against BepInEx/LogOutput.log fetched over SSM after the PlantEverything 1.21.2 upgrade and the camera/growth config restart; CLEAN at 10 plugins",
       "game": "l-1.0.12, network version 40"
     },
     "client_jetragon": {
@@ -33,17 +33,17 @@
     },
     {
       "thunderstore": "Grantapher-ValheimPlus_Grantapher_Temporary",
-      "version": "10.1.0",
-      "upstream_version": "0.10.1.0",
-      "upstream": "https://github.com/Grantapher/ValheimPlus/releases/tag/0.10.1.0",
+      "version": "10.1.1",
+      "upstream_version": "0.10.1.1",
+      "upstream": "https://github.com/Grantapher/ValheimPlus/releases/tag/0.10.1.1",
       "side": "both",
       "enforced": true,
       "why": "Craft-from-chest, map sharing, smelter tuning, build and taming settings. The server sets enforceMod = true, so a client on any other version is kicked at connect.",
       "artifact_sha256": {
-        "ValheimPlus.dll": "1201a63e6bade41f8845e4f27484461584b314e2c125d2f84ec313bca5d6728f"
+        "ValheimPlus.dll": "0d7faa2e866fe27dd159cb4a477a951e4f14be52ac3b11f765e029ae653735ea"
       },
       "plugin_name": "Valheim Plus",
-      "plugin_version": "0.10.1.0"
+      "plugin_version": "0.10.1.1"
     },
     {
       "thunderstore": "ValheimModding-Jotunn",
@@ -57,11 +57,11 @@
     },
     {
       "thunderstore": "Advize-PlantEverything",
-      "version": "1.21.1",
+      "version": "1.21.2",
       "side": "both",
       "why": "Berry bushes, thistle, dandelions, mushrooms and several trees on the cultivator. Degrades rather than blocking: a client without it still sees what others plant.",
       "artifact_sha256": {
-        "PlantEverything.dll": "444837d1ff46fcc68340299f34841d27713e066fd540c64dd992343ac26e051a"
+        "PlantEverything.dll": "0969f4f8b949eb7ce4f271166ad63167f408f75657c47761e8f91acd379698b7"
       },
       "plugin_name": "PlantEverything"
     },
@@ -105,14 +105,31 @@
       "thunderstore": null,
       "name": "Animal Feeding Trough",
       "version": "1.0.3",
-      "side": "server",
+      "side": "both",
       "source": "nexus",
       "upstream": "https://www.nexusmods.com/valheim/mods/3593",
-      "why": "Not on Thunderstore, so it can never be part of the client pack. Server-side only, but it is the reason Jotunn has to be on every client.",
+      "why": "Boss-free feeding for tamed animals. Clients MUST have it: the server rejects a connection with \"Missing mods: Animal Feeding Trough 1.0.3\", observed 2026-09-12. It is Nexus-only, so the pack cannot carry it and every player installs it by hand. Replace it with a Thunderstore equivalent when a maintained one appears; the AutoFeed family is the closest, but every candidate wants an older Jotunn or BepInEx than this estate runs.",
       "artifact_sha256": {
         "FeedingTrough.dll": "540930f5134b54e3ba4e567788c0fdcc279a389669646e38e598aa6b7e34aa18"
       },
-      "plugin_name": "Animal Feeding Trough"
+      "plugin_name": "Animal Feeding Trough",
+      "hand_install": true
+    },
+    {
+      "thunderstore": "Azumatt-Unshamed",
+      "version": "1.0.3",
+      "side": "client",
+      "why": "Valheim 1.0 blocks Steam achievements for anyone running mods, so this pack is what disables them. Unshamed restores them and returns the ones already earned, granting no free unlocks. It is here because the pack causes the problem it fixes. Client-only: achievements are a Steam client concern and the server has no use for it.",
+      "plugin_name": null,
+      "plugin_name_note": "client-side only, so it never appears in the server's load log"
+    },
+    {
+      "thunderstore": "MagiCorp-RememberServerPassword",
+      "version": "1.2.4",
+      "side": "client",
+      "why": "Saves the server password and adds a quick-connect button for the last server, so nobody retypes it every session. Chosen over Dedryx-QuickServerConnect because it covers both jobs in one mod: two mods hooking the same join dialog and both storing passwords is a conflict waiting to happen. Client-only and purely convenience, so dropping it breaks nothing. Published 2026-09-12 and therefore unproven here; remove it if it misbehaves.",
+      "plugin_name": null,
+      "plugin_name_note": "client-side only, so it never appears in the server's load log"
     }
   ]
 }
