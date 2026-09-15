@@ -24,9 +24,14 @@ import { checkDependencyExists } from "./modpack-build.mts";
 const API = "https://thunderstore.io/api/experimental";
 const COMMUNITY = "valheim";
 // Slugs, not display names: the API matches "deep-north-update", never "Deep North Update".
-// "deep-north-update" is a game-version category and states that the pack targets Valheim 1.0;
-// "modpacks" is the content category people filter on to find a pack at all.
-const CATEGORIES = ["modpacks", "deep-north-update"];
+// "modpacks" is the content category people filter on to find a pack; "deep-north-update"
+// is a game-version category stating the pack targets Valheim 1.0.
+const COMMUNITY_CATEGORIES = ["modpacks", "deep-north-update"];
+// The two fields do NOT accept the same slugs, which cost a failed submit on 2026-09-14:
+// sending both in the flat array answered HTTP 400 {"categories":{"1":["Object not found"]}},
+// index 1 being "deep-north-update". Only the community-scoped mapping takes the
+// game-version categories, so the flat legacy array carries the content category alone.
+const LEGACY_CATEGORIES = ["modpacks"];
 const TOKEN_PARAMETER = "/palworld-server/thunderstore_token";
 const REQUEST_TIMEOUT_MS = 60_000;
 
@@ -65,9 +70,9 @@ export function buildSubmissionMetadata(
 ): SubmissionMetadata {
   return {
     author_name: manifest.modpack.namespace,
-    categories: CATEGORIES,
+    categories: LEGACY_CATEGORIES,
     communities: [COMMUNITY],
-    community_categories: { [COMMUNITY]: CATEGORIES },
+    community_categories: { [COMMUNITY]: COMMUNITY_CATEGORIES },
     has_nsfw_content: false,
     upload_uuid: uploadUuid,
   };
