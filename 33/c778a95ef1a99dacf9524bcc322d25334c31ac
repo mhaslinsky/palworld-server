@@ -1,0 +1,27 @@
+mods/manifest.json
+  s_9da828f798540b::t_91caf596618e56 78,85,92
+  s_9da828f798540b::t_a68486b53f927a 36-38,43,46,120
+  s_9da828f798540b::t_fc833d435ba5a8 10,165,167-178
+  s_9da828f798540b::t_200f7462222913 21-22,71-72,133-164,166
+scripts/modpack-publish.test.mts
+  s_9da828f798540b::t_1a63aec7199881 49,54-61
+scripts/modpack-publish.mts
+  s_9da828f798540b::t_ca63587f413496 73,75
+  s_9da828f798540b::t_7ea83f8c309533 27-34
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "33c778a95ef1a99dacf9524bcc322d25334c31ac",
+  "prompts": {},
+  "sessions": {
+    "s_9da828f798540b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ba64f8e7-9037-4fcb-9ed5-70053ff5bae5",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    }
+  }
+}
