@@ -7,19 +7,20 @@
   "modpack": {
     "namespace": "valheimsquad",
     "name": "Utgarde_Client_Pack",
-    "version_number": "1.8.0",
+    "version_number": "1.9.0",
     "website_url": "https://github.com/mhaslinsky/palworld-server",
     "description": "Client mods for the Utgarde Valheim server, pinned to the versions the server runs."
   },
   "verified": {
     "server": {
-      "at": "2026-09-18T22:35:00Z",
-      "method": "scripts/mods-verify.mts against BepInEx/LogOutput.log fetched over SSM after the four ServersideQoL upgrades and the ValheimPlus [Experience] edit; CLEAN at 14. World load confirmed separately (Zonesystem Awake, DungeonDB Start), since an active unit is not a loaded world. Zero MissingFieldException, NullReferenceException or StackOverflow this boot.",
+      "at": "2026-09-18T22:47:00Z",
+      "method": "scripts/mods-verify.mts against BepInEx/LogOutput.log fetched over SSM after the Jotunn, AdventureBackpacks and Seasonality upgrades; CLEAN at 14. World load confirmed separately (Game server connected, Zonesystem Awake, DungeonDB Start at 22:46), since an active unit is not a loaded world. Zero exceptions of any class this boot. Pack 1.9.0 published and confirmed is_active on Thunderstore with all 12 dependencies matching.",
       "game": "l-1.0.15, network version 40"
     },
     "client_jetragon": {
       "at": "2026-09-15T01:45:00Z",
-      "method": "hand install into the Gale Default profile, every DLL hash-compared against the downloaded artifact; GentleDeath, AdventureBackpacks and VikingsDoSwim exercised in game"
+      "method": "hand install into the Gale Default profile, every DLL hash-compared against the downloaded artifact; GentleDeath, AdventureBackpacks and VikingsDoSwim exercised in game",
+      "stale": "STALE as of pack 1.9.0 (2026-09-18). That verification covered Jotunn 2.30.0, AdventureBackpacks 2.0.4 and Seasonality 3.8.2, all three of which have since moved. jetragon needs to pull pack 1.9.0 before this line means anything again."
     }
   },
   "mods": [
@@ -47,13 +48,14 @@
     },
     {
       "thunderstore": "ValheimModding-Jotunn",
-      "version": "2.30.0",
+      "version": "2.30.1",
       "side": "both",
       "why": "Mod library. Server-side it backs ServersideQoL; client-side it is required by Animal Feeding Trough, which is why clients carry it at all.",
       "artifact_sha256": {
-        "Jotunn.dll": "51d32cfbe2db5c203ffb8855c155d185d572dda72db49066905679d8ec5e3c46"
+        "Jotunn.dll": "95e37f9e4fe4e5c34fd2c5f662e63e43b109885879ba40fd1dd70f58ae47fa7a"
       },
-      "plugin_name": "Jotunn"
+      "plugin_name": "Jotunn",
+      "note": "AdventureBackpacks pins this exactly, so the two move together or not at all. The 2.30.1 zip uses Windows path separators: unzip normalises them, a plain Python extractall does not."
     },
     {
       "thunderstore": "Advize-PlantEverything",
@@ -135,15 +137,16 @@
     },
     {
       "thunderstore": "Vapok-AdventureBackpacks",
-      "version": "2.0.4",
+      "version": "2.0.9",
       "side": "both",
       "enforced": true,
       "why": "Craftable, wearable backpacks with tiers. Replaces ArgusMagnus-ServersideQoL_Backpack, which was server-only and therefore cheaper to deploy, but was an invisible container opened by an emote rather than an item in the world. Since the pack reaches every player anyway, the deployment saving bought nothing. Jotunn-based, so a client without it is kicked at connect exactly like ValheimPlus.",
       "artifact_sha256": {
-        "AdventureBackpacks.dll": "3ff1e3a8db1caee2579ff807e2bea9a3ad74bbc9909103833993d9547d6ce514"
+        "AdventureBackpacks.dll": "935e4704fc6a2ff714e19930b12fa1527a245054b575a8e7dc2d6f82b079fb93"
       },
       "plugin_name": "Adventure Backpacks",
-      "note": "Ships a Translations/ folder beside the DLL; 15 json files, copied on both sides."
+      "note": "Ships a Translations/ folder beside the DLL; 15 json files, copied on both sides. 2.0.9 hard-requires Jotunn 2.30.1, so the two can never be bumped independently: 2.0.4 wanted Jotunn 2.26.1 and the floor moved twice inside this version range.",
+      "telemetry": "2.0.6 added anonymous telemetry its changelog described as defaulting to enabled with auto-opt-in on launch. 2.0.9 REVERSED that: measured on the box 2026-09-18, the regenerated config carries 'Enable Anonymous Telemetry' under [Local Config] with 'Default value: false' and the value false, and 2.0.9's changelog says telemetry is now unchecked when first loaded. The key is marked [Not Synced with Server], so the server cannot set it for players either way; a client going straight from 2.0.4 to 2.0.9, which is what the pack does, gets it created at false. No action was needed. The same section carries 'Show Splash on Startup = true', also client-local, so players will see a splash screen on first launch after updating."
     },
     {
       "thunderstore": "Landoria-GentleDeath",
@@ -180,15 +183,15 @@
     },
     {
       "thunderstore": "RustyMods-Seasonality",
-      "version": "3.8.2",
+      "version": "3.8.3",
       "side": "both",
       "why": "Seasonal textures and colours, plus weather. Chosen over shudnal-Seasons because that one carries gameplay effects on crops and water, and we had just finished tuning crop growth. Modifiers Enabled ships Off and every per-season stat multiplier is 1, so out of the box it is purely visual, which is what was asked for. Depends on YamlDotNet, already carried for AdventureBackpacks.",
       "why_server_side": "Client-only was tried first, on the reasoning that the season derives from world age so clients would agree without server sync. Measured 2026-09-18: seasons never advanced, sitting on the configured Summer for days while the client logged a healthy load. Installed server-side the same night, after which the server logs 'Seasonal Timer Awake'. The mod's README lists season_winter and siblings as GLOBAL KEYS, which only a server writes, and every config entry is marked [Synced with Server] with the in-game set command admin-only. Those point the same way but do not by themselves prove the old reasoning wrong; the proof is a season actually flipping, which had not yet happened when this was written.",
       "artifact_sha256": {
-        "Seasonality.dll": "1223c18c06c90d3798ef14e9f7248c030ab1fb3176e06ee22178becd4e4ea766"
+        "Seasonality.dll": "acdc9139546509ab477d847d9eb3a3751ca39c55ceeacf0b42bffa2c65027500"
       },
       "plugin_name": "Seasonality",
-      "note": "Ships a config/Seasonality texture tree alongside the DLL; a mod manager places it, a hand install must copy it into BepInEx/config. Season lengths live in the server's copy of the config as a Vector3 of days, hours, minutes, with 30 real minutes to the in-game day. All four are set to two days, against a stock default of five in-game hours that cycles a whole year every 25 real minutes."
+      "note": "Ships a config/Seasonality texture tree alongside the DLL; a mod manager places it, a hand install must copy it into BepInEx/config. Season lengths live in the server's copy of the config as a Vector3 of days, hours, minutes, with 30 real minutes to the in-game day. All four are set to two days, against a stock default of five in-game hours that cycles a whole year every 25 real minutes. 3.8.3 adds a Warm_Twilight_SnowStorm environment because vanilla's Twilight_SnowStorm became freezing in Valheim 1.0, and instructs you to reset configs or change winter weather by hand. Checked against this estate's config on 2026-09-18 and it does NOT apply: Twilight_SnowStorm appears nowhere here, every [Winter] weather list already reads WarmSnow:1,Twilight_Snow:0.5,WarmSnowStorm:0.1, and Always Cold and Wet Freezes are both Off. Re-check that grep rather than the changelog if the warning resurfaces."
     },
     {
       "thunderstore": "f00d4tehg0dz-ValheimWebMap",
