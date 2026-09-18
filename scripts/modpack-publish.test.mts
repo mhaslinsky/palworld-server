@@ -46,14 +46,19 @@ test("the submission names the team as author and the Valheim community", () => 
   assert.equal(metadata.upload_uuid, "abc-123");
 });
 
-test("categories are sent keyed by community, which is the field that takes effect", () => {
+test("the game-version category goes ONLY in the community-scoped mapping", () => {
   const metadata = buildSubmissionMetadata(manifest(), "abc-123");
   assert.deepEqual(metadata.community_categories, {
     valheim: ["modpacks", "deep-north-update"],
   });
-  // The flat list rides along, but 1.2.0 shipped with only this set and the categories
-  // were dropped, so asserting it alone would pass for a submission that loses them again.
-  assert.deepEqual(metadata.categories, ["modpacks", "deep-north-update"]);
+  // Sending "deep-north-update" in the flat array too answered HTTP 400
+  // {"categories":{"1":["Object not found"]}} on a real submit. The two fields accept
+  // different slugs, so asserting they are equal is what let that reach Thunderstore.
+  assert.deepEqual(metadata.categories, ["modpacks"]);
+  assert.ok(
+    !metadata.categories.includes("deep-north-update"),
+    "the flat categories array rejects game-version slugs and fails the whole submit",
+  );
 });
 
 test("every category is an API slug, never a display name", () => {

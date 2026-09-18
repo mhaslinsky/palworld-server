@@ -2,24 +2,24 @@
   "_comment": "Pinned source of truth for every mod on the Valheim estate. The server install, Mike's client, and the published client modpack are all generated from or checked against this file. Edit it FIRST, then deploy; never the other way round.",
   "_versions": "`version` is what Thunderstore calls the release and is what the modpack pins. `plugin_name` and `plugin_version` are what BepInEx prints in LogOutput.log, which is what scripts/mods-verify.mts compares against. They differ: the loader is packaged as 5.4.2350 and logs 5.4.23.5. A null plugin_name means the entry cannot be verified from the log, and the verifier reports that rather than passing it.",
   "world": "Utgarde",
-  "game_version": "1.0.12",
+  "game_version": "1.0.14",
   "network_version": 40,
   "modpack": {
     "namespace": "valheimsquad",
     "name": "Utgarde_Client_Pack",
-    "version_number": "1.2.0",
+    "version_number": "1.8.0",
     "website_url": "https://github.com/mhaslinsky/palworld-server",
     "description": "Client mods for the Utgarde Valheim server, pinned to the versions the server runs."
   },
   "verified": {
     "server": {
-      "at": "2026-09-13T01:43:00Z",
-      "method": "scripts/mods-verify.mts against BepInEx/LogOutput.log fetched over SSM after the PlantEverything 1.21.2 upgrade and the camera/growth config restart; CLEAN at 10 plugins",
-      "game": "l-1.0.12, network version 40"
+      "at": "2026-09-18T05:23:00Z",
+      "method": "scripts/mods-verify.mts against BepInEx/LogOutput.log fetched over SSM after the Seasonality and OdinHorse server-side installs; CLEAN at 13",
+      "game": "l-1.0.14, network version 40"
     },
     "client_jetragon": {
-      "at": "2026-09-12T05:42:00Z",
-      "method": "hand install into D:\\SteamLibrary\\steamapps\\common\\Valheim, hashes compared against the server copies"
+      "at": "2026-09-15T01:45:00Z",
+      "method": "hand install into the Gale Default profile, every DLL hash-compared against the downloaded artifact; GentleDeath, AdventureBackpacks and VikingsDoSwim exercised in game"
     }
   },
   "mods": [
@@ -33,17 +33,17 @@
     },
     {
       "thunderstore": "Grantapher-ValheimPlus_Grantapher_Temporary",
-      "version": "10.1.1",
-      "upstream_version": "0.10.1.1",
-      "upstream": "https://github.com/Grantapher/ValheimPlus/releases/tag/0.10.1.1",
+      "version": "10.1.2",
+      "upstream_version": "0.10.1.2",
+      "upstream": "https://github.com/Grantapher/ValheimPlus/releases/tag/0.10.1.2",
       "side": "both",
       "enforced": true,
       "why": "Craft-from-chest, map sharing, smelter tuning, build and taming settings. The server sets enforceMod = true, so a client on any other version is kicked at connect.",
       "artifact_sha256": {
-        "ValheimPlus.dll": "0d7faa2e866fe27dd159cb4a477a951e4f14be52ac3b11f765e029ae653735ea"
+        "ValheimPlus.dll": "21ca2aa532eaf3de86c08ab18fa74341b36214c78b3607dc14f998f1dc0c7a47"
       },
       "plugin_name": "Valheim Plus",
-      "plugin_version": "0.10.1.1"
+      "plugin_version": "0.10.1.2"
     },
     {
       "thunderstore": "ValheimModding-Jotunn",
@@ -68,28 +68,28 @@
     {
       "thunderstore": "ValheimModding-YamlDotNet",
       "version": "16.3.1",
-      "side": "server",
-      "why": "ServersideQoL dependency.",
+      "side": "both",
+      "why": "ServersideQoL dependency server-side; AdventureBackpacks declares it client-side too, so every player now carries it.",
       "plugin_name": "YamlDotNet Detector",
       "plugin_version": "1.0.0"
     },
     {
       "thunderstore": "ArgusMagnus-ServersideQoL",
-      "version": "2.0.7",
+      "version": "2.0.10",
       "side": "server",
-      "why": "Framework the four ServersideQoL modules below plug into. 2.0.4 silently stopped on the 1.0.12 network-version bump and took PortalProgression down with it, so this pin is load-bearing after every game patch.",
+      "why": "Framework the three ServersideQoL modules below plug into. 2.0.4 silently stopped on the 1.0.12 network-version bump and took PortalProgression down with it, so this pin is load-bearing after every game patch.",
       "plugin_name": "ServersideQoL"
     },
     {
       "thunderstore": "ArgusMagnus-ServersideQoL_PortalProgression",
-      "version": "2.0.0",
+      "version": "2.0.8",
       "side": "server",
       "why": "Boss-gated ore through portals. The group voted for progression gating over free teleporting.",
       "plugin_name": "ServersideQoL.PortalProgression"
     },
     {
       "thunderstore": "ArgusMagnus-ServersideQoL_AutoStore",
-      "version": "2.0.0",
+      "version": "2.0.8",
       "side": "server",
       "why": "Auto-sort, auto-pickup, and stack-into-nearby-chests on the Cheer emote.",
       "plugin_name": "ServersideQoL.AutoStore"
@@ -117,7 +117,7 @@
     },
     {
       "thunderstore": "Azumatt-Unshamed",
-      "version": "1.0.3",
+      "version": "1.0.5",
       "side": "client",
       "why": "Valheim 1.0 blocks Steam achievements for anyone running mods, so this pack is what disables them. Unshamed restores them and returns the ones already earned, granting no free unlocks. It is here because the pack causes the problem it fixes. Client-only: achievements are a Steam client concern and the server has no use for it.",
       "plugin_name": null,
@@ -130,6 +130,63 @@
       "why": "Saves the server password and adds a quick-connect button for the last server, so nobody retypes it every session. Chosen over Dedryx-QuickServerConnect because it covers both jobs in one mod: two mods hooking the same join dialog and both storing passwords is a conflict waiting to happen. Client-only and purely convenience, so dropping it breaks nothing. Published 2026-09-12 and therefore unproven here; remove it if it misbehaves.",
       "plugin_name": null,
       "plugin_name_note": "client-side only, so it never appears in the server's load log"
+    },
+    {
+      "thunderstore": "Vapok-AdventureBackpacks",
+      "version": "2.0.4",
+      "side": "both",
+      "enforced": true,
+      "why": "Craftable, wearable backpacks with tiers. Replaces ArgusMagnus-ServersideQoL_Backpack, which was server-only and therefore cheaper to deploy, but was an invisible container opened by an emote rather than an item in the world. Since the pack reaches every player anyway, the deployment saving bought nothing. Jotunn-based, so a client without it is kicked at connect exactly like ValheimPlus.",
+      "artifact_sha256": {
+        "AdventureBackpacks.dll": "3ff1e3a8db1caee2579ff807e2bea9a3ad74bbc9909103833993d9547d6ce514"
+      },
+      "plugin_name": "Adventure Backpacks",
+      "note": "Ships a Translations/ folder beside the DLL; 15 json files, copied on both sides."
+    },
+    {
+      "thunderstore": "Landoria-GentleDeath",
+      "version": "1.0.12",
+      "side": "client",
+      "why": "Keeps equipables (weapons, armor, tools, shields, ammo, utility, trinkets) on death and sends everything else to the tombstone, classifying via Valheim's own ItemData.IsEquipable(). Replaces beefbaccio-DeathTweaks, which shipped in pack 1.3.0 and coincided with every player stuck at 1 health; that attribution was never proven, but DeathTweaks predated Valheim 1.0 and this one declares 1.0.x compatibility. Verified working on jetragon 2026-09-15.",
+      "artifact_sha256": {
+        "Landoria.GentleDeath.dll": "9852b5e5df8620fbc1e94dd32b9ce13145068698c4d1b10b1c77dd77867ea661"
+      },
+      "plugin_name": null,
+      "plugin_name_note": "client-side only, so it never appears in the server's load log"
+    },
+    {
+      "thunderstore": "blacks7ar-VikingsDoSwim",
+      "version": "1.4.2",
+      "side": "client",
+      "why": "Scales swim speed, stamina regen and stamina drain to the Swim skill, and adds diving. Vanilla swimming was the complaint. Verified on jetragon 2026-09-15.",
+      "artifact_sha256": {
+        "VikingsDoSwim.dll": "61db2b0d3761a0e65b57fdf5acd2382019a4c1b1471809509ab6a279aa8c63f2"
+      },
+      "plugin_name": null,
+      "plugin_name_note": "client-side only, so it never appears in the server's load log"
+    },
+    {
+      "thunderstore": "OdinPlus-OdinHorse",
+      "version": "1.7.0",
+      "side": "both",
+      "why": "Ground transport: a tameable, rideable, breedable horse with armour and an attachable cart. Added 2026-09-18 because overland travel to the traders and back is the group's standing complaint, and vanilla offers nothing below the Plains lox saddle. Chosen on maintenance rather than features: it is the only mod in this category still shipping, updated 2026-09-15, against a field where the nearest alternatives (BeastsOfBurden 2021, CraftyCartsRemake and ValheimRAFT early 2026) are stale. Declares no dependencies and bundles its assets in a 10.5 MB DLL, so it needs nothing else on the box. Config syncs from the server like ValheimPlus.",
+      "artifact_sha256": {
+        "OdinHorse.dll": "f96a6e638b39e5f83c6331e0c405eec26ece2d558455aaf318316ef10bce91c2"
+      },
+      "plugin_name": "OdinHorse",
+      "note": "Whether it rejects a client that lacks it is UNVERIFIED. It is not Jotunn-based, so the mod-enforcement path that kicks a client missing AdventureBackpacks or the trough does not apply, but it does add prefabs and a client without them is untested. Shipping it in the pack in the same pass as the server install is what keeps that question academic. Its own readme opens by telling you to back up character and world files before installing or updating."
+    },
+    {
+      "thunderstore": "RustyMods-Seasonality",
+      "version": "3.8.2",
+      "side": "both",
+      "why": "Seasonal textures and colours, plus weather. Chosen over shudnal-Seasons because that one carries gameplay effects on crops and water, and we had just finished tuning crop growth. Modifiers Enabled ships Off and every per-season stat multiplier is 1, so out of the box it is purely visual, which is what was asked for. Depends on YamlDotNet, already carried for AdventureBackpacks.",
+      "why_server_side": "Client-only was tried first, on the reasoning that the season derives from world age so clients would agree without server sync. Measured 2026-09-18: seasons never advanced, sitting on the configured Summer for days while the client logged a healthy load. Installed server-side the same night, after which the server logs 'Seasonal Timer Awake'. The mod's README lists season_winter and siblings as GLOBAL KEYS, which only a server writes, and every config entry is marked [Synced with Server] with the in-game set command admin-only. Those point the same way but do not by themselves prove the old reasoning wrong; the proof is a season actually flipping, which had not yet happened when this was written.",
+      "artifact_sha256": {
+        "Seasonality.dll": "1223c18c06c90d3798ef14e9f7248c030ab1fb3176e06ee22178becd4e4ea766"
+      },
+      "plugin_name": "Seasonality",
+      "note": "Ships a config/Seasonality texture tree alongside the DLL; a mod manager places it, a hand install must copy it into BepInEx/config. Season lengths live in the server's copy of the config as a Vector3 of days, hours, minutes, with 30 real minutes to the in-game day. All four are set to two days, against a stock default of five in-game hours that cycles a whole year every 25 real minutes."
     }
   ]
 }
