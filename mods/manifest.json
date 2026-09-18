@@ -7,14 +7,14 @@
   "modpack": {
     "namespace": "valheimsquad",
     "name": "Utgarde_Client_Pack",
-    "version_number": "1.7.0",
+    "version_number": "1.8.0",
     "website_url": "https://github.com/mhaslinsky/palworld-server",
     "description": "Client mods for the Utgarde Valheim server, pinned to the versions the server runs."
   },
   "verified": {
     "server": {
-      "at": "2026-09-18T03:35:00Z",
-      "method": "scripts/mods-verify.mts against BepInEx/LogOutput.log fetched over SSM after the Seasonality server-side install; CLEAN",
+      "at": "2026-09-18T05:23:00Z",
+      "method": "scripts/mods-verify.mts against BepInEx/LogOutput.log fetched over SSM after the Seasonality and OdinHorse server-side installs; CLEAN at 13",
       "game": "l-1.0.14, network version 40"
     },
     "client_jetragon": {
@@ -164,6 +164,17 @@
       },
       "plugin_name": null,
       "plugin_name_note": "client-side only, so it never appears in the server's load log"
+    },
+    {
+      "thunderstore": "OdinPlus-OdinHorse",
+      "version": "1.7.0",
+      "side": "both",
+      "why": "Ground transport: a tameable, rideable, breedable horse with armour and an attachable cart. Added 2026-09-18 because overland travel to the traders and back is the group's standing complaint, and vanilla offers nothing below the Plains lox saddle. Chosen on maintenance rather than features: it is the only mod in this category still shipping, updated 2026-09-15, against a field where the nearest alternatives (BeastsOfBurden 2021, CraftyCartsRemake and ValheimRAFT early 2026) are stale. Declares no dependencies and bundles its assets in a 10.5 MB DLL, so it needs nothing else on the box. Config syncs from the server like ValheimPlus.",
+      "artifact_sha256": {
+        "OdinHorse.dll": "f96a6e638b39e5f83c6331e0c405eec26ece2d558455aaf318316ef10bce91c2"
+      },
+      "plugin_name": "OdinHorse",
+      "note": "Whether it rejects a client that lacks it is UNVERIFIED. It is not Jotunn-based, so the mod-enforcement path that kicks a client missing AdventureBackpacks or the trough does not apply, but it does add prefabs and a client without them is untested. Shipping it in the pack in the same pass as the server install is what keeps that question academic. Its own readme opens by telling you to back up character and world files before installing or updating."
     },
     {
       "thunderstore": "RustyMods-Seasonality",
