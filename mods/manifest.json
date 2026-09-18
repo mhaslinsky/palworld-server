@@ -77,7 +77,7 @@
       "thunderstore": "ArgusMagnus-ServersideQoL",
       "version": "2.0.10",
       "side": "server",
-      "why": "Framework the four ServersideQoL modules below plug into. 2.0.4 silently stopped on the 1.0.12 network-version bump and took PortalProgression down with it, so this pin is load-bearing after every game patch.",
+      "why": "Framework the three ServersideQoL modules below plug into. 2.0.4 silently stopped on the 1.0.12 network-version bump and took PortalProgression down with it, so this pin is load-bearing after every game patch.",
       "plugin_name": "ServersideQoL"
     },
     {

@@ -57,12 +57,12 @@ export interface SubmissionMetadata {
 }
 
 /**
- * `community_categories` assigns the categories; the flat `categories` is not keyed by
- * community and was ignored. Measured 2026-09-13: 1.2.0 was submitted with
- * `categories: ["modpacks"]` alone and the listing came back carrying only "Deep North
- * Update", so the pack was missing the one category people filter on to find a modpack.
- * Both are sent because the API accepts both and only one of them is the documented
- * per-community mapping.
+ * The two category fields take different slugs, so they are built from different arrays.
+ * `community_categories` is the documented per-community mapping and takes both the content
+ * and game-version slugs. The flat `categories` takes the content slug only: sending a
+ * game-version slug there fails the whole submit with HTTP 400, measured 2026-09-14.
+ * Both are still sent, because 1.2.0 went up with the flat field alone on 2026-09-13 and
+ * the listing came back without "modpacks", the one category people filter a pack by.
  */
 export function buildSubmissionMetadata(
   manifest: EstateManifest,
