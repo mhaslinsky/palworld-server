@@ -1,0 +1,30 @@
+mods/manifest.json
+  s_2ac9eba3ef2fbd::t_5671cc70bbd684 16-17
+  s_2ac9eba3ef2fbd::t_997382fe5ff837 169-178
+  s_2ac9eba3ef2fbd::t_56702d88b2e5a8 10
+  s_a9a0d805b1f008::t_98e4c0c8fb7cd1 168
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "119e374ab5c6ebd868ddfe0f841090ee0f24538b",
+  "prompts": {},
+  "sessions": {
+    "s_2ac9eba3ef2fbd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f859c11d-69bd-4710-990c-51cd73845476",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    },
+    "s_a9a0d805b1f008": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0b2e6-3d46-77a1-b9a4-b720af1d2461",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    }
+  }
+}
