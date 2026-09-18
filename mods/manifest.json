@@ -2,7 +2,7 @@
   "_comment": "Pinned source of truth for every mod on the Valheim estate. The server install, Mike's client, and the published client modpack are all generated from or checked against this file. Edit it FIRST, then deploy; never the other way round.",
   "_versions": "`version` is what Thunderstore calls the release and is what the modpack pins. `plugin_name` and `plugin_version` are what BepInEx prints in LogOutput.log, which is what scripts/mods-verify.mts compares against. They differ: the loader is packaged as 5.4.2350 and logs 5.4.23.5. A null plugin_name means the entry cannot be verified from the log, and the verifier reports that rather than passing it.",
   "world": "Utgarde",
-  "game_version": "1.0.14",
+  "game_version": "1.0.15",
   "network_version": 40,
   "modpack": {
     "namespace": "valheimsquad",
@@ -13,9 +13,9 @@
   },
   "verified": {
     "server": {
-      "at": "2026-09-18T05:23:00Z",
-      "method": "scripts/mods-verify.mts against BepInEx/LogOutput.log fetched over SSM after the Seasonality and OdinHorse server-side installs; CLEAN at 13",
-      "game": "l-1.0.14, network version 40"
+      "at": "2026-09-18T22:35:00Z",
+      "method": "scripts/mods-verify.mts against BepInEx/LogOutput.log fetched over SSM after the four ServersideQoL upgrades and the ValheimPlus [Experience] edit; CLEAN at 14. World load confirmed separately (Zonesystem Awake, DungeonDB Start), since an active unit is not a loaded world. Zero MissingFieldException, NullReferenceException or StackOverflow this boot.",
+      "game": "l-1.0.15, network version 40"
     },
     "client_jetragon": {
       "at": "2026-09-15T01:45:00Z",
@@ -75,31 +75,33 @@
     },
     {
       "thunderstore": "ArgusMagnus-ServersideQoL",
-      "version": "2.0.10",
+      "version": "2.0.13",
       "side": "server",
       "why": "Framework the three ServersideQoL modules below plug into. 2.0.4 silently stopped on the 1.0.12 network-version bump and took PortalProgression down with it, so this pin is load-bearing after every game patch.",
-      "plugin_name": "ServersideQoL"
+      "plugin_name": "ServersideQoL",
+      "note": "Ships TWO artifacts and they must move together: plugins/ServersideQoL.dll and patchers/ServersideQoL.Patchers.dll, which BepInEx loads first and which patches assembly_valheim. Upgrading only the plugin leaves the patcher a version behind, and the load log reports both, so check the 'Loaded 1 patcher method from [ServersideQoL.Patchers ...]' line as well as the plugin line. 2.0.13 specifically fixes a StackOverflowException from infinite recursion, and 2.0.12 a crash on first-time startup."
     },
     {
       "thunderstore": "ArgusMagnus-ServersideQoL_PortalProgression",
-      "version": "2.0.8",
+      "version": "2.0.11",
       "side": "server",
       "why": "Boss-gated ore through portals. The group voted for progression gating over free teleporting.",
       "plugin_name": "ServersideQoL.PortalProgression"
     },
     {
       "thunderstore": "ArgusMagnus-ServersideQoL_AutoStore",
-      "version": "2.0.8",
+      "version": "2.0.11",
       "side": "server",
       "why": "Auto-sort, auto-pickup, and stack-into-nearby-chests on the Cheer emote.",
       "plugin_name": "ServersideQoL.AutoStore"
     },
     {
       "thunderstore": "ArgusMagnus-ServersideQoL_ContainerSigns",
-      "version": "2.0.7",
+      "version": "2.0.11",
       "side": "server",
       "why": "Content signs on chests, and how a chest is designated for other ServersideQoL modules.",
-      "plugin_name": "ServersideQoL.ContainerSigns"
+      "plugin_name": "ServersideQoL.ContainerSigns",
+      "note": "2.0.11 moved two settings out of this mod: AutoPickupMaxRange went to AutoStore and FeedFromContainersMaxRange went to AutoProcess, which this estate does not install. Both were sitting at the default of 64 here, so nothing needed re-homing, but a future custom value set on the wrong side of that split goes silently inert."
     },
     {
       "thunderstore": null,
@@ -187,6 +189,17 @@
       },
       "plugin_name": "Seasonality",
       "note": "Ships a config/Seasonality texture tree alongside the DLL; a mod manager places it, a hand install must copy it into BepInEx/config. Season lengths live in the server's copy of the config as a Vector3 of days, hours, minutes, with 30 real minutes to the in-game day. All four are set to two days, against a stock default of five in-game hours that cycles a whole year every 25 real minutes."
+    },
+    {
+      "thunderstore": "f00d4tehg0dz-ValheimWebMap",
+      "version": "2.1.5",
+      "side": "server",
+      "why": "Browser map of the live world, served from the box over the Cloudflare tunnel, showing the terrain every player has explored plus player pins and pin sharing. Server-side only: it renders from the world the server holds, so clients install nothing. Chosen over Mubs-WebMap and the other h0tw1r3 forks because it is the one still shipping, and because it keeps the 3D view and renders history rather than only what is explored while it runs.",
+      "artifact_sha256": {
+        "WebMap.dll": "07fdae8b12945fe5cceb0c8ac243debfbe3248ad483853188a37cf815015bbd8"
+      },
+      "plugin_name": "WebMap",
+      "note": "Ships a web/ tree beside the DLL and writes rendered tiles into plugins/WebMap/map_data, which reached 110 MB on first full reveal, so it is not a candidate for the backup set. Its zip uses Windows path separators, so a plain extractall produces files literally named 'plugins\\WebMap\\web\\js\\app.js'; normalise the separators on extract. The three h0tw1r3 forks share the config filename com.github.h0tw1r3.valheim.webmap.cfg, so a fork swap that leaves the old file behind silently inherits the previous fork's values."
     }
   ]
 }
