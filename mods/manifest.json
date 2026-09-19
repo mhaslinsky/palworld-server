@@ -13,14 +13,14 @@
   },
   "verified": {
     "server": {
-      "at": "2026-09-19T05:14:00Z",
-      "method": "scripts/mods-verify.mts against BepInEx/LogOutput.log fetched over SSM after installing Render Limits and Muted Mist server-side; CLEAN at 16. World load confirmed separately (Game server connected, Zonesystem Awake, DungeonDB Start at 05:11), since an active unit is not a loaded world. Zero exceptions this boot against a control of 53 BepInEx log lines, so the probe is not vacuous. The three client-only mods were checked ABSENT from the server, and the game's Managed directory confirmed untouched. Pack 1.10.0 published and confirmed is_active with all 17 dependencies.",
+      "at": "2026-09-19T20:42:23Z",
+      "method": "scripts/mods-verify.mts against the box's BepInEx/LogOutput.log after installing TreesReborn server-side; CLEAN at 17, up from 16, with TreesReborn 1.1.3 the added row. The log was fetched WHOLE (gzip plus base64 over SSM, sha256 34f0cece38ab92ca5db818631bfce2715a8da1b8768854bf96529d8d20ca0698 matching on both ends) rather than grepped on the box, because selecting lines would have shaped the input to the check. World load confirmed separately: Game server connected 20:40:10, Zonesystem Awake 20:40:11, DungeonDB Start 20:40:16. Zero exceptions against a control of 431 log lines, and the unit is active AND enabled. The dictionary selection was proven by OBSERVATION, not by the GUID match alone: BepInEx's disk sink ships without Debug, so the mod's \"Loaded <n> seeds from <file>\" line never reached the log. Debug was turned on temporarily in [Logging.Disk] only, which printed \"TreesReborn Loaded 9 seeds from .../configs/tree_dict_Plant_Everything.json\", confirming the PlantEverything branch fired and not the fallback. Both configs were then restored from their .pre-debug.20260919T203707Z backups and the revert re-read section-scoped. Control for that probe: 42 Debug lines present while it was on, 0 after. Pack 1.11.0 published and confirmed is_active with all 18 dependencies.",
       "game": "l-1.0.15, network version 40"
     },
     "client_jetragon": {
       "at": "2026-09-15T01:45:00Z",
       "method": "hand install into the Gale Default profile, every DLL hash-compared against the downloaded artifact; GentleDeath, AdventureBackpacks and VikingsDoSwim exercised in game",
-      "stale": "STALE as of pack 1.9.0 (2026-09-18). That verification covered Jotunn 2.30.0, AdventureBackpacks 2.0.4 and Seasonality 3.8.2, all three of which have since moved. jetragon needs to pull pack 1.10.0, plus the hand-installed Animal Feeding Trough 1.0.3 which the pack cannot carry, before this line means anything again."
+      "stale": "STALE as of pack 1.11.0 (2026-09-19). That verification covered Jotunn 2.30.0, AdventureBackpacks 2.0.4 and Seasonality 3.8.2, all three of which have since moved, and predates the five visual mods and TreesReborn. jetragon needs to pull pack 1.11.0, plus the hand-installed Animal Feeding Trough 1.0.3 which the pack cannot carry, before this line means anything again."
     }
   },
   "mods": [
