@@ -7,14 +7,14 @@
   "modpack": {
     "namespace": "valheimsquad",
     "name": "Utgarde_Client_Pack",
-    "version_number": "1.9.0",
+    "version_number": "1.10.0",
     "website_url": "https://github.com/mhaslinsky/palworld-server",
     "description": "Client mods for the Utgarde Valheim server, pinned to the versions the server runs."
   },
   "verified": {
     "server": {
-      "at": "2026-09-18T22:47:00Z",
-      "method": "scripts/mods-verify.mts against BepInEx/LogOutput.log fetched over SSM after the Jotunn, AdventureBackpacks and Seasonality upgrades; CLEAN at 14. World load confirmed separately (Game server connected, Zonesystem Awake, DungeonDB Start at 22:46), since an active unit is not a loaded world. Zero exceptions of any class this boot. Pack 1.9.0 published and confirmed is_active on Thunderstore with all 12 dependencies matching.",
+      "at": "2026-09-19T05:14:00Z",
+      "method": "scripts/mods-verify.mts against BepInEx/LogOutput.log fetched over SSM after installing Render Limits and Muted Mist server-side; CLEAN at 16. World load confirmed separately (Game server connected, Zonesystem Awake, DungeonDB Start at 05:11), since an active unit is not a loaded world. Zero exceptions this boot against a control of 53 BepInEx log lines, so the probe is not vacuous. The three client-only mods were checked ABSENT from the server, and the game's Managed directory confirmed untouched. Pack 1.10.0 published and confirmed is_active with all 17 dependencies.",
       "game": "l-1.0.15, network version 40"
     },
     "client_jetragon": {
@@ -203,6 +203,63 @@
       },
       "plugin_name": "WebMap",
       "note": "Ships a web/ tree beside the DLL and writes rendered tiles into plugins/WebMap/map_data, which reached 110 MB on first full reveal, so it is not a candidate for the backup set. Its zip uses Windows path separators, so a plain extractall produces files literally named 'plugins\\WebMap\\web\\js\\app.js'; normalise the separators on extract. The three h0tw1r3 forks share the config filename com.github.h0tw1r3.valheim.webmap.cfg, so a fork swap that leaves the old file behind silently inherits the previous fork's values."
+    },
+    {
+      "thunderstore": "Pumpkin-ValheimVisualEnhanced",
+      "version": "0.5.14",
+      "side": "client",
+      "why": "The visual upgrade the group asked for. Explicitly NOT a ReShade-style screen filter: its effects hook Valheim's own lighting, water, weather, biome and time-of-day systems, so they respond to the world rather than tinting the frame. Ships wind-driven cloud shadows, underwater caustics and Meadows fireflies on by default. Chosen over the texture-replacement mods because those are limited to vegetation and their own author recommends this one instead.",
+      "artifact_sha256": {
+        "ValheimVisualEnhanced.dll": "41ee80b912ebabd7ba2c50e1e180c2dddfddd7f64ed05233dfa3fe66ae7a623b"
+      },
+      "plugin_name": null,
+      "plugin_name_note": "client-side only, so it never appears in the server's load log",
+      "note": "Requires Direct3D 11; its readme states Vulkan is not currently validated, so a client launching with -force-vulkan may misbehave. Windows only. Declares no Jotunn dependency and no network sync, so it cannot trigger the mod-compatibility kick. Its own readme says do NOT install it on a dedicated server; it has no server-side behaviour. The Enhanced Environment colour-grading feature ships Enabled = false and was deliberately left off: it is the one opinionated feature and visibly recolours the game."
+    },
+    {
+      "thunderstore": "Wire-WiresGrassTweaks",
+      "version": "0.2.3",
+      "side": "client",
+      "why": "Grass density and draw distance, so clutter stops popping in a few metres ahead of the player. Chosen on currency rather than popularity: ShadowField-GrassTweaks has ten times the downloads and is recommended by other mods' readmes, but was last updated 2025-07-26, before Valheim 1.0. This one was updated 2026-09-14 and declares no dependencies at all.",
+      "artifact_sha256": {
+        "WiresGrassTweaks.dll": "5ac628f63a8b414f5b49bba57f28bf5d2ea0e9c7b45e5d5f84ee428bfb1c873f"
+      },
+      "plugin_name": null,
+      "plugin_name_note": "client-side only, so it never appears in the server's load log"
+    },
+    {
+      "thunderstore": "ontrigger-ValheimPerformanceOptimizations",
+      "version": "1.2.2",
+      "side": "client",
+      "why": "Rendering and loading optimisations, taken to buy frame headroom for the draw distance and effects the rest of this batch adds rather than to fix a performance problem. Declares no dependencies.",
+      "artifact_sha256": {
+        "ValheimPerformanceOptimizations.dll": "37b610dd6229e5eb91800ff9a5ce611bdcf57a3a5382f6712fb8bf59e7252892"
+      },
+      "plugin_name": null,
+      "plugin_name_note": "client-side only, so it never appears in the server's load log",
+      "why_not_server_side": "The package advertises itself as working on servers, but its author's own readme says 'I have not tested this mod on servers'. It also ships Unity.Burst.dll, Unity.Burst.Unsafe.dll and Unity.Mathematics.dll into the GAME's Managed directory rather than into BepInEx/plugins, and this box re-runs SteamCMD on boot, which owns that directory. Almost every optimisation it lists is rendering work a headless server never does: light flicker culling, reflection probes, particle culling, audiosource culling. Only the ZDO ownership scan is server-relevant. Untested-by-author plus writing into a SteamCMD-managed directory, for one server-side win, is a poor trade on a live world."
+    },
+    {
+      "thunderstore": "MagiCorp-Render_Limits_Fix",
+      "version": "1.16.0",
+      "side": "both",
+      "why": "Draw distance: controls how far zones are rendered, loaded and generated. Must be on the server for extended limits to be possible at all; clients install it to raise their own. This is a maintained fork of JereKuusela's Render Limits, rebuilt and smoke-tested against Valheim 1.0.14 at network version 40, which matches this estate, and it preserves the original render_limits plugin GUID and config keys.",
+      "artifact_sha256": {
+        "RenderLimits.dll": "59e101ae4813a4280e6d41a77d34d3c18c155d80fe643d28a560b5635c1dbe71"
+      },
+      "plugin_name": "Render Limits",
+      "note": "Installed at stock values. 1.16.0 specifically added server-side guardrails against a client requesting an excessive loaded radius, plus a 'Maximum force active zones' bound, so raising limits is a deliberate follow-up rather than something to crank blind. Each zone is 64x64 m."
+    },
+    {
+      "thunderstore": "VentureValheim-Muted_Mist",
+      "version": "1.0.0",
+      "side": "both",
+      "why": "Thins the Mistlands mist instead of deleting it. One setting, TransparencyIntensity, where 0 hides the mist entirely and 1 is vanilla; the estate runs 0.7, a gentle trim. Chosen over Vapok-NoFogBruh, which removes fog outright and was rejected as effectively cheating in the Mistlands, and over ComfyMods-Dramamist, which does the same job but predates Valheim 1.0.",
+      "artifact_sha256": {
+        "VentureValheim.MutedMist.dll": "7c093f4275bedacc900efa755aaf4f2438e0019bc80bdbb2ecfae72156511290"
+      },
+      "plugin_name": "MutedMist",
+      "note": "Config changes take effect LIVE, with no restart, which is unusual on this estate and makes it the cheapest setting here to tune in place. Installed server-side deliberately: its readme says a server install enforces the configuration on clients, and leaving it off the server would let each player choose, but it is the only mod in this batch with a Jotunn dependency and therefore the only one that could trigger a mod-compatibility kick if server and clients disagreed. One shared value is the cheaper trade. Its shipped default is TransparencyIntensity = 0.2, which is near-invisible mist, NOT vanilla; 0.7 here is therefore a raise off the default rather than a cut from vanilla. Read the generated config before assuming a mod's default is the vanilla behaviour."
     }
   ]
 }
