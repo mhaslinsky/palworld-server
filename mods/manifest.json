@@ -7,7 +7,7 @@
   "modpack": {
     "namespace": "valheimsquad",
     "name": "Utgarde_Client_Pack",
-    "version_number": "1.10.0",
+    "version_number": "1.11.0",
     "website_url": "https://github.com/mhaslinsky/palworld-server",
     "description": "Client mods for the Utgarde Valheim server, pinned to the versions the server runs."
   },
@@ -266,6 +266,18 @@
       },
       "plugin_name": "MutedMist",
       "note": "Config changes take effect LIVE, with no restart, which is unusual on this estate and makes it the cheapest setting here to tune in place. Installed server-side deliberately: its readme says a server install enforces the configuration on clients, and leaving it off the server would let each player choose, but it is the only mod in this batch that declares a Jotunn dependency, which is the one kick path this estate has actually seen fire. That made it the likeliest to enforce a version match, not the only thing that conceivably could; it was afterwards observed not to enforce one. One shared value is the cheaper trade. Its shipped default is TransparencyIntensity = 0.2, which is near-invisible mist, NOT vanilla; 0.7 here is therefore a raise off the default rather than a cut from vanilla. Read the generated config before assuming a mod's default is the vanilla behaviour."
+    },
+    {
+      "thunderstore": "TastyChickenLegs-TreesReborn",
+      "version": "1.1.3",
+      "side": "both",
+      "why": "Replants a sapling where a felled tree's stump is destroyed, so logging does not permanently strip the map. Requested by the operator 2026-09-19; no reason beyond the request was given. Chosen as the only maintained member of its family: it is a rebuild of Aedenthorn's TreeRespawn, and of the surviving forks of that original the freshest is Lyric-TreeRespawn_by_Aedenthorn 0.8.5, last updated 2026-03-10, with most of the rest deprecated, against this one's 2026-09-11. Its readme declares the target as \"Updated for Valheim 1.0\" with no patch number, so the fourth drift check is INDETERMINATE here rather than clean: unlike WiresGrassTweaks there is no number to compare against game_version 1.0.15. Sole declared dependency is BepInExPack 5.4.2202, older than the 5.4.2350 this estate runs.",
+      "artifact_sha256": {
+        "TreesReborn.dll": "7ec4769e9bd3b462c457027ca70f2a6194aaa1c8b60f4cab519faca025fef313"
+      },
+      "plugin_name": "TreesReborn",
+      "note": "Ships a plugins/configs/ tree beside the DLL, so a hand install must copy the folder and not just the DLL; same trap as Seasonality's config tree and AdventureBackpacks' Translations folder. ALL FOUR dictionaries must be present, because the mod picks one at RUNTIME by probing BepInEx for a planting mod's GUID: advize.PlantEverything selects tree_dict_Plant_Everything.json, com.Defryder.Plant_all_trees selects tree_dict_Plant_all_trees.json, com.bkeyes93.PlantingPlus selects tree_dict_PlantingPlus.json, and tree_dict.json is the fallback when none is loaded. This estate runs Advize-PlantEverything, so it resolves to the PlantEverything dictionary with no configuration, and that dictionary differs: it maps SwampTree1_Stub to Ancient_Sapling where the fallback maps SwampTree1 to SwampTree1. Shipping only tree_dict.json would leave the selected file missing, which is a silent failure. The mod prints \"Loaded <n> seeds from <file>\" on startup, so the chosen dictionary is verifiable from the server log rather than inferred. Config keys live under [General]: Enabled, RespawnDelay, treeRate, useRandomSapling, checkcraftingtable, noswamptreerespawn, GrowthSpaceRestriction, DebugMode.",
+      "sync": "Bundles ServerSync inside the DLL rather than declaring it as a dependency, so the server holds the config and locks it to clients. The DLL's own text says \"It's required that the mod is installed on the server and all clients\" and carries ServerSync's version-mismatch path (\"Received server version is not equal\"), so treat this as a mod that can refuse a mismatched client and keep the deploy-to-publish window short. ServerSync is not Jotunn's ModCompatibility, and whether a client lacking the mod is actually refused here is UNVERIFIED; the author's statement and the version check are the evidence, not an observation."
     }
   ]
 }
