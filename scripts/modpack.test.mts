@@ -279,3 +279,35 @@ test("the readme says so when nothing is version-enforced", () => {
   });
   assert.match(buildReadme(input), /No mod in this pack is version-enforced/);
 });
+
+test("an admin-only mod is kept out of the pack and off the player page", () => {
+  const withAdminTool = manifest({
+    mods: [
+      mod({ thunderstore: "denikson-BepInExPack_Valheim" }),
+      mod({
+        thunderstore: "Azumatt-Official_BepInEx_ConfigurationManager",
+        version: "18.4.1",
+        side: "client",
+        admin_only: true,
+        why: "admin edits synced config in game",
+      }),
+    ],
+  });
+  const { included, unpackageable, adminOnly } = selectClientMods(withAdminTool);
+  assert.deepEqual(
+    included.map((entry) => entry.thunderstore),
+    ["denikson-BepInExPack_Valheim"],
+  );
+  assert.deepEqual(
+    adminOnly.map((entry) => entry.thunderstore),
+    ["Azumatt-Official_BepInEx_ConfigurationManager"],
+  );
+  // It has an id, so it is not the missing-id mistake `unpackageable` exists to catch.
+  assert.deepEqual(unpackageable, []);
+  assert.deepEqual(validate(withAdminTool), []);
+  assert.doesNotMatch(buildReadme(withAdminTool), /ConfigurationManager/);
+  assert.doesNotMatch(
+    buildThunderstoreManifest(withAdminTool).dependencies.join(" "),
+    /ConfigurationManager/,
+  );
+});

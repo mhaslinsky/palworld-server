@@ -13,7 +13,7 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { isClientSide } from "./modpack.mts";
+import { selectClientMods } from "./modpack.mts";
 import type { EstateManifest, EstateMod } from "./modpack.mts";
 
 export interface Buckets {
@@ -24,11 +24,13 @@ export interface Buckets {
 }
 
 export function bucket(manifest: EstateManifest): Buckets {
-  const clientSide = manifest.mods.filter(isClientSide);
+  // Delegated rather than re-filtered: pack membership has exceptions now (hand installs,
+  // admin tooling), and a second copy of the rule is how this rendering starts lying.
+  const { included, unpackageable, handInstall } = selectClientMods(manifest);
   return {
     serverOnly: manifest.mods.filter((mod) => mod.side === "server"),
-    inPack: clientSide.filter((mod) => mod.thunderstore !== null),
-    clientByHand: clientSide.filter((mod) => mod.thunderstore === null),
+    inPack: included,
+    clientByHand: [...unpackageable, ...handInstall],
   };
 }
 

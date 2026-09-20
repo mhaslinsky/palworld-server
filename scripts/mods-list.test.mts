@@ -96,3 +96,15 @@ test("the unmanaged caveat is always present in both modes", () => {
     assert.match(render(SAMPLE, markdown), /theirs and unmanaged/);
   }
 });
+
+test("an admin-only mod is not listed as something players get from the pack", () => {
+  const withAdminTool = manifest([
+    mod({ thunderstore: "A-InPack" }),
+    mod({ thunderstore: "Z-AdminTool", side: "client", admin_only: true }),
+  ]);
+  const { inPack } = bucket(withAdminTool);
+  assert.deepEqual(
+    inPack.map(label),
+    ["A-InPack"],
+  );
+});

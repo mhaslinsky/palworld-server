@@ -37,6 +37,12 @@ export interface EstateMod {
    * player installs it themselves. Without the flag, a missing id is treated as a mistake.
    */
   hand_install?: boolean;
+  /**
+   * Opt-in: the pack COULD carry this and deliberately does not, because it is operator
+   * tooling rather than something the group plays with. Distinct from `hand_install`, which
+   * is about what the pack is capable of carrying; this is about what it should.
+   */
+  admin_only?: boolean;
 }
 
 export interface ModpackSettings {
@@ -109,18 +115,29 @@ export function isClientSide(mod: EstateMod): boolean {
  * with `hand_install: true`, which the generated page then tells players to install
  * themselves. The flag exists so the exception has to be written down rather than inferred
  * from a missing id, which is indistinguishable from the mistake.
+ *
+ * `adminOnly` is the other direction: it HAS an id and the pack could carry it, but it is
+ * operator tooling, so shipping it would install something on five machines for one
+ * person's benefit. It stays in the manifest because the estate record is meant to list
+ * every mod in play, and leaving it out invites the next session to add it to the pack.
  */
 export function selectClientMods(manifest: EstateManifest): {
   included: EstateMod[];
   unpackageable: EstateMod[];
   handInstall: EstateMod[];
+  adminOnly: EstateMod[];
 } {
   const clientMods = manifest.mods.filter(isClientSide);
   const offThunderstore = clientMods.filter((mod) => mod.thunderstore === null);
   return {
-    included: clientMods.filter((mod) => mod.thunderstore !== null),
-    unpackageable: offThunderstore.filter((mod) => mod.hand_install !== true),
+    included: clientMods.filter(
+      (mod) => mod.thunderstore !== null && mod.admin_only !== true,
+    ),
+    unpackageable: offThunderstore.filter(
+      (mod) => mod.hand_install !== true && mod.admin_only !== true,
+    ),
     handInstall: offThunderstore.filter((mod) => mod.hand_install === true),
+    adminOnly: clientMods.filter((mod) => mod.admin_only === true),
   };
 }
 
