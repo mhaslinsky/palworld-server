@@ -266,6 +266,15 @@ state is fine, because each is blind to the others:
 | a mod ships a new version upstream | `node scripts/mods-upstream.mts` |
 | the published pack stops matching the manifest | the same command; it checks both |
 
+**A fourth drift exists and NONE of those three can see it: a mod's own readme declaring a
+target game build older than `game_version`.** The three checks compare the box against the
+manifest, the manifest against Thunderstore's latest version, and the pack against the
+manifest. All three are satisfied by a mod that was uploaded yesterday and built for a game
+build three patches back, because upload date is not target build. Read the readme's declared
+target when adding a mod, and record the gap on the entry when one exists. Found 2026-09-19 on
+`Wire-WiresGrassTweaks`, chosen expressly on currency grounds over a rival rejected for being
+pre-1.0, whose own readme says "Built for Valheim 1.0.12" against an estate running 1.0.15.
+
 The last two are also watched off-box by `palworld-server-mod-monitor`, a Lambda on a
 six-hour schedule that posts to Discord and re-nags every run until somebody acts. It gets
 its pins from Terraform rendering `mods/manifest.json`, so it cannot hold an opinion the
