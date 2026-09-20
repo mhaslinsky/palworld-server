@@ -21,16 +21,20 @@ export interface Buckets {
   inPack: EstateMod[];
   /** In the pack's reach but not deliverable through it, so somebody installs it by hand. */
   clientByHand: EstateMod[];
+  /** On Thunderstore and deliberately withheld from the pack: operator tooling. */
+  adminOnly: EstateMod[];
 }
 
 export function bucket(manifest: EstateManifest): Buckets {
   // Delegated rather than re-filtered: pack membership has exceptions now (hand installs,
   // admin tooling), and a second copy of the rule is how this rendering starts lying.
-  const { included, unpackageable, handInstall } = selectClientMods(manifest);
+  const { included, unpackageable, handInstall, adminOnly } =
+    selectClientMods(manifest);
   return {
     serverOnly: manifest.mods.filter((mod) => mod.side === "server"),
     inPack: included,
     clientByHand: [...unpackageable, ...handInstall],
+    adminOnly,
   };
 }
 
@@ -45,7 +49,7 @@ function source(mod: EstateMod): string {
 }
 
 export function render(manifest: EstateManifest, markdown: boolean): string {
-  const { serverOnly, inPack, clientByHand } = bucket(manifest);
+  const { serverOnly, inPack, clientByHand, adminOnly } = bucket(manifest);
   const lines: string[] = [];
   const heading = (text: string) =>
     lines.push(markdown ? `\n### ${text}\n` : `\n${text}\n${"-".repeat(text.length)}`);
@@ -84,6 +88,17 @@ export function render(manifest: EstateManifest, markdown: boolean): string {
       markdown
         ? "\nThese have to be installed by hand on every client, because the pack can only carry Thunderstore packages."
         : "\n  These need a manual install on every client: the pack can only carry Thunderstore packages.",
+    );
+  }
+
+  if (adminOnly.length > 0) {
+    heading(`Admin tooling (${adminOnly.length}), deliberately NOT in the pack`);
+    tableHead("Source");
+    for (const mod of adminOnly) row(mod, source(mod));
+    lines.push(
+      markdown
+        ? "\nOn Thunderstore and withheld on purpose: the server admin installs these, and no player needs them."
+        : "\n  On Thunderstore and withheld on purpose: the admin installs these, no player needs them.",
     );
   }
 

@@ -266,6 +266,16 @@
       },
       "plugin_name": "MutedMist",
       "note": "Config changes take effect LIVE, with no restart, which is unusual on this estate and makes it the cheapest setting here to tune in place. Installed server-side deliberately: its readme says a server install enforces the configuration on clients, and leaving it off the server would let each player choose, but it is the only mod in this batch that declares a Jotunn dependency, which is the one kick path this estate has actually seen fire. That made it the likeliest to enforce a version match, not the only thing that conceivably could; it was afterwards observed not to enforce one. One shared value is the cheaper trade. Its shipped default is TransparencyIntensity = 0.2, which is near-invisible mist, NOT vanilla; 0.7 here is therefore a raise off the default rather than a cut from vanilla. Read the generated config before assuming a mod's default is the vanilla behaviour."
+    },
+    {
+      "thunderstore": "Azumatt-Official_BepInEx_ConfigurationManager",
+      "version": "18.4.1",
+      "side": "client",
+      "admin_only": true,
+      "why": "In-game editor for every BepInEx setting, opened with F1. It is how the admin changes a [Synced with Server] value without a config edit and a server restart, which is the difference between turning the rain off in ten seconds and bouncing everyone. Added 2026-09-20, when Seasonality's weather lists needed changing mid-session and there was no way to do it from inside the game.",
+      "why_not_in_pack": "Operator tooling, not something the group plays with. It edits settings that are admin-only to change anyway, so shipping it to every player installs a GUI five people cannot use to change anything. Kept in this manifest rather than left out, because an absent entry reads as an oversight and invites the next session to add it to the pack; admin_only is the recorded decision not to.",
+      "plugin_name": null,
+      "plugin_name_note": "client-side only, so it never appears in the server's load log"
     }
   ]
 }
