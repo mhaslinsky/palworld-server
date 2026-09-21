@@ -127,17 +127,18 @@ export function selectClientMods(manifest: EstateManifest): {
   handInstall: EstateMod[];
   adminOnly: EstateMod[];
 } {
+  // Split on whether the pack CAN carry it first, then on the opt-in flag within each half.
+  // Two independent axes rather than four hand-written filters, because four filters that
+  // each decide membership alone can overlap, and one that overlapped put admin tooling in
+  // the players' install-this-yourself list.
   const clientMods = manifest.mods.filter(isClientSide);
+  const packageable = clientMods.filter((mod) => mod.thunderstore !== null);
   const offThunderstore = clientMods.filter((mod) => mod.thunderstore === null);
   return {
-    included: clientMods.filter(
-      (mod) => mod.thunderstore !== null && mod.admin_only !== true,
-    ),
-    unpackageable: offThunderstore.filter(
-      (mod) => mod.hand_install !== true && mod.admin_only !== true,
-    ),
+    included: packageable.filter((mod) => mod.admin_only !== true),
+    adminOnly: packageable.filter((mod) => mod.admin_only === true),
+    unpackageable: offThunderstore.filter((mod) => mod.hand_install !== true),
     handInstall: offThunderstore.filter((mod) => mod.hand_install === true),
-    adminOnly: clientMods.filter((mod) => mod.admin_only === true),
   };
 }
 
@@ -220,6 +221,21 @@ export function validate(manifest: EstateManifest): string[] {
     problems.push(
       `${mod.name ?? "a client mod"} is client-side but has no Thunderstore id, so it cannot ship in the pack.`,
     );
+  }
+  // The buckets alone cannot catch these: a mod carrying a contradictory pair still lands in
+  // exactly one of them, and the one it lands in looks ordinary from the inside.
+  for (const mod of manifest.mods) {
+    const label = mod.name ?? mod.thunderstore ?? "a mod";
+    if (mod.admin_only === true && mod.thunderstore === null) {
+      problems.push(
+        `${label} is admin_only but has no Thunderstore id. admin_only withholds something the pack COULD carry; a missing id is the other problem and needs hand_install.`,
+      );
+    }
+    if (mod.admin_only === true && mod.hand_install === true) {
+      problems.push(
+        `${label} sets both hand_install and admin_only, which contradict: one says the pack cannot carry it, the other that it should not.`,
+      );
+    }
   }
   if (included.length === 0) {
     problems.push(

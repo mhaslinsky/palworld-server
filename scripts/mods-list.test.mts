@@ -41,9 +41,19 @@ const SAMPLE = manifest([
 ]);
 
 test("every mod lands in exactly one bucket", () => {
-  const { serverOnly, inPack, clientByHand } = bucket(SAMPLE);
-  const placed = [...serverOnly, ...inPack, ...clientByHand].map(label);
-  assert.equal(placed.length, SAMPLE.mods.length, "none dropped, none double-counted");
+  // The admin bucket is unioned here too. It was left out when it was added, which made this
+  // test structurally unable to fail on the one bucket that was new.
+  const withEveryShape = manifest([
+    ...SAMPLE.mods,
+    mod({ thunderstore: "Y-AdminTool", side: "client", admin_only: true }),
+  ]);
+  const { serverOnly, inPack, clientByHand, adminOnly } = bucket(withEveryShape);
+  const placed = [...serverOnly, ...inPack, ...clientByHand, ...adminOnly].map(label);
+  assert.equal(
+    placed.length,
+    withEveryShape.mods.length,
+    "none dropped, none double-counted",
+  );
   assert.equal(new Set(placed).size, placed.length, "no mod in two buckets");
 });
 

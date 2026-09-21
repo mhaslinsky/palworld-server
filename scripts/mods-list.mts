@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Renders mods/manifest.json into the three buckets people actually ask about: what runs
+ * Renders mods/manifest.json into the four buckets people actually ask about: what runs
  * only on the server, what every player installs through the pack, and what is neither.
  *
  *   node scripts/mods-list.mts            # readable

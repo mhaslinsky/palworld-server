@@ -311,3 +311,72 @@ test("an admin-only mod is kept out of the pack and off the player page", () => 
     /ConfigurationManager/,
   );
 });
+
+// The law: selectClientMods PARTITIONS the client-side mods. Every one lands in exactly one
+// of the four buckets, whatever combination of flags it carries. The space is 2x2x2 and
+// finite, so enumerate it rather than sampling: a random generator would only rediscover
+// these eight cases more slowly.
+test("selectClientMods partitions every client mod into exactly one bucket", () => {
+  for (const hasId of [true, false]) {
+    for (const handInstallFlag of [true, false]) {
+      for (const adminOnlyFlag of [true, false]) {
+        const subject = mod({
+          thunderstore: hasId ? "Someone-SomeMod" : null,
+          name: "subject",
+          side: "client",
+          hand_install: handInstallFlag,
+          admin_only: adminOnlyFlag,
+        });
+        const buckets = selectClientMods(manifest({ mods: [subject] }));
+        const landings = [
+          buckets.included,
+          buckets.unpackageable,
+          buckets.handInstall,
+          buckets.adminOnly,
+        ].filter((bucket) => bucket.includes(subject)).length;
+        assert.equal(
+          landings,
+          1,
+          `id=${hasId} hand_install=${handInstallFlag} admin_only=${adminOnlyFlag} landed in ${landings} buckets`,
+        );
+      }
+    }
+  }
+});
+
+test("admin_only with no Thunderstore id is rejected, not silently absorbed", () => {
+  const contradiction = manifest({
+    mods: [
+      mod({ thunderstore: "denikson-BepInExPack_Valheim" }),
+      mod({
+        thunderstore: null,
+        name: "Nexus Admin Tool",
+        side: "client",
+        admin_only: true,
+      }),
+    ],
+  });
+  assert.match(
+    validate(contradiction).join("\n"),
+    /Nexus Admin Tool is admin_only but has no Thunderstore id/,
+  );
+});
+
+test("admin_only and hand_install together are rejected as contradictory", () => {
+  const contradiction = manifest({
+    mods: [
+      mod({ thunderstore: "denikson-BepInExPack_Valheim" }),
+      mod({
+        thunderstore: null,
+        name: "Confused Tool",
+        side: "client",
+        hand_install: true,
+        admin_only: true,
+      }),
+    ],
+  });
+  assert.match(
+    validate(contradiction).join("\n"),
+    /Confused Tool sets both hand_install and admin_only/,
+  );
+});
