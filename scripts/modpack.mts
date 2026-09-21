@@ -223,10 +223,17 @@ export function validate(manifest: EstateManifest): string[] {
     );
   }
   // The buckets alone cannot catch these: a mod carrying a contradictory pair still lands in
-  // exactly one of them, and the one it lands in looks ordinary from the inside.
+  // exactly one of them, and the one it lands in looks ordinary from the inside. The two
+  // checks are scoped differently on purpose. A missing id only matters where the pack
+  // could have carried the mod, so that check is client-side. Two flags that deny each
+  // other are a confused record on any side, so that check is not client-only.
   for (const mod of manifest.mods) {
     const label = mod.name ?? mod.thunderstore ?? "a mod";
-    if (mod.admin_only === true && mod.thunderstore === null) {
+    if (
+      mod.admin_only === true &&
+      mod.thunderstore === null &&
+      isClientSide(mod)
+    ) {
       problems.push(
         `${label} is admin_only but has no Thunderstore id. admin_only withholds something the pack COULD carry; a missing id is the other problem and needs hand_install.`,
       );

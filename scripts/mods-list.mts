@@ -2,7 +2,8 @@
 
 /**
  * Renders mods/manifest.json into the four buckets people actually ask about: what runs
- * only on the server, what every player installs through the pack, and what is neither.
+ * only on the server, what every player installs through the pack, what the admin installs
+ * and nobody else needs, and what is neither.
  *
  *   node scripts/mods-list.mts            # readable
  *   node scripts/mods-list.mts --markdown # paste into Discord or a README

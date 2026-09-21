@@ -41,8 +41,7 @@ const SAMPLE = manifest([
 ]);
 
 test("every mod lands in exactly one bucket", () => {
-  // The admin bucket is unioned here too. It was left out when it was added, which made this
-  // test structurally unable to fail on the one bucket that was new.
+  // Unions all four buckets against a fixture carrying every shape: land in exactly one.
   const withEveryShape = manifest([
     ...SAMPLE.mods,
     mod({ thunderstore: "Y-AdminTool", side: "client", admin_only: true }),

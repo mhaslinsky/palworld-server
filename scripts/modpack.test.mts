@@ -362,6 +362,61 @@ test("admin_only with no Thunderstore id is rejected, not silently absorbed", ()
   );
 });
 
+// The live Feeding Trough arm. The partition test proves it lands in exactly one bucket,
+// but not which one; only a real build would notice it moving.
+test("hand_install with no id lands in handInstall and validates clean", () => {
+  const withTrough = manifest({
+    mods: [
+      mod({ thunderstore: "denikson-BepInExPack_Valheim" }),
+      mod({
+        thunderstore: null,
+        name: "Animal Feeding Trough",
+        side: "both",
+        hand_install: true,
+      }),
+    ],
+  });
+  const { handInstall, unpackageable, adminOnly } = selectClientMods(withTrough);
+  assert.deepEqual(
+    handInstall.map((entry) => entry.name),
+    ["Animal Feeding Trough"],
+  );
+  assert.deepEqual(unpackageable, []);
+  assert.deepEqual(adminOnly, []);
+  assert.deepEqual(validate(withTrough), []);
+});
+
+test("a pack of nothing but admin tooling is rejected, not published empty", () => {
+  const allAdmin = manifest({
+    mods: [
+      mod({ thunderstore: "ArgusMagnus-ServersideQoL", side: "server" }),
+      mod({ thunderstore: "Azumatt-Tool", side: "client", admin_only: true }),
+    ],
+  });
+  assert.match(
+    validate(allAdmin).join("\n"),
+    /no client-side mods resolved/,
+  );
+});
+
+// A missing id only matters where the pack could have carried the mod, so this check is
+// client-side. The contradiction check below is not: two flags that deny each other are a
+// confused record whichever side runs it.
+test("a server-side mod with admin_only and no id is not refused for a pack it was never in", () => {
+  const serverSide = manifest({
+    mods: [
+      mod({ thunderstore: "denikson-BepInExPack_Valheim" }),
+      mod({
+        thunderstore: null,
+        name: "Some Server Tool",
+        side: "server",
+        admin_only: true,
+      }),
+    ],
+  });
+  assert.deepEqual(validate(serverSide), []);
+});
+
 test("admin_only and hand_install together are rejected as contradictory", () => {
   const contradiction = manifest({
     mods: [
