@@ -279,3 +279,159 @@ test("the readme says so when nothing is version-enforced", () => {
   });
   assert.match(buildReadme(input), /No mod in this pack is version-enforced/);
 });
+
+test("an admin-only mod is kept out of the pack and off the player page", () => {
+  const withAdminTool = manifest({
+    mods: [
+      mod({ thunderstore: "denikson-BepInExPack_Valheim" }),
+      mod({
+        thunderstore: "Azumatt-Official_BepInEx_ConfigurationManager",
+        version: "18.4.1",
+        side: "client",
+        admin_only: true,
+        why: "admin edits synced config in game",
+      }),
+    ],
+  });
+  const { included, unpackageable, adminOnly } = selectClientMods(withAdminTool);
+  assert.deepEqual(
+    included.map((entry) => entry.thunderstore),
+    ["denikson-BepInExPack_Valheim"],
+  );
+  assert.deepEqual(
+    adminOnly.map((entry) => entry.thunderstore),
+    ["Azumatt-Official_BepInEx_ConfigurationManager"],
+  );
+  // It has an id, so it is not the missing-id mistake `unpackageable` exists to catch.
+  assert.deepEqual(unpackageable, []);
+  assert.deepEqual(validate(withAdminTool), []);
+  assert.doesNotMatch(buildReadme(withAdminTool), /ConfigurationManager/);
+  assert.doesNotMatch(
+    buildThunderstoreManifest(withAdminTool).dependencies.join(" "),
+    /ConfigurationManager/,
+  );
+});
+
+// The law: selectClientMods PARTITIONS the client-side mods. Every one lands in exactly one
+// of the four buckets, whatever combination of flags it carries. The space is 2x2x2 and
+// finite, so enumerate it rather than sampling: a random generator would only rediscover
+// these eight cases more slowly.
+test("selectClientMods partitions every client mod into exactly one bucket", () => {
+  for (const hasId of [true, false]) {
+    for (const handInstallFlag of [true, false]) {
+      for (const adminOnlyFlag of [true, false]) {
+        const subject = mod({
+          thunderstore: hasId ? "Someone-SomeMod" : null,
+          name: "subject",
+          side: "client",
+          hand_install: handInstallFlag,
+          admin_only: adminOnlyFlag,
+        });
+        const buckets = selectClientMods(manifest({ mods: [subject] }));
+        const landings = [
+          buckets.included,
+          buckets.unpackageable,
+          buckets.handInstall,
+          buckets.adminOnly,
+        ].filter((bucket) => bucket.includes(subject)).length;
+        assert.equal(
+          landings,
+          1,
+          `id=${hasId} hand_install=${handInstallFlag} admin_only=${adminOnlyFlag} landed in ${landings} buckets`,
+        );
+      }
+    }
+  }
+});
+
+test("admin_only with no Thunderstore id is rejected, not silently absorbed", () => {
+  const contradiction = manifest({
+    mods: [
+      mod({ thunderstore: "denikson-BepInExPack_Valheim" }),
+      mod({
+        thunderstore: null,
+        name: "Nexus Admin Tool",
+        side: "client",
+        admin_only: true,
+      }),
+    ],
+  });
+  assert.match(
+    validate(contradiction).join("\n"),
+    /Nexus Admin Tool is admin_only but has no Thunderstore id/,
+  );
+});
+
+// The live Feeding Trough arm. The partition test proves it lands in exactly one bucket,
+// but not which one; only a real build would notice it moving.
+test("hand_install with no id lands in handInstall and validates clean", () => {
+  const withTrough = manifest({
+    mods: [
+      mod({ thunderstore: "denikson-BepInExPack_Valheim" }),
+      mod({
+        thunderstore: null,
+        name: "Animal Feeding Trough",
+        side: "both",
+        hand_install: true,
+      }),
+    ],
+  });
+  const { handInstall, unpackageable, adminOnly } = selectClientMods(withTrough);
+  assert.deepEqual(
+    handInstall.map((entry) => entry.name),
+    ["Animal Feeding Trough"],
+  );
+  assert.deepEqual(unpackageable, []);
+  assert.deepEqual(adminOnly, []);
+  assert.deepEqual(validate(withTrough), []);
+});
+
+test("a pack of nothing but admin tooling is rejected, not published empty", () => {
+  const allAdmin = manifest({
+    mods: [
+      mod({ thunderstore: "ArgusMagnus-ServersideQoL", side: "server" }),
+      mod({ thunderstore: "Azumatt-Tool", side: "client", admin_only: true }),
+    ],
+  });
+  assert.match(
+    validate(allAdmin).join("\n"),
+    /no client-side mods resolved/,
+  );
+});
+
+// A missing id only matters where the pack could have carried the mod, so this check is
+// client-side. The contradiction check below is not: two flags that deny each other are a
+// confused record whichever side runs it.
+test("a server-side mod with admin_only and no id is not refused for a pack it was never in", () => {
+  const serverSide = manifest({
+    mods: [
+      mod({ thunderstore: "denikson-BepInExPack_Valheim" }),
+      mod({
+        thunderstore: null,
+        name: "Some Server Tool",
+        side: "server",
+        admin_only: true,
+      }),
+    ],
+  });
+  assert.deepEqual(validate(serverSide), []);
+});
+
+test("admin_only and hand_install together are rejected as contradictory", () => {
+  const contradiction = manifest({
+    mods: [
+      mod({ thunderstore: "denikson-BepInExPack_Valheim" }),
+      mod({
+        thunderstore: null,
+        name: "Confused Tool",
+        side: "client",
+        hand_install: true,
+        admin_only: true,
+      }),
+    ],
+  });
+  assert.match(
+    validate(contradiction).join("\n"),
+    /Confused Tool sets both hand_install and admin_only/,
+  );
+});

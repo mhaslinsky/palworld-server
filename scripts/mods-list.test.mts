@@ -41,9 +41,18 @@ const SAMPLE = manifest([
 ]);
 
 test("every mod lands in exactly one bucket", () => {
-  const { serverOnly, inPack, clientByHand } = bucket(SAMPLE);
-  const placed = [...serverOnly, ...inPack, ...clientByHand].map(label);
-  assert.equal(placed.length, SAMPLE.mods.length, "none dropped, none double-counted");
+  // Unions all four buckets against a fixture carrying every shape: land in exactly one.
+  const withEveryShape = manifest([
+    ...SAMPLE.mods,
+    mod({ thunderstore: "Y-AdminTool", side: "client", admin_only: true }),
+  ]);
+  const { serverOnly, inPack, clientByHand, adminOnly } = bucket(withEveryShape);
+  const placed = [...serverOnly, ...inPack, ...clientByHand, ...adminOnly].map(label);
+  assert.equal(
+    placed.length,
+    withEveryShape.mods.length,
+    "none dropped, none double-counted",
+  );
   assert.equal(new Set(placed).size, placed.length, "no mod in two buckets");
 });
 
@@ -95,4 +104,16 @@ test("the unmanaged caveat is always present in both modes", () => {
   for (const markdown of [true, false]) {
     assert.match(render(SAMPLE, markdown), /theirs and unmanaged/);
   }
+});
+
+test("an admin-only mod is not listed as something players get from the pack", () => {
+  const withAdminTool = manifest([
+    mod({ thunderstore: "A-InPack" }),
+    mod({ thunderstore: "Z-AdminTool", side: "client", admin_only: true }),
+  ]);
+  const { inPack } = bucket(withAdminTool);
+  assert.deepEqual(
+    inPack.map(label),
+    ["A-InPack"],
+  );
 });

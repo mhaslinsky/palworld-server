@@ -37,6 +37,12 @@ export interface EstateMod {
    * player installs it themselves. Without the flag, a missing id is treated as a mistake.
    */
   hand_install?: boolean;
+  /**
+   * Opt-in: the pack COULD carry this and deliberately does not, because it is operator
+   * tooling, not shared gameplay. Distinct from `hand_install`, which covers what the pack
+   * can carry; this covers what it should carry.
+   */
+  admin_only?: boolean;
 }
 
 export interface ModpackSettings {
@@ -109,16 +115,28 @@ export function isClientSide(mod: EstateMod): boolean {
  * with `hand_install: true`, which the generated page then tells players to install
  * themselves. The flag exists so the exception has to be written down rather than inferred
  * from a missing id, which is indistinguishable from the mistake.
+ *
+ * `adminOnly` is the other direction: it HAS an id and the pack could carry it, but it is
+ * operator tooling, so shipping it would install something on five machines for one
+ * person's benefit. It stays in the manifest because the estate record is meant to list
+ * every mod in play, and leaving it out invites the next session to add it to the pack.
  */
 export function selectClientMods(manifest: EstateManifest): {
   included: EstateMod[];
   unpackageable: EstateMod[];
   handInstall: EstateMod[];
+  adminOnly: EstateMod[];
 } {
+  // Split on whether the pack CAN carry it first, then on the opt-in flag within each half.
+  // Two independent axes rather than four hand-written filters, because four filters that
+  // each decide membership alone can overlap, and one that overlapped put admin tooling in
+  // the players' install-this-yourself list.
   const clientMods = manifest.mods.filter(isClientSide);
+  const packageable = clientMods.filter((mod) => mod.thunderstore !== null);
   const offThunderstore = clientMods.filter((mod) => mod.thunderstore === null);
   return {
-    included: clientMods.filter((mod) => mod.thunderstore !== null),
+    included: packageable.filter((mod) => mod.admin_only !== true),
+    adminOnly: packageable.filter((mod) => mod.admin_only === true),
     unpackageable: offThunderstore.filter((mod) => mod.hand_install !== true),
     handInstall: offThunderstore.filter((mod) => mod.hand_install === true),
   };
@@ -203,6 +221,28 @@ export function validate(manifest: EstateManifest): string[] {
     problems.push(
       `${mod.name ?? "a client mod"} is client-side but has no Thunderstore id, so it cannot ship in the pack.`,
     );
+  }
+  // The buckets alone cannot catch these: a mod carrying a contradictory pair still lands in
+  // exactly one of them, and the one it lands in looks ordinary from the inside. The two
+  // checks are scoped differently on purpose. A missing id only matters where the pack
+  // could have carried the mod, so that check is client-side. Two flags that deny each
+  // other are a confused record on any side, so that check is not client-only.
+  for (const mod of manifest.mods) {
+    const label = mod.name ?? mod.thunderstore ?? "a mod";
+    if (
+      mod.admin_only === true &&
+      mod.thunderstore === null &&
+      isClientSide(mod)
+    ) {
+      problems.push(
+        `${label} is admin_only but has no Thunderstore id. admin_only withholds something the pack COULD carry; a missing id is the other problem and needs hand_install.`,
+      );
+    }
+    if (mod.admin_only === true && mod.hand_install === true) {
+      problems.push(
+        `${label} sets both hand_install and admin_only, which contradict: one says the pack cannot carry it, the other that it should not.`,
+      );
+    }
   }
   if (included.length === 0) {
     problems.push(

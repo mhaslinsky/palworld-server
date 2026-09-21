@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 
 /**
- * Renders mods/manifest.json into the three buckets people actually ask about: what runs
- * only on the server, what every player installs through the pack, and what is neither.
+ * Renders mods/manifest.json into the four buckets people actually ask about: what runs
+ * only on the server, what every player installs through the pack, what the admin installs
+ * and nobody else needs, and what is neither.
  *
  *   node scripts/mods-list.mts            # readable
  *   node scripts/mods-list.mts --markdown # paste into Discord or a README
@@ -13,7 +14,7 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { isClientSide } from "./modpack.mts";
+import { selectClientMods } from "./modpack.mts";
 import type { EstateManifest, EstateMod } from "./modpack.mts";
 
 export interface Buckets {
@@ -21,14 +22,20 @@ export interface Buckets {
   inPack: EstateMod[];
   /** In the pack's reach but not deliverable through it, so somebody installs it by hand. */
   clientByHand: EstateMod[];
+  /** On Thunderstore and deliberately withheld from the pack: operator tooling. */
+  adminOnly: EstateMod[];
 }
 
 export function bucket(manifest: EstateManifest): Buckets {
-  const clientSide = manifest.mods.filter(isClientSide);
+  // Delegated rather than re-filtered: pack membership has exceptions now (hand installs,
+  // admin tooling), and a second copy of the rule is how this rendering starts lying.
+  const { included, unpackageable, handInstall, adminOnly } =
+    selectClientMods(manifest);
   return {
     serverOnly: manifest.mods.filter((mod) => mod.side === "server"),
-    inPack: clientSide.filter((mod) => mod.thunderstore !== null),
-    clientByHand: clientSide.filter((mod) => mod.thunderstore === null),
+    inPack: included,
+    clientByHand: [...unpackageable, ...handInstall],
+    adminOnly,
   };
 }
 
@@ -43,7 +50,7 @@ function source(mod: EstateMod): string {
 }
 
 export function render(manifest: EstateManifest, markdown: boolean): string {
-  const { serverOnly, inPack, clientByHand } = bucket(manifest);
+  const { serverOnly, inPack, clientByHand, adminOnly } = bucket(manifest);
   const lines: string[] = [];
   const heading = (text: string) =>
     lines.push(markdown ? `\n### ${text}\n` : `\n${text}\n${"-".repeat(text.length)}`);
@@ -82,6 +89,17 @@ export function render(manifest: EstateManifest, markdown: boolean): string {
       markdown
         ? "\nThese have to be installed by hand on every client, because the pack can only carry Thunderstore packages."
         : "\n  These need a manual install on every client: the pack can only carry Thunderstore packages.",
+    );
+  }
+
+  if (adminOnly.length > 0) {
+    heading(`Admin tooling (${adminOnly.length}), deliberately NOT in the pack`);
+    tableHead("Source");
+    for (const mod of adminOnly) row(mod, source(mod));
+    lines.push(
+      markdown
+        ? "\nOn Thunderstore and withheld on purpose: the server admin installs these, and no player needs them."
+        : "\n  On Thunderstore and withheld on purpose: the admin installs these, no player needs them.",
     );
   }
 
