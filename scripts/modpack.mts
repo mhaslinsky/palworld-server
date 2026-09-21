@@ -39,8 +39,8 @@ export interface EstateMod {
   hand_install?: boolean;
   /**
    * Opt-in: the pack COULD carry this and deliberately does not, because it is operator
-   * tooling rather than something the group plays with. Distinct from `hand_install`, which
-   * is about what the pack is capable of carrying; this is about what it should.
+   * tooling, not shared gameplay. Distinct from `hand_install`, which covers what the pack
+   * can carry; this covers what it should carry.
    */
   admin_only?: boolean;
 }
