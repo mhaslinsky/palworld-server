@@ -276,7 +276,7 @@ target when adding a mod, and record the gap on the entry when one exists. Found
 pre-1.0, whose own readme says "Built for Valheim 1.0.12" against an estate running 1.0.15.
 
 The last two are also watched off-box by `palworld-server-mod-monitor`, a Lambda on a
-six-hour schedule that posts to Discord and re-nags every run until somebody acts. It gets
+three-day schedule that posts to Discord and re-nags every run until somebody acts. It gets
 its pins from Terraform rendering `mods/manifest.json`, so it cannot hold an opinion the
 committed manifest does not, and a failed Thunderstore lookup alerts as UNKNOWN rather than
 passing quietly. The first drift is NOT watched: it needs the box running and the box
