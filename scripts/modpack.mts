@@ -43,6 +43,15 @@ export interface EstateMod {
    * can carry; this covers what it should carry.
    */
   admin_only?: boolean;
+  /**
+   * Opt-in: a package of plain assemblies with no BepInEx plugin in it, so it can never
+   * appear in a load log on either side. Without the flag, a server-side entry with no
+   * plugin_name is treated as an unfilled record and blocks the verifier, which is the
+   * right default: "I could not check this" must not read as a pass. The flag says the
+   * check is impossible rather than missing, and `plugin_name_note` must then say how the
+   * package IS verified, so the exemption still owes an answer.
+   */
+  library?: boolean;
 }
 
 export interface ModpackSettings {
@@ -241,6 +250,19 @@ export function validate(manifest: EstateManifest): string[] {
     if (mod.admin_only === true && mod.hand_install === true) {
       problems.push(
         `${label} sets both hand_install and admin_only, which contradict: one says the pack cannot carry it, the other that it should not.`,
+      );
+    }
+    if (mod.library === true && mod.plugin_name) {
+      problems.push(
+        `${label} is marked library but names a plugin_name of "${mod.plugin_name}". library means there is no plugin to find in the log; if there is one, drop the flag and let the verifier check it.`,
+      );
+    }
+    // The flag buys an exemption from the verifier, so it has to hand back a way to check
+    // the package by other means. Otherwise it is the silent pass the exemption was
+    // carved out of.
+    if (mod.library === true && !mod.plugin_name_note) {
+      problems.push(
+        `${label} is marked library but has no plugin_name_note. The flag exempts it from the load-log check, so the note has to say how it IS verified.`,
       );
     }
   }
