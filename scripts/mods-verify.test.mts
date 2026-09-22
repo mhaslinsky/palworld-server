@@ -286,8 +286,8 @@ test("a library package is reported but does not block a clean run", () => {
 });
 
 test("the library flag exempts only the entry that carries it", () => {
-  // The exemption has to stay narrow, or it becomes the silent pass it was carved out of:
-  // a neighbouring entry with an unfilled plugin_name must still fail the run.
+  // A neighbouring entry with an unfilled plugin_name must still fail the run, or the
+  // flag stops being narrow and starts hiding real gaps.
   const input = manifest([
     mod({ plugin_name: "Jotunn", version: "2.30.0" }),
     mod({ thunderstore: "A-Library", library: true, plugin_name: null, plugin_name_note: "n/a" }),

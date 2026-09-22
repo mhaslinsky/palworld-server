@@ -257,9 +257,8 @@ export function validate(manifest: EstateManifest): string[] {
         `${label} is marked library but names a plugin_name of "${mod.plugin_name}". library means there is no plugin to find in the log; if there is one, drop the flag and let the verifier check it.`,
       );
     }
-    // The flag buys an exemption from the verifier, so it has to hand back a way to check
-    // the package by other means. Otherwise it is the silent pass the exemption was
-    // carved out of.
+    // The flag exempts the entry from the load-log check, so the note is where it says
+    // what checks it instead. Without one the exemption is just a silent pass.
     if (mod.library === true && !mod.plugin_name_note) {
       problems.push(
         `${label} is marked library but has no plugin_name_note. The flag exempts it from the load-log check, so the note has to say how it IS verified.`,

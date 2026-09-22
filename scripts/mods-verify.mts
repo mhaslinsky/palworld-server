@@ -99,8 +99,7 @@ export interface Comparison {
   selfDisabled: string[];
   /**
    * Packages of plain assemblies with no BepInEx plugin, so the log cannot see them at all.
-   * Reported, never silent, but they do not block a clean run the way an unfilled
-   * plugin_name does: one is a check that is impossible, the other a check that is missing.
+   * Always reported, but unlike an unfilled `plugin_name` they do not block a clean run.
    */
   libraries: { label: string; reason: string }[];
 }
@@ -127,9 +126,8 @@ export function compare(
 
   for (const mod of onTheServer) {
     const label = mod.thunderstore ?? mod.name ?? "an unnamed mod";
-    // A library package has no plugin for the log to carry, so the check is impossible
-    // rather than unfilled. `validateManifest` makes the flag pay for itself by requiring
-    // a plugin_name_note saying how the package is verified instead.
+    // `validateManifest` requires a plugin_name_note here, so the entry always names
+    // something that does check it.
     if (mod.library === true) {
       comparison.libraries.push({
         label,
