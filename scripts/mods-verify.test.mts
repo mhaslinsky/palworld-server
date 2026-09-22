@@ -262,3 +262,50 @@ test("the report names the drift rather than only counting it", () => {
     /MISMATCH {2}ServersideQoL: manifest says 2\.0\.7, box loaded 2\.0\.4/,
   );
 });
+
+test("a library package is reported but does not block a clean run", () => {
+  const input = manifest([
+    mod({ plugin_name: "Jotunn", version: "2.30.0" }),
+    mod({
+      thunderstore: "ValMedia-OOD_LIB",
+      library: true,
+      plugin_name: null,
+      plugin_name_note: "no BepInEx plugin; checked by file presence on the box",
+    }),
+  ]);
+  const comparison = compare(input, new Map([["Jotunn", "2.30.0"]]));
+  assert.deepEqual(comparison.libraries, [
+    {
+      label: "ValMedia-OOD_LIB",
+      reason: "no BepInEx plugin; checked by file presence on the box",
+    },
+  ]);
+  assert.deepEqual(comparison.unverifiable, [], "a library is not an unfilled record");
+  assert.equal(isClean(comparison), true);
+  assert.match(report(comparison), /LIBRARY {3}ValMedia-OOD_LIB/);
+});
+
+test("the library flag exempts only the entry that carries it", () => {
+  // A neighbouring entry with an unfilled plugin_name must still fail the run, or the
+  // flag stops being narrow and starts hiding real gaps.
+  const input = manifest([
+    mod({ plugin_name: "Jotunn", version: "2.30.0" }),
+    mod({ thunderstore: "A-Library", library: true, plugin_name: null, plugin_name_note: "n/a" }),
+    mod({ thunderstore: "B-Unfilled", plugin_name: null }),
+  ]);
+  const comparison = compare(input, new Map([["Jotunn", "2.30.0"]]));
+  assert.equal(comparison.libraries.length, 1);
+  assert.deepEqual(comparison.unverifiable, [
+    { label: "B-Unfilled", reason: "no plugin_name in the manifest" },
+  ]);
+  assert.equal(isClean(comparison), false, "the unfilled neighbour must still fail");
+});
+
+test("a library entry is sought nowhere, so it cannot be reported as not loaded", () => {
+  const input = manifest([
+    mod({ plugin_name: "Jotunn", version: "2.30.0" }),
+    mod({ thunderstore: "A-Library", library: true, plugin_name: null, plugin_name_note: "n/a" }),
+  ]);
+  const comparison = compare(input, new Map([["Jotunn", "2.30.0"]]));
+  assert.deepEqual(comparison.notLoaded, []);
+});

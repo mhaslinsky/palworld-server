@@ -435,3 +435,48 @@ test("admin_only and hand_install together are rejected as contradictory", () =>
     /Confused Tool sets both hand_install and admin_only/,
   );
 });
+
+test("library alongside a plugin_name is rejected as a confused record", () => {
+  const contradiction = manifest({
+    mods: [
+      mod({ thunderstore: "denikson-BepInExPack_Valheim" }),
+      mod({
+        thunderstore: "Someone-HasAPlugin",
+        library: true,
+        plugin_name: "HasAPlugin",
+        plugin_name_note: "n/a",
+      }),
+    ],
+  });
+  assert.match(
+    validate(contradiction).join("\n"),
+    /Someone-HasAPlugin is marked library but names a plugin_name/,
+  );
+});
+
+test("library without a plugin_name_note is rejected, because the exemption owes an answer", () => {
+  const unexplained = manifest({
+    mods: [
+      mod({ thunderstore: "denikson-BepInExPack_Valheim" }),
+      mod({ thunderstore: "Someone-BareLibrary", library: true }),
+    ],
+  });
+  assert.match(
+    validate(unexplained).join("\n"),
+    /Someone-BareLibrary is marked library but has no plugin_name_note/,
+  );
+});
+
+test("a properly declared library validates clean", () => {
+  const declared = manifest({
+    mods: [
+      mod({ thunderstore: "denikson-BepInExPack_Valheim" }),
+      mod({
+        thunderstore: "ValMedia-OOD_LIB",
+        library: true,
+        plugin_name_note: "no BepInEx plugin; checked by file presence on the box",
+      }),
+    ],
+  });
+  assert.deepEqual(validate(declared), []);
+});

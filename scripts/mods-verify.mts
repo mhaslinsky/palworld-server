@@ -97,6 +97,11 @@ export interface Comparison {
   unverifiable: { label: string; reason: string }[];
   unexpected: { plugin: string; version: string }[];
   selfDisabled: string[];
+  /**
+   * Packages of plain assemblies with no BepInEx plugin, so the log cannot see them at all.
+   * Always reported, but unlike an unfilled `plugin_name` they do not block a clean run.
+   */
+  libraries: { label: string; reason: string }[];
 }
 
 export function compare(
@@ -111,6 +116,7 @@ export function compare(
     unverifiable: [],
     unexpected: [],
     selfDisabled,
+    libraries: [],
   };
   const accountedFor = new Set<string>();
 
@@ -120,6 +126,15 @@ export function compare(
 
   for (const mod of onTheServer) {
     const label = mod.thunderstore ?? mod.name ?? "an unnamed mod";
+    // `validateManifest` requires a plugin_name_note here, so the entry always names
+    // something that does check it.
+    if (mod.library === true) {
+      comparison.libraries.push({
+        label,
+        reason: mod.plugin_name_note ?? "marked library",
+      });
+      continue;
+    }
     if (!mod.plugin_name) {
       comparison.unverifiable.push({
         label,
@@ -186,6 +201,9 @@ export function report(comparison: Comparison): string {
   }
   for (const entry of comparison.unverifiable) {
     lines.push(`  UNCHECKED ${entry.label}: ${entry.reason}`);
+  }
+  for (const entry of comparison.libraries) {
+    lines.push(`  LIBRARY   ${entry.label}: ${entry.reason}`);
   }
   for (const entry of comparison.selfDisabled) {
     lines.push(`  SELF-DISABLED ${entry}`);
