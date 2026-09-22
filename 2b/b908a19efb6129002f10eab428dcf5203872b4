@@ -1,0 +1,24 @@
+scripts/mods-verify.mts
+  s_c41349ab1ef60a::t_faded3d8053c8c 102
+  s_c41349ab1ef60a::t_31e5ae86f55a28 129-130
+scripts/modpack.mts
+  s_c41349ab1ef60a::t_3a84c6d9b15531 260-261
+scripts/mods-verify.test.mts
+  s_c41349ab1ef60a::t_52ed6350cd2b31 289-290
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "2bb908a19efb6129002f10eab428dcf5203872b4",
+  "prompts": {},
+  "sessions": {
+    "s_c41349ab1ef60a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a6ce2ac6-b8c0-405f-8fc8-54001e8284c8",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    }
+  }
+}
