@@ -13,6 +13,7 @@ import {
   validate,
   type EstateManifest,
   type EstateMod,
+  type PlayerSetupExtra,
 } from "./modpack.mts";
 
 function mod(overrides: Partial<EstateMod> = {}): EstateMod {
@@ -479,4 +480,135 @@ test("a properly declared library validates clean", () => {
     ],
   });
   assert.deepEqual(validate(declared), []);
+});
+
+
+function extra(overrides: Partial<PlayerSetupExtra> = {}): PlayerSetupExtra {
+  return {
+    unlocks: "YouTube at its best quality",
+    install: "A JavaScript runtime on your PATH.",
+    verify: "The cog menu reports which runtime it found.",
+    without_it: "YouTube still plays, possibly at lower quality.",
+    ...overrides,
+  };
+}
+
+function withSetup(overrides: Partial<EstateMod> = {}): EstateManifest {
+  return manifest({
+    mods: [
+      mod({ thunderstore: "denikson-BepInExPack_Valheim" }),
+      mod({
+        thunderstore: "ValMedia-OdinOnDemand",
+        player_setup: {
+          summary: "Plays direct links and radio with nothing installed.",
+          extras: [extra()],
+        },
+        ...overrides,
+      }),
+    ],
+  });
+}
+
+test("the readme renders a player's optional extras, leading with what skipping costs", () => {
+  const readme = buildReadme(withSetup());
+  assert.match(readme, /## Optional extras you install yourself/);
+  assert.match(readme, /### OdinOnDemand/);
+  assert.match(readme, /Plays direct links and radio with nothing installed\./);
+  assert.match(readme, /\*\*YouTube at its best quality\.\*\* A JavaScript runtime on your PATH\./);
+  assert.match(readme, /The cog menu reports which runtime it found\./);
+  assert.match(readme, /\*\*Skip it:\*\* YouTube still plays, possibly at lower quality\./);
+  assert.deepEqual(validate(withSetup()), []);
+});
+
+test("the extras section is absent entirely when no mod has any", () => {
+  assert.doesNotMatch(buildReadme(manifest()), /Optional extras/);
+});
+
+test("a download link renders, and is omitted rather than faked when there is none", () => {
+  const linked = withSetup({
+    player_setup: {
+      summary: "s",
+      extras: [extra({ url: "https://example.invalid/install" })],
+    },
+  });
+  assert.match(buildReadme(linked), /Get it from <https:\/\/example\.invalid\/install>\./);
+  assert.doesNotMatch(buildReadme(withSetup()), /Get it from/);
+});
+
+test("an admin-only mod's player setup never reaches the page it is kept off", () => {
+  const input = withSetup({ side: "client", admin_only: true });
+  assert.doesNotMatch(buildReadme(input), /Optional extras/);
+  assert.doesNotMatch(buildReadme(input), /cog menu/);
+});
+
+test("a hand-installed mod still gets its extras rendered, since players do run it", () => {
+  const input = manifest({
+    mods: [
+      mod({ thunderstore: "denikson-BepInExPack_Valheim" }),
+      mod({
+        thunderstore: null,
+        name: "Some Nexus Mod",
+        side: "client",
+        hand_install: true,
+        player_setup: { summary: "s", extras: [extra()] },
+      }),
+    ],
+  });
+  assert.deepEqual(validate(input), []);
+  assert.match(buildReadme(input), /### Some Nexus Mod/);
+});
+
+test("player_setup on a server-side mod is rejected: a player never runs it", () => {
+  const problems = validate(withSetup({ side: "server" }));
+  assert.equal(problems.length, 1);
+  assert.match(problems[0], /server-side/);
+});
+
+test("each of the four required fields is rejected on its own", () => {
+  for (const field of ["unlocks", "install", "verify", "without_it"] as const) {
+    const problems = validate(
+      withSetup({
+        player_setup: { summary: "s", extras: [extra({ [field]: "  " })] },
+      }),
+    );
+    assert.equal(problems.length, 1, `${field} should be the only problem`);
+    assert.match(problems[0], new RegExp(`extra 1 has no ${field}\\.`));
+  }
+});
+
+test("an empty extras list and a missing summary are both rejected", () => {
+  assert.deepEqual(
+    validate(withSetup({ player_setup: { summary: "s", extras: [] } })).length,
+    1,
+  );
+  assert.match(
+    validate(withSetup({ player_setup: { summary: " ", extras: [extra()] } }))[0],
+    /no summary/,
+  );
+});
+
+test("a plain-http download link is rejected", () => {
+  const problems = validate(
+    withSetup({
+      player_setup: {
+        summary: "s",
+        extras: [extra({ url: "http://example.invalid/install" })],
+      },
+    }),
+  );
+  assert.equal(problems.length, 1);
+  assert.match(problems[0], /not https/);
+});
+
+test("the offending extra is named by position, not just the mod", () => {
+  const problems = validate(
+    withSetup({
+      player_setup: {
+        summary: "s",
+        extras: [extra(), extra({ verify: "" })],
+      },
+    }),
+  );
+  assert.equal(problems.length, 1);
+  assert.match(problems[0], /extra 2 has no verify/);
 });

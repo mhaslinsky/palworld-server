@@ -7,7 +7,7 @@
   "modpack": {
     "namespace": "valheimsquad",
     "name": "Utgarde_Client_Pack",
-    "version_number": "1.14.0",
+    "version_number": "1.14.1",
     "website_url": "https://github.com/mhaslinsky/palworld-server",
     "description": "Client mods for the Utgarde Valheim server, pinned to the versions the server runs."
   },
@@ -344,9 +344,27 @@
       "plugin_name": "OdinOnDemand",
       "enforcement": "Jotunn NetworkCompatibility, confirmed by reading the strings in OdinOnDemand.dll rather than inferred from it being Jotunn-based: the assembly carries both NetworkCompatibilityAttribute and VersionStrictness. That is the same kick path that already fires for AdventureBackpacks, so the box and the published pack must move together and a player on the old pack is refused at connect.",
       "why_linux_is_fine": "The package is 24.8 MB and most of it is a win-x64 LibVLC runtime, which cannot execute on this Linux box. It still loads, for reasons that were CHECKED rather than assumed. The assembly carries no BepInProcess attribute and names neither valheim.exe nor valheim_server.exe, so BepInEx does not skip it under valheim_server.exe; that is the exact way ForsakenShrines 0.8.2 failed here, so it was the first thing looked for. It does carry IsDedicated, IsServer and ZNet, so a server branch exists in the code. The readme scopes the VLC runtime to 'every client' and describes the server's job as simulating station playback position and sending it to players, which is bookkeeping rather than decoding. The libvlc tree is installed on the server anyway, inert, because the readme also says clients and servers must have identical files and 40 MB of dormant Windows DLLs is the cheaper risk.",
-      "player_setup": "Two capabilities need an executable the Thunderstore pack CANNOT ship, so they are per-player hand installs like Animal Feeding Trough. Neither blocks connecting. YouTube works without them but the readme warns quality or audio availability may be limited without a JavaScript runtime beside yt-dlp: Deno 2.3+, Node, Bun or QuickJS, and Proton needs the Windows x64 deno.exe. Twitch and Kick need Streamlink on every client that wants to watch them. Direct HTTP(S) audio and video, radio stations and SoundCloud need nothing extra, because the bundled VLC handles them.",
+      "player_setup": {
+        "summary": "Screens, televisions and radios play direct audio and video links, internet radio and SoundCloud with nothing extra installed: the mod bundles its own VLC. Two sources need a free program on your own machine.",
+        "extras": [
+          {
+            "unlocks": "YouTube at its best quality",
+            "install": "A JavaScript runtime on your PATH. Deno 2.3 or newer is the one the mod's authors name, and it also accepts Node, Bun or QuickJS if you already have one. If you play through Proton or on a Steam Deck, use the Windows x64 `deno.exe` instead of the native Linux build.",
+            "verify": "The cog menu on any media player has an External JS line naming the runtime it found.",
+            "without_it": "YouTube still plays. The mod's authors warn that quality or audio availability may be limited, so this is the one worth doing.",
+            "url": "https://docs.deno.com/runtime/getting_started/installation/"
+          },
+          {
+            "unlocks": "Twitch and Kick livestreams",
+            "install": "Streamlink, on your PATH, in the Valheim folder, or beside `OdinOnDemand.dll`. Under Proton use either the Windows build in one of those places, or the Linux build in `/usr/bin`, `/usr/local/bin` or `~/.local/bin`, outside the Steam runtime container.",
+            "verify": "The same cog menu shows whether Streamlink was detected; reopen it to re-probe after installing.",
+            "without_it": "Twitch and Kick links do not play. Nothing else changes, and most people will never want this one.",
+            "url": "https://streamlink.github.io/install.html"
+          }
+        ]
+      },
       "drift_target_build": "INDETERMINATE, the same verdict TreesReborn carries. The readme says 'updated for Valheim 1.0' and 'Valheim 1.0 support' with no patch number, so there is nothing to compare against game_version 1.0.15. Worth watching: 1.2.5 shipped 2026-09-15 and the game moved to 1.0.15 on 2026-09-18, so this is the one mod on the estate whose latest release predates the current game build.",
-      "note": "Config lives in BepInEx/config/OdinOnDemand/ rather than a single cfg file. The readme lists admin-only settings, a VIP mode and remote-control options, none of which are configured yet."
+      "note": "The two player extras are per-player hand installs like Animal Feeding Trough, because a Thunderstore pack carries mods and nothing else. Neither is a version gate, so a player without them is not kicked, only short a source. Read off the 1.2.5 readme and re-read 2026-09-22 before any of it went on the pack page; the mod reports detection status for both in its own cog menu, which is why the page tells players to look there rather than to assume the copy took. Config lives in BepInEx/config/OdinOnDemand/ rather than a single cfg file. The readme lists admin-only settings, a VIP mode and remote-control options, none of which are configured yet."
     },
     {
       "thunderstore": "JereKuusela-Server_devcommands",

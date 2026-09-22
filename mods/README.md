@@ -93,7 +93,10 @@ phrases a plugin prints when it has stopped acting, and any hit fails the run.
 
 Exit codes are 0 for clean, 1 for drift, and 2 for a log it could not read. A manifest entry
 with no `plugin_name` fails the run rather than riding along on someone else's match: leaving
-it out of the matched set would let "I could not check this" read as a pass.
+it out of the matched set would let "I could not check this" read as a pass. The one exemption
+is `library: true`, for a package holding no plugin at all, where no log could ever show it.
+That entry is still reported, as LIBRARY, and still owes a `plugin_name_note` saying what does
+check it, so the exemption is a stated answer rather than a silent skip.
 
 ## What is installed where
 
@@ -135,6 +138,9 @@ is unknown rather than fine.
 | `enforced` | The server kicks clients on a different version. |
 | `artifact_sha256` | Hashes of specific DLLs, not of the Thunderstore zip. Do not compare them against an archive. |
 | `verified` | When each side was last actually read, and how. |
+| `player_setup` | Free programs a player may install to unlock more of a client-side mod. Rendered onto the pack page as data, not prose, so the page can lead with what skipping each one costs. Each entry owes `unlocks`, `install`, `verify` and `without_it`; the build rejects a partial one, because a short paragraph reads as a complete one. |
+| `library` | The package is plain assemblies with no BepInEx plugin, so no load log can ever show it. Requires a `plugin_name_note` saying what checks it instead. |
+| `hand_install` / `admin_only` | The pack CANNOT carry it (not on Thunderstore), versus the pack COULD and deliberately does not (operator tooling). They contradict each other and the build says so. |
 
 A client-side mod with a null `thunderstore` fails the build rather than being quietly
 left out of the pack, since a silently short pack would kick players with no explanation.

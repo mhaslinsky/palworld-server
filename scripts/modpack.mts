@@ -16,6 +16,37 @@ const DESCRIPTION_LIMIT = 250;
 
 export type ModSide = "both" | "server" | "client";
 
+/**
+ * One free program a player can install to unlock more of a mod. Everything here is
+ * optional by construction: an extra a player MUST have is not this, it is a hard
+ * dependency and belongs in the pack or in `hand_install`.
+ */
+export interface PlayerSetupExtra {
+  /** What the player gets, named as the thing they want rather than the program. */
+  unlocks: string;
+  /** What to install and where to put it, in enough detail to do it without asking. */
+  install: string;
+  /**
+   * How the player confirms the game FOUND it. Required, because "I copied the file in"
+   * is the same bad evidence as a green exit code, and both of these report detection
+   * status in game, so there is no reason to guess.
+   */
+  verify: string;
+  /**
+   * What they lose by skipping it. Required: an optional extra whose cost goes unstated
+   * reads as mandatory, and some of these are ones most players should skip.
+   */
+  without_it: string;
+  /** Where to download it. */
+  url?: string;
+}
+
+export interface PlayerSetup {
+  /** One paragraph on what the mod already does with nothing installed. */
+  summary: string;
+  extras: PlayerSetupExtra[];
+}
+
 export interface EstateMod {
   thunderstore: string | null;
   name?: string;
@@ -52,6 +83,12 @@ export interface EstateMod {
    * package IS verified, so the exemption still owes an answer.
    */
   library?: boolean;
+  /**
+   * Opt-in: free programs a player may install to unlock more of this mod, rendered into
+   * the pack page. Data rather than prose so the page can lead with the skip cost, which
+   * is the part a player actually needs: most of them should skip most of these.
+   */
+  player_setup?: PlayerSetup;
 }
 
 export interface ModpackSettings {
@@ -181,6 +218,53 @@ export function buildThunderstoreManifest(
   };
 }
 
+/**
+ * The pack page is the only place these reach a player, so a half-filled entry does not
+ * render a warning, it renders a shorter paragraph that reads as complete. Each rule below
+ * is a way of doing that, which is why they are rejections rather than defaults.
+ */
+function playerSetupProblems(mod: EstateMod, label: string): string[] {
+  const setup = mod.player_setup;
+  if (setup === undefined) return [];
+  const problems: string[] = [];
+
+  if (!isClientSide(mod)) {
+    problems.push(
+      `${label} has player_setup but is server-side. Players never run it, so nothing they install applies; operator-side setup goes in note.`,
+    );
+  }
+  if (!setup.summary?.trim()) {
+    problems.push(
+      `${label} has a player_setup with no summary. The summary is what says the mod works without any of this, so leaving it out makes every extra look required.`,
+    );
+  }
+  if (setup.extras.length === 0) {
+    problems.push(
+      `${label} has a player_setup with no extras, which renders a heading over nothing and reads as documented.`,
+    );
+  }
+
+  for (const [index, extra] of setup.extras.entries()) {
+    const where = `${label} player_setup extra ${index + 1}`;
+    for (const field of ["unlocks", "install", "verify", "without_it"] as const) {
+      if (!extra[field]?.trim()) {
+        problems.push(
+          `${where} has no ${field}. All four are required: verify is how a player knows the game found it, and without_it is how they know they may skip it.`,
+        );
+      }
+    }
+    // Not "looks like a URL": this is a download link on a page telling players to run the
+    // thing they fetch, and plain http on that is a worse answer than no link at all.
+    if (extra.url !== undefined && !extra.url.startsWith("https://")) {
+      problems.push(
+        `${where} has url "${extra.url}", which is not https. The page tells players to install what they download from it.`,
+      );
+    }
+  }
+
+  return problems;
+}
+
 const VALID_SIDES: ModSide[] = ["both", "server", "client"];
 
 /**
@@ -264,6 +348,7 @@ export function validate(manifest: EstateManifest): string[] {
         `${label} is marked library but has no plugin_name_note. The flag exempts it from the load-log check, so the note has to say how it IS verified.`,
       );
     }
+    problems.push(...playerSetupProblems(mod, label));
   }
   if (included.length === 0) {
     problems.push(
@@ -320,6 +405,24 @@ export function buildReadme(manifest: EstateManifest): string {
         .join("\n")}\n`
     : "";
 
+  const withExtras = [...included, ...handInstall].filter(
+    (mod) => mod.player_setup !== undefined,
+  );
+  const playerSetupSection = withExtras.length
+    ? `\n## Optional extras you install yourself\n\nNone of this is required to connect or play. These are free programs that a mod will use if it detects them, and a Thunderstore pack can only carry mods, so installing them is on you.\n\n${withExtras
+        .map((mod) => {
+          const setup = mod.player_setup as PlayerSetup;
+          const bullets = setup.extras
+            .map(
+              (extra) =>
+                `- **${extra.unlocks}.** ${extra.install}${extra.url ? ` Get it from <${extra.url}>.` : ""} ${extra.verify}\n  **Skip it:** ${extra.without_it}`,
+            )
+            .join("\n");
+          return `### ${displayName(mod)}\n\n${setup.summary}\n\n${bullets}\n`;
+        })
+        .join("\n")}`
+    : "";
+
   // Derived from the manifest rather than written out, so this paragraph cannot drift from
   // the pinned record the way a hand-maintained list would.
   const serverSentence = serverOnly.length
@@ -339,7 +442,7 @@ Install this pack in [Gale](https://github.com/Kesomannen/gale) or [r2modman](ht
 ${rows}
 
 ${enforcedNote}
-${handInstallSection}
+${handInstallSection}${playerSetupSection}
 ## What is not in it
 
 ${serverSentence}
