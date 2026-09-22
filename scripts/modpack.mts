@@ -18,18 +18,18 @@ export type ModSide = "both" | "server" | "client";
 
 /**
  * One free program a player can install to unlock more of a mod. Everything here is
- * optional by construction: an extra a player MUST have is not this, it is a hard
- * dependency and belongs in the pack or in `hand_install`.
+ * optional by construction: an extra a player MUST have is a hard dependency, and
+ * belongs in the pack or in `hand_install`.
  */
 export interface PlayerSetupExtra {
-  /** What the player gets, named as the thing they want rather than the program. */
+  /** What the player gets, named for what they want rather than for the program. */
   unlocks: string;
   /** What to install and where to put it, in enough detail to do it without asking. */
   install: string;
   /**
    * How the player confirms the game FOUND it. Required, because "I copied the file in"
-   * is the same bad evidence as a green exit code, and both of these report detection
-   * status in game, so there is no reason to guess.
+   * is the same bad evidence as a green exit code, and both report detection status
+   * in game, so there is no reason to guess.
    */
   verify: string;
   /**
@@ -84,9 +84,9 @@ export interface EstateMod {
    */
   library?: boolean;
   /**
-   * Opt-in: free programs a player may install to unlock more of this mod, rendered into
-   * the pack page. Data rather than prose so the page can lead with the skip cost, which
-   * is the part a player actually needs: most of them should skip most of these.
+   * Opt-in: free programs a player may install to unlock more of this mod, rendered
+   * into the pack page. Structured data rather than prose so the page can lead with
+   * the skip cost, which is what a player actually needs.
    */
   player_setup?: PlayerSetup;
 }
@@ -219,9 +219,9 @@ export function buildThunderstoreManifest(
 }
 
 /**
- * The pack page is the only place these reach a player, so a half-filled entry does not
- * render a warning, it renders a shorter paragraph that reads as complete. Each rule below
- * is a way of doing that, which is why they are rejections rather than defaults.
+ * The pack page is the only place these reach a player, so a half-filled entry renders a
+ * shorter paragraph that reads as complete rather than a warning. Each rule below rejects
+ * the missing data rather than substituting a default.
  */
 function playerSetupProblems(mod: EstateMod, label: string): string[] {
   const setup = mod.player_setup;
@@ -253,8 +253,8 @@ function playerSetupProblems(mod: EstateMod, label: string): string[] {
         );
       }
     }
-    // Not "looks like a URL": this is a download link on a page telling players to run the
-    // thing they fetch, and plain http on that is a worse answer than no link at all.
+    // Strict, not just "looks like a URL": this link tells players to run what they
+    // fetch from it, and plain http there is a worse answer than no link at all.
     if (extra.url !== undefined && !extra.url.startsWith("https://")) {
       problems.push(
         `${where} has url "${extra.url}", which is not https. The page tells players to install what they download from it.`,
