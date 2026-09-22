@@ -1,0 +1,30 @@
+mods/README.md
+  s_c41349ab1ef60a::t_1e18d1613e410d 96-99,141-143
+scripts/modpack.test.mts
+  s_c41349ab1ef60a::t_b446cdd6e2f57a 16,484-614
+mods/manifest.json
+  s_c41349ab1ef60a::t_ea1e3eb370b7e7 348,352,354,359
+  s_c41349ab1ef60a::t_c1b059c62a2e71 10
+  s_c41349ab1ef60a::t_d6f98a2aea6c68 347,349-351,353,355-358,360-365,367
+scripts/modpack.mts
+  s_c41349ab1ef60a::t_71e4958117baff 221-267,351
+  s_c41349ab1ef60a::t_be6672fb232d89 19-49,86-91
+  s_c41349ab1ef60a::t_ea1e3eb370b7e7 412
+  s_c41349ab1ef60a::t_fbd414c18845ed 408-411,413-425,445
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "8d54b1254867fff7e7ced204fda7efb2aa43068b",
+  "prompts": {},
+  "sessions": {
+    "s_c41349ab1ef60a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a6ce2ac6-b8c0-405f-8fc8-54001e8284c8",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    }
+  }
+}
