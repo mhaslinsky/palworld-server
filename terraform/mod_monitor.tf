@@ -108,14 +108,14 @@ resource "aws_lambda_function" "mod_monitor" {
   depends_on = [aws_cloudwatch_log_group.mod_monitor]
 }
 
-# Every 6 hours. Mod drift is not urgent the way a dead backup is: nothing is being lost
+# Every 3 days. Mod drift is not urgent the way a dead backup is: nothing is being lost
 # while a pin is stale. It re-alerts on every run rather than tracking state, so a stale
-# pin nags four times a day until somebody deals with it, which is the point. Faster than
-# this would train the channel to scroll past it.
+# pin gets one message per run until somebody acts. Running every 6 hours trained the
+# channel to scroll past it within a day.
 resource "aws_cloudwatch_event_rule" "mod_monitor" {
   name                = local.mod_monitor_name
   description         = "Check pinned mods against Thunderstore and the published pack against the manifest"
-  schedule_expression = "rate(6 hours)"
+  schedule_expression = "rate(3 days)"
 }
 
 resource "aws_cloudwatch_event_target" "mod_monitor" {
@@ -133,21 +133,44 @@ resource "aws_lambda_permission" "mod_monitor_events" {
 }
 
 # The function throws when it cannot deliver to Discord, so a broken webhook surfaces
-# here instead of vanishing. treat_missing_data breaching means a function that stops
-# running at all also alarms, which is the failure a monitor cannot report about itself.
+# here instead of vanishing. Missing data is not breaching: on a 3-day schedule most
+# days have no run, and "no errors today" is the normal state. No ok_actions on either
+# alarm: a recovery message is noise in a channel that already heard about the failure.
 resource "aws_cloudwatch_metric_alarm" "mod_monitor_errors" {
   alarm_name          = "${local.mod_monitor_name}-errors"
   comparison_operator = "GreaterThanOrEqualToThreshold"
   evaluation_periods  = 1
   metric_name         = "Errors"
   namespace           = "AWS/Lambda"
-  period              = 21600
+  period              = 86400
+  statistic           = "Sum"
+  threshold           = 1
+  treat_missing_data  = "notBreaching"
+  alarm_description   = "The mod monitor errored. Its findings may not be reaching Discord."
+  alarm_actions       = [aws_sns_topic.alerts.arn]
+
+  dimensions = {
+    FunctionName = aws_lambda_function.mod_monitor.function_name
+  }
+}
+
+# The failure a monitor cannot report about itself: not running at all. Daily buckets
+# against a 72-hour schedule leave at most two empty days between runs, so four empty days
+# in a row means a run was missed, with a day of slack. The window must span more than
+# the schedule, or it fires between healthy runs (and at creation, before the first one).
+resource "aws_cloudwatch_metric_alarm" "mod_monitor_stopped" {
+  alarm_name          = "${local.mod_monitor_name}-stopped"
+  comparison_operator = "LessThanThreshold"
+  evaluation_periods  = 4
+  datapoints_to_alarm = 4
+  metric_name         = "Invocations"
+  namespace           = "AWS/Lambda"
+  period              = 86400
   statistic           = "Sum"
   threshold           = 1
   treat_missing_data  = "breaching"
-  alarm_description   = "The mod monitor errored or stopped running. Its findings are not reaching Discord."
+  alarm_description   = "The mod monitor has not run in four days. Mod drift is not being checked."
   alarm_actions       = [aws_sns_topic.alerts.arn]
-  ok_actions          = [aws_sns_topic.alerts.arn]
 
   dimensions = {
     FunctionName = aws_lambda_function.mod_monitor.function_name
