@@ -75,6 +75,13 @@ in-place `user_data` update is a player-facing restart: announce it, force-save,
 confirm `Level.sav`'s mtime advanced first. Prefer keeping runtime-tunable values OUT
 of `user_data` entirely (SSM, like the Discord webhook and roster already are).
 
+**The Valheim box's swap and memory cap live outside `user_data`.** `terraform/memory_guard.tf`
+manages them through an SSM association that runs `scripts/memory-guard.mts` every 30 minutes
+while the box is up, and on any rebuilt instance. Change the sizes in that script, never by hand
+on the box: running `systemctl set-property` without `--runtime` writes a drop-in that outranks
+the repo's, and the next scheduled run deletes it. Without the cap, the 4 GB box froze solid on
+2026-09-23 when it ran out of memory instead of letting systemd restart Valheim.
+
 ### 6. Putting a script in S3 is NOT deploying it
 
 The boot-fetch loop in `windows_user_data.ps1.tftpl` runs from `user_data`, and
