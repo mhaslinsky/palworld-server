@@ -7,7 +7,7 @@
   "modpack": {
     "namespace": "valheimsquad",
     "name": "Utgarde_Client_Pack",
-    "version_number": "1.14.1",
+    "version_number": "1.15.0",
     "website_url": "https://github.com/mhaslinsky/palworld-server",
     "description": "Client mods for the Utgarde Valheim server, pinned to the versions the server runs."
   },
@@ -191,6 +191,19 @@
       },
       "plugin_name": "OdinHorse",
       "note": "Whether it rejects a client that lacks it is UNVERIFIED. It is not Jotunn-based, so the mod-enforcement path that kicks a client missing AdventureBackpacks or the trough does not apply, but it does add prefabs and a client without them is untested. Shipping it in the pack in the same pass as the server install is what keeps that question academic. Its own readme opens by telling you to back up character and world files before installing or updating. 1.7.1 through 1.7.3 are a piecemanager bump and added localisations, with no behaviour change the changelog names."
+    },
+    {
+      "thunderstore": "Skarif-BuildOnShip",
+      "version": "3.4.3",
+      "side": "both",
+      "why": "Build on the vanilla Karve and Longship: walls, crafting stations, chests, beds that set a respawn point, and portals that travel with the ship. Picked by the operator 2026-09-23 over zolantris-ValheimRAFT 5.0.4, which builds custom ships out of pieces rather than building on the existing ones; the operator wanted the existing ships.",
+      "risk": "MAINTENANCE risk only. Every version on Thunderstore is dated 2026-09-16 to 2026-09-21, and recent changelog entries fix \"disappearing structures\" and \"duplicate portals on ships\", so the mod is young and still settling. On the fourth drift the readme declares only \"Valheim 0.219+\", a floor rather than a tested build, so the check against game_version 1.0.15 is INDETERMINATE. Sole declared dependency is BepInExPack 5.4.2333, older than the 5.4.2350 here.",
+      "artifact_sha256": {
+        "BuildOnShip.dll": "f8ecf2aaa80da13c3f8aa2b7bea17eaff7259b47488794eecd8997e0ee8dd7b2"
+      },
+      "plugin_name": "ShipBuildMod",
+      "plugin_version": "4.0.0",
+      "note": "The DLL's BepInPlugin attribute is com.custom.shipbuildmod, ShipBuildMod, 4.0.0, so the log will show 4.0.0 against Thunderstore's 3.4.3. Read off the DLL, not yet off a server boot. It declares no BepInProcess restriction, so it loads under the dedicated server. It carries no ServerSync and no Jotunn NetworkCompatibility, so nothing refuses a client that lacks it; what such a client sees on a built-on ship is UNVERIFIED. The ship link is stored in ZDO fields (ShipBuild_ParentUUID, ShipBuild_ShipUUID, ShipBuild_LocalPos, ShipBuild_LocalRot), so assume removing the mod strands built pieces and take a world backup before uninstalling. Ship portals are ordinary portal pieces, so PortalProgression's ore gate should apply to them unchanged; UNVERIFIED."
     },
     {
       "thunderstore": "RustyMods-Seasonality",
