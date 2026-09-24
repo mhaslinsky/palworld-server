@@ -7,8 +7,8 @@ import {
   capProblems,
   dropInContent,
   fstabHasSwap,
-  MEMORY_MAX,
   MEMORY_SWAP_MAX,
+  memoryMaxFor,
   swapIsActive,
 } from "./memory-guard.mts";
 
@@ -25,8 +25,19 @@ test("bytesFromSize rejects sizes it cannot read rather than guessing", () => {
   assert.throws(() => bytesFromSize("3400"), /unparseable/);
 });
 
+test("memoryMaxFor leaves 512 MiB of RAM outside the cap", () => {
+  const meminfo = (kib: number) => `MemTotal:       ${kib} kB\nMemFree:          123456 kB\n`;
+  assert.equal(memoryMaxFor(meminfo(3928064)), "3324M");
+  assert.equal(memoryMaxFor(meminfo(8053064)), "7352M");
+});
+
+test("memoryMaxFor refuses meminfo it cannot read and caps too small to run Valheim", () => {
+  assert.throws(() => memoryMaxFor("MemFree: 123 kB\n"), /MemTotal not found/);
+  assert.throws(() => memoryMaxFor("MemTotal:       1048576 kB\n"), /below 1024M/);
+});
+
 test("dropInContent carries both limits under [Service]", () => {
-  assert.equal(dropInContent(), `[Service]\nMemoryMax=${MEMORY_MAX}\nMemorySwapMax=${MEMORY_SWAP_MAX}\n`);
+  assert.equal(dropInContent("7352M"), `[Service]\nMemoryMax=7352M\nMemorySwapMax=${MEMORY_SWAP_MAX}\n`);
 });
 
 test("fstabHasSwap finds the swapfile entry and ignores lookalikes", () => {
@@ -43,8 +54,9 @@ test("swapIsActive finds the swapfile in /proc/swaps and ignores other swap", ()
 });
 
 test("capProblems is empty only when both limits match", () => {
-  assert.deepEqual(capProblems("3565158400\n", "2147483648"), []);
-  assert.equal(capProblems("infinity", "2147483648").length, 1);
-  assert.equal(capProblems("3565158400", "infinity").length, 1);
-  assert.equal(capProblems("infinity", "infinity").length, 2);
+  assert.deepEqual(capProblems("3565158400\n", "2147483648", "3400M"), []);
+  assert.equal(capProblems("3565158400", "2147483648", "7352M").length, 1);
+  assert.equal(capProblems("infinity", "2147483648", "3400M").length, 1);
+  assert.equal(capProblems("3565158400", "infinity", "3400M").length, 1);
+  assert.equal(capProblems("infinity", "infinity", "3400M").length, 2);
 });
