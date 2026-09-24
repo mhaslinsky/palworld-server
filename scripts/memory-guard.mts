@@ -10,7 +10,8 @@ import { pathToFileURL } from "node:url";
 
 export const SWAP_PATH = "/swapfile";
 export const SWAP_SIZE = "3G";
-export const MEMORY_MAX = "3400M";
+// The cap follows the instance size: a hardcoded 3400M left Valheim swapping on an 8 GB box.
+export const RESERVED_MIB = 512;
 export const MEMORY_SWAP_MAX = "2G";
 export const UNIT = "valheim.service";
 export const DROP_IN_DIR = `/etc/systemd/system/${UNIT}.d`;
@@ -20,8 +21,17 @@ export const DROP_IN_PATH = `${DROP_IN_DIR}/memory-guard.conf`;
 export const CONTROL_DIR = `/etc/systemd/system.control/${UNIT}.d`;
 export const LEGACY_CONTROL_FILES = ["50-MemoryMax.conf", "50-MemorySwapMax.conf"];
 
-export function dropInContent(): string {
-  return `[Service]\nMemoryMax=${MEMORY_MAX}\nMemorySwapMax=${MEMORY_SWAP_MAX}\n`;
+/** Takes the text of /proc/meminfo and returns MemoryMax as a systemd size, total RAM minus RESERVED_MIB. */
+export function memoryMaxFor(memInfo: string): string {
+  const match = /^MemTotal:\s+(\d+) kB$/m.exec(memInfo);
+  if (match === null) throw new Error("MemTotal not found in /proc/meminfo");
+  const capMib = Math.floor(Number(match[1]) / 1024) - RESERVED_MIB;
+  if (capMib < 1024) throw new Error(`computed MemoryMax ${capMib}M is below 1024M`);
+  return `${capMib}M`;
+}
+
+export function dropInContent(memoryMax: string): string {
+  return `[Service]\nMemoryMax=${memoryMax}\nMemorySwapMax=${MEMORY_SWAP_MAX}\n`;
 }
 
 export function bytesFromSize(size: string): number {
@@ -41,9 +51,9 @@ export function swapIsActive(procSwaps: string): boolean {
 }
 
 /** Compares cap values read back from systemd or the cgroup against the wanted sizes. */
-export function capProblems(memoryMax: string, memorySwapMax: string): string[] {
+export function capProblems(memoryMax: string, memorySwapMax: string, wantMemoryMax: string): string[] {
   const problems: string[] = [];
-  const wantMemory = String(bytesFromSize(MEMORY_MAX));
+  const wantMemory = String(bytesFromSize(wantMemoryMax));
   const wantSwap = String(bytesFromSize(MEMORY_SWAP_MAX));
   if (memoryMax.trim() !== wantMemory) problems.push(`MemoryMax is ${memoryMax.trim()}, want ${wantMemory}`);
   if (memorySwapMax.trim() !== wantSwap) problems.push(`MemorySwapMax is ${memorySwapMax.trim()}, want ${wantSwap}`);
@@ -70,12 +80,12 @@ function ensureSwap(): void {
 }
 
 /** Returns true when systemd needs a daemon-reload to see the change. */
-function ensureDropIn(): boolean {
+function ensureDropIn(memoryMax: string): boolean {
   let changed = false;
   mkdirSync(DROP_IN_DIR, { recursive: true });
   const current = existsSync(DROP_IN_PATH) ? readFileSync(DROP_IN_PATH, "utf8") : "";
-  if (current !== dropInContent()) {
-    writeFileSync(DROP_IN_PATH, dropInContent());
+  if (current !== dropInContent(memoryMax)) {
+    writeFileSync(DROP_IN_PATH, dropInContent(memoryMax));
     changed = true;
   }
   for (const fileName of LEGACY_CONTROL_FILES) {
@@ -89,8 +99,9 @@ function ensureDropIn(): boolean {
 }
 
 function main(): void {
+  const memoryMax = memoryMaxFor(readFileSync("/proc/meminfo", "utf8"));
   ensureSwap();
-  if (ensureDropIn()) run("systemctl", ["daemon-reload"]);
+  if (ensureDropIn(memoryMax)) run("systemctl", ["daemon-reload"]);
 
   if (unitShow("LoadState") !== "loaded") {
     console.log(`MEMORY_GUARD_STAGED: ${UNIT} is not installed yet; the drop-in applies when it is`);
@@ -99,15 +110,15 @@ function main(): void {
   const active = unitShow("ActiveState") === "active";
   if (active) {
     // Applies the cap to the running cgroup without a restart; --runtime keeps it out of CONTROL_DIR.
-    run("systemctl", ["set-property", "--runtime", UNIT, `MemoryMax=${MEMORY_MAX}`, `MemorySwapMax=${MEMORY_SWAP_MAX}`]);
+    run("systemctl", ["set-property", "--runtime", UNIT, `MemoryMax=${memoryMax}`, `MemorySwapMax=${MEMORY_SWAP_MAX}`]);
   }
-  const problems = capProblems(unitShow("MemoryMax"), unitShow("MemorySwapMax"));
+  const problems = capProblems(unitShow("MemoryMax"), unitShow("MemorySwapMax"), memoryMax);
   if (problems.length > 0) {
     console.error(`MEMORY_GUARD_FAILED: ${problems.join("; ")}`);
     process.exitCode = 1;
     return;
   }
-  console.log(`MEMORY_GUARD_OK: swap on, cap ${MEMORY_MAX} + ${MEMORY_SWAP_MAX} swap ${active ? "live" : "configured, unit not running"}`);
+  console.log(`MEMORY_GUARD_OK: swap on, cap ${memoryMax} + ${MEMORY_SWAP_MAX} swap ${active ? "live" : "configured, unit not running"}`);
 }
 
 const invokedScriptPath = process.argv[1];
