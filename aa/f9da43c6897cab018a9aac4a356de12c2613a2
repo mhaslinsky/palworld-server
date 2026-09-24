@@ -1,0 +1,20 @@
+mods/manifest.json
+  s_3a5663e86a3478::t_e4d9bbe5ab99eb 10,195-206
+  s_3a5663e86a3478::t_0177b9835d7261 207
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "aaf9da43c6897cab018a9aac4a356de12c2613a2",
+  "prompts": {},
+  "sessions": {
+    "s_3a5663e86a3478": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7e97024b-6524-4549-8fe2-14fc1bdb552b",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    }
+  }
+}
