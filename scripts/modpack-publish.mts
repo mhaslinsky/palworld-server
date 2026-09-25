@@ -18,7 +18,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import type { EstateManifest } from "./modpack.mts";
+import { packageTextEntries, type EstateManifest } from "./modpack.mts";
 import { checkDependencyExists } from "./modpack-build.mts";
 
 const API = "https://thunderstore.io/api/experimental";
@@ -173,6 +173,34 @@ async function postJson(
   return text === "" ? null : JSON.parse(text);
 }
 
+/**
+ * Names each archive text entry that is missing or differs from what the current
+ * manifest builds; empty means the archive is current. Without this, an archive built
+ * before a later manifest edit uploads as-is under the same version number.
+ */
+export function staleArchiveEntries(
+  manifest: EstateManifest,
+  readEntry: (entry: string) => string | null,
+): string[] {
+  return Object.entries(packageTextEntries(manifest)).flatMap(([entry, expected]) => {
+    const actual = readEntry(entry);
+    if (actual === null) return [`${entry} is missing from the archive`];
+    return actual === expected
+      ? []
+      : [`${entry} differs from what mods/manifest.json builds`];
+  });
+}
+
+function readArchiveEntry(zipPath: string, entry: string): string | null {
+  try {
+    return execFileSync("unzip", ["-p", zipPath, entry], { encoding: "utf8" });
+  } catch (error) {
+    // unzip exits 11 when the named entry is absent. Anything else is a real failure.
+    if ((error as { status?: number }).status === 11) return null;
+    throw error;
+  }
+}
+
 async function main(): Promise<number> {
   const dryRun = process.argv.includes("--dry-run");
   const root = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -192,6 +220,16 @@ async function main(): Promise<number> {
     console.error(
       `No archive at ${archivePath}. Run scripts/modpack-build.mts first.`,
     );
+    return 1;
+  }
+
+  const stale = staleArchiveEntries(manifest, (entry) =>
+    readArchiveEntry(archivePath, entry),
+  );
+  if (stale.length > 0) {
+    console.error(`Refusing to publish ${archivePath}: it does not match mods/manifest.json.`);
+    for (const reason of stale) console.error(`  - ${reason}`);
+    console.error("Rebuild with scripts/modpack-build.mts, then publish.");
     return 1;
   }
 
