@@ -1,0 +1,33 @@
+scripts/modpack.mts
+  s_d9d02ad73fc4af::t_a2fcec67b27936 462-463
+  s_d9d02ad73fc4af::t_7d63c4f634bc98 459-461,464-470
+scripts/modpack-build.mts
+  s_d9d02ad73fc4af::t_8207353087e2ed 27
+  s_d9d02ad73fc4af::t_2ab39cbb3dbe47 227-229
+scripts/modpack-publish.mts
+  s_d9d02ad73fc4af::t_f6e4613f29cc40 226-235
+  s_d9d02ad73fc4af::t_b794b77b149e5a 177
+  s_d9d02ad73fc4af::t_62cf3f2985faac 176,178-186,189-203
+  s_d9d02ad73fc4af::t_1a5c80371a966a 188
+  s_d9d02ad73fc4af::t_4cd9b7a2dc1afc 21
+  s_d9d02ad73fc4af::t_eb12b69b048f6b 187
+scripts/modpack-publish.test.mts
+  s_d9d02ad73fc4af::t_3ca1af03cd71b6 10,13
+  s_d9d02ad73fc4af::t_b798b6f3e6d9dc 140-190
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "e8731733230c39e7421d0189753d7c37dbd5468f",
+  "prompts": {},
+  "sessions": {
+    "s_d9d02ad73fc4af": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8e9cc29e-ab66-47cd-84b7-d16bf40ec09e",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    }
+  }
+}
