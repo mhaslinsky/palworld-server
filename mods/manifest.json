@@ -380,6 +380,20 @@
       "note": "The two player extras are per-player hand installs like Animal Feeding Trough, because a Thunderstore pack carries mods and nothing else. Neither is a version gate, so a player without them is not kicked, only short a source. Read off the 1.2.5 readme and re-read 2026-09-22 before any of it went on the pack page; the mod reports detection status for both in its own cog menu, which is why the page tells players to look there rather than to assume the copy took. Config lives in BepInEx/config/OdinOnDemand/ rather than a single cfg file. The readme lists admin-only settings, a VIP mode and remote-control options, none of which are configured yet."
     },
     {
+      "thunderstore": "Ivvty-PortalPreview",
+      "version": "1.1.4",
+      "side": "client",
+      "why": "Shows where a portal leads: the frame becomes a window onto a frozen 3D view of the destination, lit for its current time of day and weather. Walk through once, and both ends get their view. Existing mechanics are untouched: tags, travel, and the ore gate work exactly as before. Requested by the operator on 2026-09-24.",
+      "risk": "MAINTENANCE risk only. The package was created 2026-09-24 at 12:47Z and shipped six versions, 1.0.0 to 1.1.4, in its first eleven hours, so this pin will go stale fast and the mod monitor will say so. Its readme scopes it to Windows, says native Linux/Vulkan stability after repeated portal travel is not verified and that Linux crashes have been reported, and says a capture is synchronous work that can hitch. A player on native Linux rather than Proton should leave it disabled. On the fourth drift the readme declares no target game build at all, so the check against game_version 1.0.15 is INDETERMINATE.",
+      "artifact_sha256": {
+        "PortalPreview.dll": "505be1e50c2cd58a367cc0e596cdf2b7418739a09e70c9fa87bebc382db481a9"
+      },
+      "plugin_name": null,
+      "plugin_name_note": "client-side only, so it never appears in the server's load log. On a client it loads as PortalPreview 1.1.4, from BepInPlugin(ru.ivest.portalpreview, PortalPreview, 1.1.4) read off the DLL.",
+      "dependencies_note": "Declares BepInExPack 5.4.2351, released 2026-09-24, one step past the 5.4.2350 pinned here. Gale still installs 5.4.2350: Thunderstore::dependencies walks the pack breadth first and keeps the first version of each package it meets, which is the pack's own pin, and missing_deps skips any package already installed whatever its version (both read in the Kesomannen/gale source on 2026-09-24). 5.4.2351 changes log formatting, adds a Valheim version log line, rewords the duplicate-GUID warning and swaps the Linux doorstop library, none of it plugin-facing, so running on 5.4.2350 is expected to work; UNVERIFIED until a client loads it. r2modman's resolution was not checked. The DLL also declares a SOFT BepInDependency on ru.ivest.valheimframebudget, which no package on this estate provides; soft means it loads without it.",
+      "note": "Not on the server, deliberately: its readme says 'Client-side. Each player captures the portals they use; nothing is sent over the network', so a server copy would have nothing to do. Captures live in BepInEx/cache/PortalPreview/PortalSnapshots on each client, and at a Panorama resolution of 2048 each visible portal costs about 100 MB more video memory. Config is BepInEx/config/ru.ivest.portalpreview.cfg; the F5 console takes frozenportal status, refresh and log on. How it treats a portal built on a moving Build On Ship ship is UNVERIFIED."
+    },
+    {
       "thunderstore": "JereKuusela-Server_devcommands",
       "version": "1.113.0",
       "side": "server",
