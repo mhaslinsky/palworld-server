@@ -7,9 +7,10 @@ import {
   requireEtag,
   resolveToken,
   sliceParts,
+  staleArchiveEntries,
   type UploadPart,
 } from "./modpack-publish.mts";
-import type { EstateManifest } from "./modpack.mts";
+import { packageTextEntries, type EstateManifest } from "./modpack.mts";
 
 function manifest(): EstateManifest {
   return {
@@ -135,4 +136,55 @@ test("no token anywhere is a loud failure, never an empty-string publish attempt
     () => resolveToken({}, () => "   "),
     /no Thunderstore token/,
   );
+});
+
+function manifestWithOneMod(why: string, version: string): EstateManifest {
+  return {
+    ...manifest(),
+    mods: [
+      {
+        thunderstore: "Author-ShipMod",
+        version,
+        side: "client",
+        why,
+        plugin_name: "ShipMod",
+      },
+    ],
+  };
+}
+
+function archiveBuiltFrom(built: EstateManifest): (entry: string) => string | null {
+  const entries = packageTextEntries(built);
+  return (entry) => entries[entry] ?? null;
+}
+
+test("an archive built from the current manifest is not stale", () => {
+  const current = manifestWithOneMod("Build on ships.", "1.0.0");
+  assert.deepEqual(staleArchiveEntries(current, archiveBuiltFrom(current)), []);
+});
+
+test("a why edit made after the build is caught in the readme alone", () => {
+  const atBuild = manifestWithOneMod("Build on ships.", "1.0.0");
+  const edited = manifestWithOneMod("Build on ships. Known conflict: rotation.", "1.0.0");
+  assert.deepEqual(staleArchiveEntries(edited, archiveBuiltFrom(atBuild)), [
+    "README.md differs from what mods/manifest.json builds",
+  ]);
+});
+
+test("a version pin changed after the build is caught in both entries", () => {
+  const atBuild = manifestWithOneMod("Build on ships.", "1.0.0");
+  const bumped = manifestWithOneMod("Build on ships.", "1.0.1");
+  assert.deepEqual(staleArchiveEntries(bumped, archiveBuiltFrom(atBuild)), [
+    "manifest.json differs from what mods/manifest.json builds",
+    "README.md differs from what mods/manifest.json builds",
+  ]);
+});
+
+test("an entry absent from the archive is reported as missing, not as a match", () => {
+  const current = manifestWithOneMod("Build on ships.", "1.0.0");
+  const complete = archiveBuiltFrom(current);
+  const withoutReadme = (entry: string) => (entry === "README.md" ? null : complete(entry));
+  assert.deepEqual(staleArchiveEntries(current, withoutReadme), [
+    "README.md is missing from the archive",
+  ]);
 });

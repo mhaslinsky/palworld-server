@@ -23,8 +23,8 @@ import {
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
-  buildReadme,
   buildThunderstoreManifest,
+  packageTextEntries,
   parseDependency,
   validate,
   type EstateManifest,
@@ -224,11 +224,9 @@ async function main(): Promise<number> {
   rmSync(distDir, { recursive: true, force: true });
   mkdirSync(distDir, { recursive: true });
 
-  writeFileSync(
-    join(outputDir, "manifest.json"),
-    `${JSON.stringify(built, null, 2)}\n`,
-  );
-  writeFileSync(join(outputDir, "README.md"), buildReadme(manifest));
+  for (const [entry, content] of Object.entries(packageTextEntries(manifest))) {
+    writeFileSync(join(outputDir, entry), content);
+  }
   writeFileSync(
     join(outputDir, "icon.png"),
     encodePng(ICON_SIZE, ICON_SIZE, renderAlgizIcon(ICON_SIZE)),

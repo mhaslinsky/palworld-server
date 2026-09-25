@@ -456,3 +456,15 @@ Almost always a ValheimPlus version mismatch. Check that your manager has this p
 Game version ${manifest.game_version}, network version ${manifest.network_version}.
 `;
 }
+
+/**
+ * The pack archive's text entries, byte for byte as the build writes them. The publish step
+ * compares against the same function, so the two cannot disagree on whether an archive is
+ * current.
+ */
+export function packageTextEntries(manifest: EstateManifest): Record<string, string> {
+  return {
+    "manifest.json": `${JSON.stringify(buildThunderstoreManifest(manifest), null, 2)}\n`,
+    "README.md": buildReadme(manifest),
+  };
+}
