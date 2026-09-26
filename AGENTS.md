@@ -62,13 +62,16 @@ disconnecting every player, while the script itself does NOT re-run. Both halves
 players get dropped AND the change does not take effect.
 
 Read the plan for `aws_instance.server` at all, not just for `must be replaced`. An
-in-place `user_data` update is a player-facing restart: announce it, check who is online
-using the live SSM roster (`terraform/ssm.tf`, published from A2S player counts by
-`scripts/valheim-idle.mts`) or an A2S query in `scripts/a2s.mts`, and wait, unless the
-owner says otherwise. Valheim saves on its configured interval and on the SIGINT shutdown
-path in `terraform/user_data.sh.tftpl`; before restarting, confirm the newest chunk-file
-mtime under `worlds_local/<World>/` passes the freshness check in
-`scripts/valheim-backup.mts`. Prefer keeping runtime-tunable values OUT of `user_data`
+in-place `user_data` update is a player-facing restart: announce it, check occupancy with
+`aws ssm get-parameter --name /palworld-server/roster`, and wait, unless the owner says
+otherwise. Read `count`, not `names`: `count` is the A2S player count; `names` contains
+only journal names from the previous three minutes, so a player connected longer can be
+missing. Valheim saves on its configured interval and on the SIGINT shutdown path
+in `terraform/user_data.sh.tftpl`; before restarting, run
+`sudo -u steam /usr/bin/node /opt/valheim/valheim-backup.mts` over SSM Run Command.
+Require exit code 0 and the stdout line `BACKUP_VERIFIED <key> <size>`; `BACKUP_DEGRADED`
+is not success. This creates, integrity-checks, uploads, and verifies a backup, rather
+than only reading the save mtime. Prefer keeping runtime-tunable values OUT of `user_data`
 entirely (SSM, like the Discord webhook and roster already are).
 
 **The Valheim box's swap and memory cap live outside `user_data`.** `terraform/memory_guard.tf`
@@ -95,11 +98,13 @@ for that prefix is configured in `terraform/backup_monitor.tf`. Before any risky
 use `aws s3 ls` to confirm a recent object exists under `world/linux/`; do not assume the
 timer is alive. `world/linux-degraded/` holds captures whose save freshness could not be
 proven, so an object there is not a healthy backup.
+After changing anything in the backup path, prove an actual backup restores before
+cutover. This repository has no Valheim restore drill yet.
 
 ## Current runbooks
 
 - For alert changes, inspect `terraform/backup_monitor.tf`, `terraform/mod_monitor.tf`, `terraform/alarm_forwarder.tf`, and `discord-bot/alarm-forwarder/index.mjs`. The SNS Discord subscription uses the monitor webhook; only a confirmed email subscriber provides independent coverage, so verify live subscriptions before relying on them.
-- Start mod work with [mods/README.md](mods/README.md) and `mods/manifest.json`. Compare each mod's readme-declared target game build against `game_version` rather than its upload date; check setting gates and units, and test runtime behavior before treating a mod as working. Verify the server before publishing a matching client pack.
+- Start mod work with [mods/README.md](mods/README.md), especially [Mod behavior and rollout checks](mods/README.md#mod-behavior-and-rollout-checks), and `mods/manifest.json`. Compare each mod's readme-declared target game build against `game_version` rather than its upload date; check setting gates and units, and test runtime behavior before treating a mod as working. Verify the server before publishing a matching client pack.
 
 ## Archived Palworld safeguards
 
@@ -123,9 +128,11 @@ This codebase has produced several failures that reported success:
   right up to the reboot; only `is-enabled` would have said `disabled`. **Check
   `is-enabled`, not just `is-active`** - and prefer `enable --now` to `start`.
 
-So: after a change, ask the running system what it thinks is true (the A2S query in
-`scripts/a2s.mts`, `journalctl -u valheim`, and `aws s3 ls` on the `world/linux/` backup
-prefix) rather than trusting the command's return code. And when adding a guard,
+So: after a change, ask the running system what it thinks is true: read the roster's
+`count` with `aws ssm get-parameter --name /palworld-server/roster`, run
+`journalctl -u valheim` over SSM, and run
+`aws s3 ls "s3://$(terraform -chdir=terraform output -raw backups_bucket)/world/linux/" --profile aidb-personal --region us-east-1`.
+Do not trust the command's return code alone. And when adding a guard,
 **make it fail once on purpose** before believing it.
 
 ## Context
