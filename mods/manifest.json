@@ -7,17 +7,18 @@
   "modpack": {
     "namespace": "valheimsquad",
     "name": "Utgarde_Client_Pack",
-    "version_number": "1.15.0",
+    "version_number": "1.16.0",
     "website_url": "https://github.com/mhaslinsky/palworld-server",
     "description": "Client mods for the Utgarde Valheim server, pinned to the versions the server runs."
   },
   "verified": {
     "server": {
-      "at": "2026-09-25T05:41:00Z",
-      "method": "scripts/mods-verify.mts against BepInEx/LogOutput.log from the first boot with Build On Ship 3.4.3 installed (the DLL went in at 01:52Z without a restart; this start was 05:36Z). CLEAN at 22, up from 21, with ShipBuildMod 4.0.0 the added row. The log holds exactly one 'Chainloader startup complete', so it covers this boot only; it was fetched whole as gzip plus base64 over SSM once it stopped growing, with sha256 83e73ce658bf09dfea7450cc9a53d4c75a7aedf9b3bb7f6353856b068d2f604c matching on both ends. World load confirmed separately: Game server connected 05:38:34, Zonesystem Awake 05:38:35, DungeonDB Start 05:38:41.",
+      "at": "2026-09-26T01:08:00Z",
+      "method": "scripts/mods-verify.mts against BepInEx/LogOutput.log from the first boot with OdinOnDemand 1.3.0 and AdventureBackpacks 2.1.13, installed over SSM (command f27ab96d) with valheim.service stopped. CLEAN at 22, the same count as before, with both rows at their new versions. All 37 files (two DLLs and 35 translation json files) were fetched through presigned URLs, because the instance role reads only scripts/linux/*, and every one was sha256-checked against the package before the service stopped. The replaced 1.2.5 and 2.1.10 files are kept in /home/steam/mod-backup-20260926. The log was fetched whole as gzip plus base64 with sha256 423daeae8e760ce09a99d024bf389f44b93b6bf6889a1196db1ec181dd9dd36a matching on both ends and holds exactly one 'Chainloader startup complete'. World load confirmed separately: Game server connected 01:07:31, Zonesystem Awake 01:07:32, DungeonDB Start 01:07:37. UDP 2456 and 2457 bound by valheim_server.",
       "game": "l-1.0.15, network version 40, BepInExPack 5.4.2350",
-      "errors": "15 '[Error' lines and zero 'Exception' lines this boot, against a control of 491 log lines. 13 are the vanilla headless noise documented before: AsyncResourceUpload, the missing video decode shaders, the intro cinematic and the custom render path shader. The other 2 are new: ValheimPlus failing to apply its free placement rotation, which is the Build On Ship conflict recorded on that mod's entry. All 14 warnings are Unity rendering and audio lines that a headless box prints, plus Jotunn's three ambiguous asset name warnings, which the journal shows on every boot since at least 2026-09-22. None comes from ShipBuildMod.",
-      "unverified": "FOUR items, none covered by the CLEAN. Carried from the previous entry and not re-checked: PortalProgression's GATING, which needs a player to carry ore through a portal; and whether OdinOnDemand media players survive a relog and a restart (a player has used one in game since, for the 2026-09-24 audio test, but nobody checked that it survived a restart). New with Build On Ship: whether a client logs the same free placement rotation failure, and building on a ship at all, including whether a ship portal still obeys PortalProgression's ore gate. The log shows 'Connections 0' for this whole boot, so no client has touched Build On Ship yet."
+      "errors": "15 '[Error' lines and zero 'Exception' lines, the same set as the 2026-09-25 boot: 13 vanilla headless lines (AsyncResourceUpload, the video decode shaders, the intro cinematic, the custom render path shader) and the 2 ValheimPlus free placement rotation lines that Build On Ship causes. Neither upgraded mod added a line.",
+      "unverified": "Carried and not re-checked: PortalProgression's GATING (needs a player carrying ore through a portal), whether OdinOnDemand media players survive a relog and a restart, and the three Build On Ship client checks. New: nobody has connected on pack 1.16.0 yet, so OdinOnDemand 1.3.0's new network format and AdventureBackpacks 2.1.13 have only been seen from the server side, and 2.1.13's Stone Portal fix has not been exercised.",
+      "shutdown": "The idle timer was re-armed at 01:12:06Z (active and enabled) and fired at once: the box had been empty since the 00:31Z start, so it shut itself down, writing world backup 20260926T011216Z on the way. The install had already captured 20260926T010629Z when it stopped the service. The next start is the first one a player will see on these mods."
     },
     "client_jetragon": {
       "at": "2026-09-15T01:45:00Z",
@@ -25,9 +26,9 @@
       "stale": "STALE as of pack 1.14.0 (2026-09-22). The 2026-09-15 hand check predates every mod added since, and OdinOnDemand is now a third enforced mod alongside ValheimPlus and AdventureBackpacks, so an un-updated client is refused at connect rather than degraded. jetragon needs pack 1.14.0 plus the hand-installed Animal Feeding Trough 1.0.3, and, for OdinOnDemand specifically, a JavaScript runtime beside yt-dlp for full YouTube quality and Streamlink for Twitch or Kick. Neither of those two blocks connecting."
     },
     "pack": {
-      "at": "2026-09-25T06:06:35Z",
-      "method": "scripts/modpack-publish.mts, run after rebuilding from merged main (cf6dc3a). The rebuild was deliberate: the publish step uploads whatever archive the last build left in dist/, and the archive from the earlier dry run predated the Build On Ship warning. The build confirmed all 24 pinned versions exist upstream before writing. Presence was then polled separately rather than inferred from the submit: Thunderstore reports valheimsquad-Utgarde_Client_Pack-1.15.0 is_active with 24 dependencies and as the package's latest, Build On Ship 3.4.3 and PortalPreview 1.1.4 were each checked present BY NAME, and the published readme carries the Build On Ship rotation warning. The time is Thunderstore's own date_created.",
-      "window": "The server gained Build On Ship at the 05:37Z boot and the pack went live at 06:06:35Z, about 29 minutes in which the box ran a mod the published pack did not. Unlike the enforced mods, Build On Ship carries no ServerSync and no Jotunn NetworkCompatibility, so a 1.14.0 client would not have been refused anyway. None tried: this boot's log has no 'Got connection' line, and it reads 'Connections 0' at 05:48:59 and 05:58:59."
+      "at": "2026-09-26T01:09:21Z",
+      "method": "scripts/modpack-publish.mts after a rebuild from this branch. The script's own post-check read HTTP 404 for the version and refused to call it shipped, the same index lag seen on the 1.9.0 publish. Settled against controls: the per-version endpoint returned 404 for 1.16.0, 200 for 1.15.0 and 404 for 9.9.9, while the package index reported valheimsquad-Utgarde_Client_Pack 1.16.0 as latest and is_active with 24 dependencies, including AdventureBackpacks-2.1.13, ValheimVisualEnhanced-0.5.18 and OdinOnDemand-1.3.0 by name. The time is Thunderstore's own date_created.",
+      "window": "valheim.service came up on the new mods at 01:06:43Z and the pack went live at 01:09:21Z, about 2.5 minutes in which a 1.15.0 client would have been refused by OdinOnDemand's version check. The box had been stopped until 00:31Z for the deploy and nobody connected."
     }
   },
   "mods": [
@@ -146,16 +147,17 @@
     },
     {
       "thunderstore": "Vapok-AdventureBackpacks",
-      "version": "2.1.10",
+      "version": "2.1.13",
       "side": "both",
       "enforced": true,
       "why": "Craftable, wearable backpacks with tiers. Replaces ArgusMagnus-ServersideQoL_Backpack, which was server-only and therefore cheaper to deploy, but was an invisible container opened by an emote rather than an item in the world. Since the pack reaches every player anyway, the deployment saving bought nothing. Jotunn-based, so a client without it is kicked at connect exactly like ValheimPlus.",
       "artifact_sha256": {
-        "AdventureBackpacks.dll": "745e27d146d81d8e0d7ad5f2f18e128a46ee850d7b9dd82516ebc8f7ac1fb73c"
+        "AdventureBackpacks.dll": "5773e28a4e8a7f27b839f1fbc4ab2272c5349e7e38d671f683950e30d47d4541"
       },
       "plugin_name": "Adventure Backpacks",
-      "note": "Ships a Translations/ folder beside the DLL; 15 json files, copied on both sides. 2.1.10 hard-requires Jotunn 2.30.2, so the two can never be bumped independently: the floor was 2.26.1 at 2.0.4 and 2.30.1 at 2.0.9. Two fixes in this range earn the jump on this estate specifically. 2.1.9 fixes dedicated servers failing to load backpacks while waiting on a user-interface event, which is a server-side fault this box was exposed to. 2.1.9 also fixes cold effects bleeding through when a weather mod is running, naming Seasonality, which this estate runs with every season set to two days, so winter arrives often.",
-      "telemetry": "2.0.6 added anonymous telemetry its changelog described as defaulting to enabled with auto-opt-in on launch. 2.0.9 REVERSED that, and 2.1.10 holds the line: read off the box's regenerated config on 2026-09-22, 'Enable Anonymous Telemetry' under [Local Config] is false and marked [Not Synced with Server], so the server cannot set it for players either way. That is a re-read at 2.1.10, not the 2.0.9 reading carried forward. The same section carries 'Show Splash on Startup = true', also client-local, so players see a splash on first launch after updating."
+      "note": "Ships a Translations/ folder beside the DLL; 35 json files as of 2.1.13 (15 at 2.1.10, the other 20 are new languages from 2.1.11), copied on both sides. 2.1.10 hard-requires Jotunn 2.30.2, so the two can never be bumped independently: the floor was 2.26.1 at 2.0.4 and 2.30.1 at 2.0.9. Two fixes in this range earn the jump on this estate specifically. 2.1.9 fixes dedicated servers failing to load backpacks while waiting on a user-interface event, which is a server-side fault this box was exposed to. 2.1.9 also fixes cold effects bleeding through when a weather mod is running, naming Seasonality, which this estate runs with every season set to two days, so winter arrives often.",
+      "telemetry": "2.0.6 added anonymous telemetry its changelog described as defaulting to enabled with auto-opt-in on launch. 2.0.9 REVERSED that, and 2.1.10 holds the line: read off the box's regenerated config on 2026-09-22, 'Enable Anonymous Telemetry' under [Local Config] is false and marked [Not Synced with Server], so the server cannot set it for players either way. That is a re-read at 2.1.10, not the 2.0.9 reading carried forward. The same section carries 'Show Splash on Startup = true', also client-local, so players see a splash on first launch after updating.",
+      "upgrade_2_1_13": "Dependencies are unchanged from 2.1.10 (BepInExPack 5.4.2350, Jotunn 2.30.2, YamlDotNet 16.3.1). What earns it here: 2.1.13 fixes backpacks carrying ore or metal being blocked at Stone Portals, and adds safety checks against crafting and inventory errors on dedicated servers; 2.1.11 adds more dedicated-server protections and null safety when crafting from a backpack; 2.1.12 fixes a config sync problem in a library. Enforced, so it moved with the pack."
     },
     {
       "thunderstore": "Landoria-GentleDeath",
@@ -230,15 +232,15 @@
     },
     {
       "thunderstore": "Pumpkin-ValheimVisualEnhanced",
-      "version": "0.5.17",
+      "version": "0.5.18",
       "side": "client",
       "why": "The visual upgrade the group asked for. Explicitly NOT a ReShade-style screen filter: its effects hook Valheim's own lighting, water, weather, biome and time-of-day systems, so they respond to the world rather than tinting the frame. Ships wind-driven cloud shadows, underwater caustics and Meadows fireflies on by default. Chosen over the texture-replacement mods because those are limited to vegetation and their own author recommends this one instead.",
       "artifact_sha256": {
-        "ValheimVisualEnhanced.dll": "cbe53b4b8315c591e8290e5bd6c506cce2bf80b72714d9edb3dc2f5018a7c587"
+        "ValheimVisualEnhanced.dll": "e1f611ad5d1b3a59a79dd9926cd5fd813c4e24265f0626554db52ab51bb25f2e"
       },
       "plugin_name": null,
       "plugin_name_note": "client-side only, so it never appears in the server's load log",
-      "note": "Requires Direct3D 11; its readme states Vulkan is not currently validated, so a client launching with -force-vulkan may misbehave. Windows only. Declares no Jotunn dependency and no network sync. More usefully than that reasoning, it was OBSERVED on 2026-09-19 that a client lacking this batch's mods connected and spawned normally (05:40:44Z), and neither new server-side DLL carries a Jotunn NetworkCompatibility string, so nothing here enforces a version match. Its own readme says do NOT install it on a dedicated server; it has no server-side behaviour. The Enhanced Environment colour-grading feature ships Enabled = false and was deliberately left off: it is the one opinionated feature and visibly recolours the game. 0.5.15 through 0.5.17 tune the three features that ship on by default: cloud shadows now form in broad bands rather than one uniform dapple size, the finest shadow octave is dropped when the mask cannot resolve it, which removes shimmer at high ShadowDrawDistance, and underwater caustics now fall off on vertical faces instead of lighting walls like floors. Its zip uses Windows path separators, the same trap as Jotunn's."
+      "note": "Requires Direct3D 11; its readme states Vulkan is not currently validated, so a client launching with -force-vulkan may misbehave. Windows only. Declares no Jotunn dependency and no network sync. More usefully than that reasoning, it was OBSERVED on 2026-09-19 that a client lacking this batch's mods connected and spawned normally (05:40:44Z), and neither new server-side DLL carries a Jotunn NetworkCompatibility string, so nothing here enforces a version match. Its own readme says do NOT install it on a dedicated server; it has no server-side behaviour. The Enhanced Environment colour-grading feature ships Enabled = false and was deliberately left off: it is the one opinionated feature and visibly recolours the game. 0.5.15 through 0.5.17 tune the three features that ship on by default: cloud shadows now form in broad bands rather than one uniform dapple size, the finest shadow octave is dropped when the mask cannot resolve it, which removes shimmer at high ShadowDrawDistance, and underwater caustics now fall off on vertical faces instead of lighting walls like floors. Its zip uses Windows path separators, the same trap as Jotunn's. 0.5.18 only raises the default Water Caustic Lighting intensity to 1.8; a client with an existing config keeps its saved value, so for current players it changes nothing."
     },
     {
       "thunderstore": "Wire-WiresGrassTweaks",
@@ -346,12 +348,12 @@
     },
     {
       "thunderstore": "ValMedia-OdinOnDemand",
-      "version": "1.2.5",
+      "version": "1.3.0",
       "side": "both",
       "enforced": true,
       "why": "Cinema screens, televisions and music players built in world, playing YouTube, SoundCloud, Twitch, Kick and direct HTTP(S) streams for everyone in earshot. Asked for by the operator 2026-09-22. 1.2 rebuilt it on LibVLC and restored its own build-menu category on Valheim 1.0's new system.",
       "artifact_sha256": {
-        "OdinOnDemand.dll": "79d1dd06b454650ffa63c5cdd450bc06d41e30ead0d5c82debb7ae67cf90fb72",
+        "OdinOnDemand.dll": "85be0e140079e05747d1af7f57fe49f7923c33a0175848aac45224aeb9ee1d05",
         "LibVLCSharp.dll": "c69b4a45dbeb554d99090941273731a88bd4636a054c09c846633d6d50dc4adc"
       },
       "plugin_name": "OdinOnDemand",
@@ -377,8 +379,10 @@
           }
         ]
       },
-      "drift_target_build": "INDETERMINATE, the same verdict TreesReborn carries. The readme says 'updated for Valheim 1.0' and 'Valheim 1.0 support' with no patch number, so there is nothing to compare against game_version 1.0.15. Worth watching: 1.2.5 shipped 2026-09-15 and the game moved to 1.0.15 on 2026-09-18, so this is the one mod on the estate whose latest release predates the current game build.",
-      "note": "The two player extras are per-player hand installs like Animal Feeding Trough, because a Thunderstore pack carries mods and nothing else. Neither is a version gate, so a player without them is not kicked, only short a source. Read off the 1.2.5 readme and re-read 2026-09-22 before any of it went on the pack page; the mod reports detection status for both in its own cog menu, which is why the page tells players to look there rather than to assume the copy took. Config lives in BepInEx/config/OdinOnDemand/ rather than a single cfg file. The readme lists admin-only settings, a VIP mode and remote-control options, none of which are configured yet."
+      "drift_target_build": "INDETERMINATE by the readme, which still says only 'Valheim 1.0 support' with no patch number. 1.3.0 was published 2026-09-25, a week after the game moved to 1.0.15 on 2026-09-18, so the concern that this mod's latest release predated the current game build no longer applies.",
+      "note": "The two player extras are per-player hand installs like Animal Feeding Trough, because a Thunderstore pack carries mods and nothing else. Neither is a version gate, so a player without them is not kicked, only short a source. Read off the 1.2.5 readme and re-read 2026-09-22 before any of it went on the pack page; the mod reports detection status for both in its own cog menu, which is why the page tells players to look there rather than to assume the copy took. Config lives in BepInEx/config/OdinOnDemand/ rather than a single cfg file. The readme lists admin-only settings, a VIP mode and remote-control options, none of which are configured yet.",
+      "upgrade_1_3_0": "Taken 2026-09-25 because its changelog calls it an 'Important security update' that servers and all players should take, without saying what the issue is. 1.3.0 changes the network message format and 'can't connect to older versions', so the box and the pack moved together. Only OdinOnDemand.dll differs from 1.2.5: every LibVLCSharp and libvlc file in the package is byte-identical, and the three declared dependencies (Jotunn 2.30.2, OOD_LIB 1.2.0, JsonDotNET 13.0.4) are unchanged. It also stops a dedicated server from trying to play media, which is the path the Linux box never exercised anyway. Settings have lived in BepInEx/config/com.valmedia.odinondemand.cfg since 1.2.6; the plugin moves an existing OdinOnDemand/config.cfg there whole on first launch, before it binds its settings.",
+      "client_local_patch": "jetragon does not run the stock client DLL. It runs 1.3.0 plus a local patch that sends single-file YouTube formats (format 18) through LibVLC's native HTTP access with 2000 ms of caching, which fixed a stutter where about three quarters of the audio was dropped. Source: ~/Developer/OdinOnDemand, branch local/muxed-native-access-1.3.0, commit ac89733, a port of the 1.2.5 patch 4230911, pushed nowhere. It is off unless '[YouTube] Muxed Native Access = true' is set. The patch is client-side only and does not touch networking, so it does not affect the version check. Any reinstall of OdinOnDemand through Gale restores the stock DLL silently."
     },
     {
       "thunderstore": "Ivvty-PortalPreview",
