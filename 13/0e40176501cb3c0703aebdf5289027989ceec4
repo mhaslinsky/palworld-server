@@ -1,0 +1,21 @@
+AGENTS.md
+  s_afbb80dd6a0112::t_5eea9950842050 46-47,128-129
+  s_afbb80dd6a0112::t_15b663d831a6cc 66-72
+  s_afbb80dd6a0112::t_4c42b25c91dccc 37,65,81-98,126-127
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "130e40176501cb3c0703aebdf5289027989ceec4",
+  "prompts": {},
+  "sessions": {
+    "s_afbb80dd6a0112": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0dcc5-373d-7521-9792-5e7d28a7909c",
+        "model": "gpt-6-luna"
+      },
+      "human_author": null
+    }
+  }
+}
