@@ -34,7 +34,7 @@ is part of a hash that can replace a running server.
 Changing any of these on a live instance destroys and recreates it. Treat an edit to
 one as a deliberate, backup-first operation, never a side effect:
 
-- `ami` (hence: **every AMI is pinned by id**, in `data.tf`, `presence.tf`, `windows.tf`
+- `ami` (hence: **every AMI is pinned by id**, in `terraform/data.tf`, `terraform/presence.tf`
   - never `most_recent = true` or `ami-windows-latest`, both of which drift into a
   silent replacement on an unrelated apply)
 - `user_data` / anything `templatefile()` renders into it
@@ -43,7 +43,8 @@ one as a deliberate, backup-first operation, never a side effect:
 ### 5. Do not re-arm the guards in `compute.tf`
 
 `prevent_destroy`, `delete_on_termination = false`, and
-`user_data_replace_on_change = false` exist because of the root-volume loss incident documented in the CAI-1990 incident artifact. The world now
+`user_data_replace_on_change = false` exist because of the root-volume loss incident
+documented in `_global/personal/palworld-server/postmortems/2026-07-18-comment-edit-destroyed-live-world-postmortem.md`. The world now
 lives on its own EBS volume (`aws_ebs_volume.world`, also `prevent_destroy`), so a
 replacement is survivable rather than fatal - but all four are still load-bearing, and a
 replacement still drops every player and re-runs SteamCMD into whatever build is current.
@@ -61,9 +62,14 @@ disconnecting every player, while the script itself does NOT re-run. Both halves
 players get dropped AND the change does not take effect.
 
 Read the plan for `aws_instance.server` at all, not just for `must be replaced`. An
-in-place `user_data` update is a player-facing restart: announce it, force-save, and
-confirm `Level.sav`'s mtime advanced first. Prefer keeping runtime-tunable values OUT
-of `user_data` entirely (SSM, like the Discord webhook and roster already are).
+in-place `user_data` update is a player-facing restart: announce it, check who is online
+using the live SSM roster (`terraform/ssm.tf`, published from A2S player counts by
+`scripts/valheim-idle.mts`) or an A2S query in `scripts/a2s.mts`, and wait until the
+server is empty. Valheim saves on its configured interval and on the SIGINT shutdown
+path in `terraform/user_data.sh.tftpl`; before restarting, confirm the newest chunk-file
+mtime under `worlds_local/<World>/` passes the freshness check in
+`scripts/valheim-backup.mts`. Prefer keeping runtime-tunable values OUT of `user_data`
+entirely (SSM, like the Discord webhook and roster already are).
 
 **The Valheim box's swap and memory cap live outside `user_data`.** `terraform/memory_guard.tf`
 manages them through an SSM association that runs `scripts/memory-guard.mts` every 30 minutes
@@ -71,6 +77,24 @@ while the box is up, and on any rebuilt instance. Change the sizes in that scrip
 on the box: running `systemctl set-property` without `--runtime` writes a drop-in that outranks
 the repo's, and the next scheduled run deletes it. Without the cap, the 4 GB box froze solid on
 2026-09-23 when it ran out of memory instead of letting systemd restart Valheim.
+
+### 6. Putting a script in S3 is NOT deploying it
+
+Terraform uploads `a2s.mts`, `idle-logic.mts`, `valheim-idle.mts`, `backup-gates.mts`,
+and `valheim-backup.mts` to the backups bucket. `terraform/user_data.sh.tftpl` copies
+them into `/opt/valheim` only on first boot, so updating those S3 objects does not update
+the running host. `memory-guard.mts` is re-copied by its SSM association in
+`terraform/memory_guard.tf`. For a changed script, deliver the updated file to the running
+host and verify its contents there before reporting it deployed.
+
+### 7. Backups: check, don't assume
+
+The `aws_s3_bucket.backups` bucket stores healthy world backups under `world/linux/`,
+written by `scripts/valheim-backup.mts` on a 30-minute systemd timer. The freshness monitor
+for that prefix is configured in `terraform/backup_monitor.tf`. Before any risky operation,
+use `aws s3 ls` to confirm a recent object exists under `world/linux/`; do not assume the
+timer is alive. `world/linux-degraded/` holds captures whose save freshness could not be
+proven, so an object there is not a healthy backup.
 
 ## Current runbooks
 
@@ -99,10 +123,10 @@ This codebase has produced several failures that reported success:
   right up to the reboot; only `is-enabled` would have said `disabled`. **Check
   `is-enabled`, not just `is-active`** - and prefer `enable --now` to `start`.
 
-So: after a change, ask the running system what it thinks is true (`/v1/api/settings`,
-`/v1/api/info`, `aws s3 ls`, the served world GUID) rather than trusting the command's
-return code. And when adding a guard, **make it fail once on purpose** before believing
-it.
+So: after a change, ask the running system what it thinks is true (the A2S query in
+`scripts/a2s.mts`, `journalctl -u valheim`, and `aws s3 ls` on the `world/linux/` backup
+prefix) rather than trusting the command's return code. And when adding a guard,
+**make it fail once on purpose** before believing it.
 
 ## Context
 
