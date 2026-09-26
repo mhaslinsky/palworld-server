@@ -7,7 +7,7 @@
   "modpack": {
     "namespace": "valheimsquad",
     "name": "Utgarde_Client_Pack",
-    "version_number": "1.16.0",
+    "version_number": "1.17.0",
     "website_url": "https://github.com/mhaslinsky/palworld-server",
     "description": "Client mods for the Utgarde Valheim server, pinned to the versions the server runs."
   },
@@ -21,14 +21,14 @@
       "shutdown": "The idle timer was re-armed at 01:12:06Z (active and enabled) and fired at once: the box had been empty since the 00:31Z start, so it shut itself down, writing world backup 20260926T011216Z on the way. The install had already captured 20260926T010629Z when it stopped the service. The next start is the first one a player will see on these mods."
     },
     "client_jetragon": {
-      "at": "2026-09-15T01:45:00Z",
-      "method": "hand install into the Gale Default profile, every DLL hash-compared against the downloaded artifact; GentleDeath, AdventureBackpacks and VikingsDoSwim exercised in game",
-      "stale": "STALE as of pack 1.14.0 (2026-09-22). The 2026-09-15 hand check predates every mod added since, and OdinOnDemand is now a third enforced mod alongside ValheimPlus and AdventureBackpacks, so an un-updated client is refused at connect rather than degraded. jetragon needs pack 1.14.0 plus the hand-installed Animal Feeding Trough 1.0.3, and, for OdinOnDemand specifically, a JavaScript runtime beside yt-dlp for full YouTube quality and Streamlink for Twitch or Kick. Neither of those two blocks connecting."
+      "at": "2026-09-26T02:50:00Z",
+      "method": "Gale Default profile read over SSH after the 1.16.0 update, then this session's LogOutput.log from the last BepInEx banner. Updating the pack in Gale left OdinOnDemand and AdventureBackpacks at their old versions, the same Gale behaviour seen on 1.14.1, so Mike updated the three changed mods one at a time rather than Update all. Afterwards each package's manifest.json read OdinOnDemand 1.3.0, AdventureBackpacks 2.1.13 and ValheimVisualEnhanced 0.5.18, with PlantEverything 1.21.2 and GentleDeath 1.0.13 unmoved. The live OdinOnDemand.dll is the local patch build 638edefa..., put there by C:\\Users\\mhasl\\ood-patch\\deploy.ps1 over stock 85be0e14.... The session log shows 'Loading [OdinOnDemand 1.3.0]', the patch's startup line, 'Moved settings from ...OdinOnDemand/config.cfg', 'Loading [Adventure Backpacks 2.1.13]' and 'Got connection' at 22:44:27 local with no refusal, which is the first client connection on 1.3.0's new network format. The migrated com.valmedia.odinondemand.cfg holds 'Muxed Native Access = true'. Four videos took the native HTTP path, VLC held its 2000 ms lead, and Mike confirmed by ear that audio sounds right. 6 '[Error' lines and 0 exceptions in the session, none from OdinOnDemand or AdventureBackpacks.",
+      "stale": "Pack 1.17.0 removes PortalPreview, and Gale does not uninstall a mod when a pack drops it, so jetragon still has it until it is removed by hand in Gale."
     },
     "pack": {
-      "at": "2026-09-26T01:09:21Z",
-      "method": "scripts/modpack-publish.mts after a rebuild from this branch. The script's own post-check read HTTP 404 for the version and refused to call it shipped, the same index lag seen on the 1.9.0 publish. Settled against controls: the per-version endpoint returned 404 for 1.16.0, 200 for 1.15.0 and 404 for 9.9.9, while the package index reported valheimsquad-Utgarde_Client_Pack 1.16.0 as latest and is_active with 24 dependencies, including AdventureBackpacks-2.1.13, ValheimVisualEnhanced-0.5.18 and OdinOnDemand-1.3.0 by name. The time is Thunderstore's own date_created.",
-      "window": "valheim.service came up on the new mods at 01:06:43Z and the pack went live at 01:09:21Z, about 2.5 minutes in which a 1.15.0 client would have been refused by OdinOnDemand's version check. The box had been stopped until 00:31Z for the deploy and nobody connected."
+      "at": "2026-09-26T02:49:33Z",
+      "method": "scripts/modpack-publish.mts after a rebuild from this branch; the built README.md and manifest.json were grepped for 'preview' and returned nothing. The script's post-check read HTTP 404 for the version, the same index lag as 1.16.0 an hour earlier, whose controls (1.15.0 200, 9.9.9 404) showed the endpoint lags rather than lies. The package index reports valheimsquad-Utgarde_Client_Pack 1.17.0 as latest and is_active with 23 dependencies, none of them PortalPreview. The time is Thunderstore's own date_created.",
+      "window": "None that matters: PortalPreview is client-only with no network sync, so a player on 1.16.0 and a player on 1.17.0 can share the server. Gale does not uninstall a mod a pack drops, so each player removes it by hand."
     }
   },
   "mods": [
@@ -383,20 +383,6 @@
       "note": "The two player extras are per-player hand installs like Animal Feeding Trough, because a Thunderstore pack carries mods and nothing else. Neither is a version gate, so a player without them is not kicked, only short a source. Read off the 1.2.5 readme and re-read 2026-09-22 before any of it went on the pack page; the mod reports detection status for both in its own cog menu, which is why the page tells players to look there rather than to assume the copy took. Config lives in BepInEx/config/OdinOnDemand/ rather than a single cfg file. The readme lists admin-only settings, a VIP mode and remote-control options, none of which are configured yet.",
       "upgrade_1_3_0": "Taken 2026-09-25 because its changelog calls it an 'Important security update' that servers and all players should take, without saying what the issue is. 1.3.0 changes the network message format and 'can't connect to older versions', so the box and the pack moved together. Only OdinOnDemand.dll differs from 1.2.5: every LibVLCSharp and libvlc file in the package is byte-identical, and the three declared dependencies (Jotunn 2.30.2, OOD_LIB 1.2.0, JsonDotNET 13.0.4) are unchanged. It also stops a dedicated server from trying to play media, which is the path the Linux box never exercised anyway. Settings have lived in BepInEx/config/com.valmedia.odinondemand.cfg since 1.2.6; the plugin moves an existing OdinOnDemand/config.cfg there whole on first launch, before it binds its settings.",
       "client_local_patch": "jetragon does not run the stock client DLL. It runs 1.3.0 plus a local patch that sends single-file YouTube formats (format 18) through LibVLC's native HTTP access with 2000 ms of caching, which fixed a stutter where about three quarters of the audio was dropped. Source: ~/Developer/OdinOnDemand, branch local/muxed-native-access-1.3.0, commit ac89733, a port of the 1.2.5 patch 4230911, pushed nowhere. It is off unless '[YouTube] Muxed Native Access = true' is set. The patch is client-side only and does not touch networking, so it does not affect the version check. Any reinstall of OdinOnDemand through Gale restores the stock DLL silently."
-    },
-    {
-      "thunderstore": "Ivvty-PortalPreview",
-      "version": "1.1.4",
-      "side": "client",
-      "why": "Shows where a portal leads: the frame becomes a window onto a frozen 3D view of the destination, lit for its current time of day and weather. Walk through once, and both ends get their view. Existing mechanics are untouched: tags, travel, and the ore gate work exactly as before. Requested by the operator on 2026-09-24.",
-      "risk": "MAINTENANCE risk only. The package was created 2026-09-24 at 12:47Z and shipped six versions, 1.0.0 to 1.1.4, in its first eleven hours, so this pin will go stale fast and the mod monitor will say so. Its readme scopes it to Windows, says native Linux/Vulkan stability after repeated portal travel is not verified and that Linux crashes have been reported, and says a capture is synchronous work that can hitch. A player on native Linux rather than Proton should leave it disabled. On the fourth drift the readme declares no target game build at all, so the check against game_version 1.0.15 is INDETERMINATE.",
-      "artifact_sha256": {
-        "PortalPreview.dll": "505be1e50c2cd58a367cc0e596cdf2b7418739a09e70c9fa87bebc382db481a9"
-      },
-      "plugin_name": null,
-      "plugin_name_note": "client-side only, so it never appears in the server's load log. On a client it loads as PortalPreview 1.1.4, from BepInPlugin(ru.ivest.portalpreview, PortalPreview, 1.1.4) read off the DLL.",
-      "dependencies_note": "Declares BepInExPack 5.4.2351, released 2026-09-24, one step past the 5.4.2350 pinned here. Gale still installs 5.4.2350: Thunderstore::dependencies walks the pack breadth first and keeps the first version of each package it meets, which is the pack's own pin, and missing_deps skips any package already installed whatever its version (both read in the Kesomannen/gale source on 2026-09-24). 5.4.2351 changes log formatting, adds a Valheim version log line, rewords the duplicate-GUID warning and swaps the Linux doorstop library, none of it plugin-facing, so running on 5.4.2350 is expected to work; UNVERIFIED until a client loads it. r2modman's resolution was not checked. The DLL also declares a SOFT BepInDependency on ru.ivest.valheimframebudget, which no package on this estate provides; soft means it loads without it.",
-      "note": "Not on the server, deliberately: its readme says 'Client-side. Each player captures the portals they use; nothing is sent over the network', so a server copy would have nothing to do. Captures live in BepInEx/cache/PortalPreview/PortalSnapshots on each client, and at a Panorama resolution of 2048 each visible portal costs about 100 MB more video memory. Config is BepInEx/config/ru.ivest.portalpreview.cfg; the F5 console takes frozenportal status, refresh and log on. How it treats a portal built on a moving Build On Ship ship is UNVERIFIED."
     },
     {
       "thunderstore": "JereKuusela-Server_devcommands",
