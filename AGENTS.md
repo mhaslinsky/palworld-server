@@ -62,7 +62,8 @@ disconnecting every player, while the script itself does NOT re-run. Both halves
 players get dropped AND the change does not take effect.
 
 Every AWS CLI command in rules 5, 7, and 8 pins `--profile aidb-personal --region us-east-1`
-because the operator shell defaults to `us-east-2`, which is wrong for this estate.
+because the operator shell defaults to `us-east-2`, which is wrong for this estate. The box
+command script pins these values for its AWS calls.
 
 Read the plan for `aws_instance.server` at all, not just for `must be replaced`. An
 in-place `user_data` update is a player-facing restart: announce it, check occupancy with
@@ -78,69 +79,13 @@ aws ssm get-parameter \
 ```
 
 Valheim saves on its configured interval and on the SIGINT shutdown path in
-`terraform/user_data.sh.tftpl`. Before restarting, run the backup command below over SSM
-Run Command. The command resolves the running instance from its `Name=palworld-server` tag.
-The box sleeps when idle, so if no running instance id is returned, do not send the command
-or start the box. Stop and ask the owner to wake it.
-
-Set `BOX_COMMAND` to the requested command and run this recipe. A successful
-`send-command` call means only that AWS accepted the request. Wait for the invocation to
-finish, then inspect its final status and output. Accept success only when `Status` is
-`Success` and `ResponseCode` is `0`; for the backup, also require the stdout line
-`BACKUP_VERIFIED <key> <size>`. `BACKUP_DEGRADED` is not success.
-
-```bash
-BOX_COMMAND='sudo -u steam /usr/bin/node /opt/valheim/valheim-backup.mts'
-INSTANCE_ID="$(aws ec2 describe-instances \
-  --filters 'Name=tag:Name,Values=palworld-server' 'Name=instance-state-name,Values=running' \
-  --query 'Reservations[].Instances[].InstanceId' \
-  --output text \
-  --profile aidb-personal \
-  --region us-east-1)" || exit 1
-if ! printf '%s\n' "$INSTANCE_ID" | grep -Eq '^i-([[:xdigit:]]{8}|[[:xdigit:]]{17})$'; then
-  printf 'Expected exactly one running palworld-server instance, got: %s\n' "$INSTANCE_ID" >&2
-  exit 1
-fi
-COMMAND_ID="$(aws ssm send-command \
-  --instance-ids "$INSTANCE_ID" \
-  --document-name AWS-RunShellScript \
-  --parameters "commands=[\"$BOX_COMMAND\"]" \
-  --query 'Command.CommandId' \
-  --output text \
-  --profile aidb-personal \
-  --region us-east-1)" || exit 1
-if [ -z "$COMMAND_ID" ] || [ "$COMMAND_ID" = None ]; then
-  printf 'send-command returned no command id\n' >&2
-  exit 1
-fi
-while true; do
-  if aws ssm wait command-executed \
-    --command-id "$COMMAND_ID" \
-    --instance-id "$INSTANCE_ID" \
-    --profile aidb-personal \
-    --region us-east-1; then
-    break
-  fi
-  INVOCATION_STATUS="$(aws ssm get-command-invocation \
-    --command-id "$COMMAND_ID" \
-    --instance-id "$INSTANCE_ID" \
-    --query Status \
-    --output text \
-    --profile aidb-personal \
-    --region us-east-1)" || exit 1
-  case "$INVOCATION_STATUS" in
-    Success|Failed|TimedOut|Cancelled) break ;;
-    Pending|InProgress|Delayed|Cancelling) sleep 5 ;;
-    *) printf 'Unexpected invocation status: %s\n' "$INVOCATION_STATUS" >&2; exit 1 ;;
-  esac
-done
-aws ssm get-command-invocation \
-  --command-id "$COMMAND_ID" \
-  --instance-id "$INSTANCE_ID" \
-  --output json \
-  --profile aidb-personal \
-  --region us-east-1
-```
+`terraform/user_data.sh.tftpl`. Before restarting, run `node scripts/box-command.mts backup`.
+The script resolves the instance tagged `Name=palworld-server`, requires exactly one match
+in `running` state, sends the backup over SSM Run Command, and polls the invocation. It exits
+successfully only for `Status=Success`, `ResponseCode=0`, and a stdout line
+`BACKUP_VERIFIED <key> <size>`. `BACKUP_DEGRADED` is not success. The box sleeps when idle;
+for a `stopped` result, do not send a command or start the box. Stop and ask the owner to wake it.
+For any other state, wait and check again.
 
 This creates, integrity-checks, uploads, and verifies a backup, rather than only reading
 the save mtime. Prefer keeping runtime-tunable values OUT of `user_data` entirely (SSM,
@@ -167,9 +112,11 @@ host and verify its contents there before reporting it deployed.
 The `aws_s3_bucket.backups` bucket stores healthy world backups under `world/linux/`,
 written by `scripts/valheim-backup.mts` on a 30-minute systemd timer. The freshness monitor
 for that prefix is configured in `terraform/backup_monitor.tf`. Before any risky operation,
-check server state with the `aws ec2 describe-instances` lookup in rule 5: a returned instance
-ID means running; an empty successful response means stopped. Run this listing and verify that
-it contains a healthy object under `world/linux/`:
+run `node scripts/box-command.mts state`. For exactly one `running` instance, the newest
+backup must be no more than 75 minutes old. For exactly one `stopped` instance, no new backup
+is expected and the newest object should date from the last shutdown. Any other state means
+wait and check again; zero or multiple matches are failures, never evidence that the box is
+stopped. Run this listing and verify that it contains a healthy object under `world/linux/`:
 
 ```bash
 aws s3 ls s3://palworld-server-backups-414700437904/world/linux/ \
@@ -177,10 +124,8 @@ aws s3 ls s3://palworld-server-backups-414700437904/world/linux/ \
   --region us-east-1
 ```
 
-When the instance is running, the newest object must be no more than 75 minutes old to match
-the monitor's stale threshold. When the instance is stopped, no new backups are expected; the
-newest object should date from the last shutdown because the `ExecStopPost` hook runs
-`valheim-backup.mts`. Do not assume the timer is alive.
+When stopped, the newest object should date from the last shutdown because the `ExecStopPost`
+hook runs `valheim-backup.mts`. Do not assume the timer is alive.
 
 `world/linux-degraded/` holds captures whose save freshness could not be proven, so an
 object there is not a healthy backup. After changing anything in the backup path, verify that
@@ -214,10 +159,10 @@ This codebase has produced several failures that reported success:
   `is-enabled`, not just `is-active`** - and prefer `enable --now` to `start`.
 
 So: after a change, ask the running system what it thinks is true: read the roster's
-`count` with the complete command in rule 5, and run `journalctl -u valheim` over SSM by
-setting `BOX_COMMAND='journalctl -u valheim'` and using the same SSM recipe in rule 5. Repeat
-the backup listing in rule 7. Do not trust the command's return code alone. And when adding
-a guard, **make it fail once on purpose** before believing it.
+`count` with the complete command in rule 5, run
+`node scripts/box-command.mts run 'journalctl -u valheim -n 200 --no-pager'`, and repeat the
+backup listing in rule 7. Do not trust the command's return code alone. When adding a guard,
+**make it fail once on purpose** before believing it.
 
 ## Context
 

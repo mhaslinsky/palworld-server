@@ -55,7 +55,8 @@ stage would otherwise lose it with no record of what was lost.
 
 sha256 `2f31e30cb4132f3f2b4864b242e7484fb05ca4ebde85fd433db61faac3e1d60e`.
 
-The patch is described in [AGENTS.md](../../AGENTS.md) under Archived Palworld safeguards.
+The [Archived Palworld safeguards section of AGENTS.md](../../AGENTS.md) says to preserve this
+local patch while staging archived UE4SS mods.
 Short version: upstream's `LoadMod` returns
 `false` on an invalid World without registering the mod for revalidation, so the retry
 loop iterates an empty table and prints `Finished loading LogicMods!` having loaded

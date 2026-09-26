@@ -76,6 +76,15 @@ Do steps 3 and 4 close together. Between them the server and the published pack 
 ValheimPlus runs `enforceMod = true`, so a client with a different version is kicked with a
 message that does not explain why. Keep the window short and say in chat that it is open.
 
+Three things can drift: the box versus `manifest.json`, a newer upstream version, and the
+published pack versus the manifest. Run all three checks before saying mod state is healthy:
+`mods-verify.mts` checks the box, while `mods-upstream.mts` checks upstream versions and the
+published pack. Each check misses the other drift.
+
+Only the upstream and pack checks are watched off-box. The box-versus-manifest check needs
+the server running, and the box sleeps most of the time, so run `mods-verify.mts` by hand
+after any server-side mod change.
+
 ## Verifying the box matches
 
 ```bash
