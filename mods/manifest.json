@@ -93,11 +93,16 @@
     },
     {
       "thunderstore": "ArgusMagnus-ServersideQoL",
-      "version": "2.0.14",
+      "version": "2.1.0",
       "side": "server",
       "why": "Framework the three ServersideQoL modules below plug into. 2.0.4 silently stopped on the 1.0.12 network-version bump and took PortalProgression down with it, so this pin is load-bearing after every game patch.",
       "plugin_name": "ServersideQoL",
-      "note": "Ships TWO artifacts and they must move together: plugins/ServersideQoL.dll and patchers/ServersideQoL.Patchers.dll, which BepInEx loads first and which patches assembly_valheim. Upgrading only the plugin leaves the patcher a version behind, and the load log reports both, so check the 'Loaded 1 patcher method from [ServersideQoL.Patchers ...]' line as well as the plugin line. 2.0.14 turns config auto-reload on by default and fixes occasional item loss when a module modifies a container on a non-dedicated server."
+      "note": "Ships TWO artifacts and they must move together: plugins/ServersideQoL.dll and patchers/ServersideQoL.Patchers.dll, which BepInEx loads first and which patches assembly_valheim. Upgrading only the plugin leaves the patcher a version behind, and the load log reports both, so check the 'Loaded 1 patcher method from [ServersideQoL.Patchers ...]' line as well as the plugin line. 2.0.14 turns config auto-reload on by default and fixes occasional item loss when a module modifies a container on a non-dedicated server.",
+      "artifact_sha256": {
+        "plugins/ServersideQoL.dll": "8b487debdbc91dd621d70393af6420a694bf81e6d84af7317f0a604813e2aa44",
+        "patchers/ServersideQoL.Patchers.dll": "2a9d95d2cf1c6ae93632219470e8e59bccf137ad85ac4e5003cf0e65bce74ff1"
+      },
+      "upgrade_2_1_0": "Taken 2026-09-26 at the operator's request once moves 1 and 2 were done, after it had been held as hours old. Its own fixes are for TameAssist feeding from containers and a host-inventory bug on non-dedicated servers, neither of which this estate runs, so the reason is currency rather than a fix. Declares BepInExPack 5.4.2351 and YamlDotNet 16.3.1, both already here. Both artifacts and plugins/ServersideQoL.deps.json changed and were installed together."
     },
     {
       "thunderstore": "ArgusMagnus-ServersideQoL_PortalProgression",
@@ -109,18 +114,25 @@
     },
     {
       "thunderstore": "ArgusMagnus-ServersideQoL_AutoStore",
-      "version": "2.0.14",
+      "version": "2.1.0",
       "side": "server",
       "why": "Auto-sort, auto-pickup, and stack-into-nearby-chests on the Cheer emote.",
-      "plugin_name": "ServersideQoL.AutoStore"
+      "plugin_name": "ServersideQoL.AutoStore",
+      "artifact_sha256": {
+        "ServersideQoL.AutoStore.dll": "2d3ca80732daabac2c5c3855a5c735485fb6737cb1bb1d153a7f26305756821a"
+      },
+      "note": "2.1.0 adds AutoPickupRangeSignPrefix (a per-chest pickup range written on its sign) and SuppressContainerModifiedEffectSound. Both are new options with defaults, so nothing here changes until someone sets them."
     },
     {
       "thunderstore": "ArgusMagnus-ServersideQoL_ContainerSigns",
-      "version": "2.0.11",
+      "version": "2.1.0",
       "side": "server",
       "why": "Content signs on chests, and how a chest is designated for other ServersideQoL modules.",
       "plugin_name": "ServersideQoL.ContainerSigns",
-      "note": "2.0.11 moved two settings out of this mod: AutoPickupMaxRange went to AutoStore and FeedFromContainersMaxRange went to AutoProcess, which this estate does not install. Both were sitting at the default of 64 here, so nothing needed re-homing, but a future custom value set on the wrong side of that split goes silently inert."
+      "note": "2.0.11 moved two settings out of this mod: AutoPickupMaxRange went to AutoStore and FeedFromContainersMaxRange went to AutoProcess, which this estate does not install. Both were sitting at the default of 64 here, so nothing needed re-homing, but a future custom value set on the wrong side of that split goes silently inert. 2.1.0 reads the new AutoStore sign prefix and fixes the range emoji on some platforms.",
+      "artifact_sha256": {
+        "ServersideQoL.ContainerSigns.dll": "b1db6d30a9c4186aac3fb19c7b39c77f8b473775b506dbf2e5b576c4f5d412dc"
+      }
     },
     {
       "thunderstore": null,
