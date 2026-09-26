@@ -61,18 +61,90 @@ setting, a comment in the template - will **stop and start the live server on ap
 disconnecting every player, while the script itself does NOT re-run. Both halves bite:
 players get dropped AND the change does not take effect.
 
+Every AWS CLI command in rules 5, 7, and 8 pins `--profile aidb-personal --region us-east-1`
+because the operator shell defaults to `us-east-2`, which is wrong for this estate.
+
 Read the plan for `aws_instance.server` at all, not just for `must be replaced`. An
 in-place `user_data` update is a player-facing restart: announce it, check occupancy with
-`aws ssm get-parameter --name /palworld-server/roster`, and wait, unless the owner says
-otherwise. Read `count`, not `names`: `count` is the A2S player count; `names` contains
-only journal names from the previous three minutes, so a player connected longer can be
-missing. Valheim saves on its configured interval and on the SIGINT shutdown path
-in `terraform/user_data.sh.tftpl`; before restarting, run
-`sudo -u steam /usr/bin/node /opt/valheim/valheim-backup.mts` over SSM Run Command.
-Require exit code 0 and the stdout line `BACKUP_VERIFIED <key> <size>`; `BACKUP_DEGRADED`
-is not success. This creates, integrity-checks, uploads, and verifies a backup, rather
-than only reading the save mtime. Prefer keeping runtime-tunable values OUT of `user_data`
-entirely (SSM, like the Discord webhook and roster already are).
+the full roster command below, and wait, unless the owner says otherwise. Read `count`, not
+`names`: `count` is the A2S player count; `names` contains only journal names from the
+previous three minutes, so a player connected longer can be missing.
+
+```bash
+aws ssm get-parameter \
+  --name /palworld-server/roster \
+  --profile aidb-personal \
+  --region us-east-1
+```
+
+Valheim saves on its configured interval and on the SIGINT shutdown path in
+`terraform/user_data.sh.tftpl`. Before restarting, run the backup command below over SSM
+Run Command. The command resolves the running instance from its `Name=palworld-server` tag.
+The box sleeps when idle, so if no running instance id is returned, do not send the command
+or start the box. Stop and ask the owner to wake it.
+
+Set `BOX_COMMAND` to the requested command and run this recipe. A successful
+`send-command` call means only that AWS accepted the request. Wait for the invocation to
+finish, then inspect its final status and output. Accept success only when `Status` is
+`Success` and `ResponseCode` is `0`; for the backup, also require the stdout line
+`BACKUP_VERIFIED <key> <size>`. `BACKUP_DEGRADED` is not success.
+
+```bash
+BOX_COMMAND='sudo -u steam /usr/bin/node /opt/valheim/valheim-backup.mts'
+INSTANCE_ID="$(aws ec2 describe-instances \
+  --filters 'Name=tag:Name,Values=palworld-server' 'Name=instance-state-name,Values=running' \
+  --query 'Reservations[].Instances[].InstanceId' \
+  --output text \
+  --profile aidb-personal \
+  --region us-east-1)" || exit 1
+if ! printf '%s\n' "$INSTANCE_ID" | grep -Eq '^i-([[:xdigit:]]{8}|[[:xdigit:]]{17})$'; then
+  printf 'Expected exactly one running palworld-server instance, got: %s\n' "$INSTANCE_ID" >&2
+  exit 1
+fi
+COMMAND_ID="$(aws ssm send-command \
+  --instance-ids "$INSTANCE_ID" \
+  --document-name AWS-RunShellScript \
+  --parameters "commands=[\"$BOX_COMMAND\"]" \
+  --query 'Command.CommandId' \
+  --output text \
+  --profile aidb-personal \
+  --region us-east-1)" || exit 1
+if [ -z "$COMMAND_ID" ] || [ "$COMMAND_ID" = None ]; then
+  printf 'send-command returned no command id\n' >&2
+  exit 1
+fi
+while true; do
+  if aws ssm wait command-executed \
+    --command-id "$COMMAND_ID" \
+    --instance-id "$INSTANCE_ID" \
+    --profile aidb-personal \
+    --region us-east-1; then
+    break
+  fi
+  INVOCATION_STATUS="$(aws ssm get-command-invocation \
+    --command-id "$COMMAND_ID" \
+    --instance-id "$INSTANCE_ID" \
+    --query Status \
+    --output text \
+    --profile aidb-personal \
+    --region us-east-1)" || exit 1
+  case "$INVOCATION_STATUS" in
+    Success|Failed|TimedOut|Cancelled) break ;;
+    Pending|InProgress|Delayed|Cancelling) sleep 5 ;;
+    *) printf 'Unexpected invocation status: %s\n' "$INVOCATION_STATUS" >&2; exit 1 ;;
+  esac
+done
+aws ssm get-command-invocation \
+  --command-id "$COMMAND_ID" \
+  --instance-id "$INSTANCE_ID" \
+  --output json \
+  --profile aidb-personal \
+  --region us-east-1
+```
+
+This creates, integrity-checks, uploads, and verifies a backup, rather than only reading
+the save mtime. Prefer keeping runtime-tunable values OUT of `user_data` entirely (SSM,
+like the Discord webhook and roster already are).
 
 **The Valheim box's swap and memory cap live outside `user_data`.** `terraform/memory_guard.tf`
 manages them through an SSM association that runs `scripts/memory-guard.mts` every 30 minutes
@@ -95,16 +167,24 @@ host and verify its contents there before reporting it deployed.
 The `aws_s3_bucket.backups` bucket stores healthy world backups under `world/linux/`,
 written by `scripts/valheim-backup.mts` on a 30-minute systemd timer. The freshness monitor
 for that prefix is configured in `terraform/backup_monitor.tf`. Before any risky operation,
-use `aws s3 ls` to confirm a recent object exists under `world/linux/`; do not assume the
-timer is alive. `world/linux-degraded/` holds captures whose save freshness could not be
-proven, so an object there is not a healthy backup.
+run this listing and confirm an object is no more than 75 minutes old, matching the monitor's
+stale threshold. Do not assume the timer is alive.
+
+```bash
+aws s3 ls s3://palworld-server-backups-414700437904/world/linux/ \
+  --profile aidb-personal \
+  --region us-east-1
+```
+
+`world/linux-degraded/` holds captures whose save freshness could not be proven, so an
+object there is not a healthy backup.
 After changing anything in the backup path, prove an actual backup restores before
 cutover. This repository has no Valheim restore drill yet.
 
 ## Current runbooks
 
 - For alert changes, inspect `terraform/backup_monitor.tf`, `terraform/mod_monitor.tf`, `terraform/alarm_forwarder.tf`, and `discord-bot/alarm-forwarder/index.mjs`. The SNS Discord subscription uses the monitor webhook; only a confirmed email subscriber provides independent coverage, so verify live subscriptions before relying on them.
-- Start mod work with [mods/README.md](mods/README.md), especially [Mod behavior and rollout checks](mods/README.md#mod-behavior-and-rollout-checks), and `mods/manifest.json`. Compare each mod's readme-declared target game build against `game_version` rather than its upload date; check setting gates and units, and test runtime behavior before treating a mod as working. Verify the server before publishing a matching client pack.
+- Start mod work with [mods/README.md](mods/README.md), especially [Mod behavior and rollout checks](mods/README.md#mod-behavior-and-rollout-checks), and `mods/manifest.json`. When adding a mod, read its README's declared target game build and record the target-build gap on the manifest entry when one exists. Compare each mod's declared target against `game_version` rather than its upload date; check setting gates and units, and test runtime behavior before treating a mod as working. Verify the server before publishing a matching client pack.
 
 ## Archived Palworld safeguards
 
@@ -122,18 +202,17 @@ This codebase has produced several failures that reported success:
 - a roster publish that failed every cycle because `aws` is not on `PATH` in a
   Scheduled Task's SYSTEM context, inside a bare `try/catch`
 - a restore that "succeeded" while serving a freshly generated **empty** world
-- a `user_data` that never ran at all because an em-dash in a comment broke the parse
+- a `user_data` that never ran at all because an em dash in a comment broke the parse
 - a systemd timer that was `start`ed but never `enable`d, so it worked perfectly
   until the next reboot and then never came back. `systemctl status` said `active`
   right up to the reboot; only `is-enabled` would have said `disabled`. **Check
   `is-enabled`, not just `is-active`** - and prefer `enable --now` to `start`.
 
 So: after a change, ask the running system what it thinks is true: read the roster's
-`count` with `aws ssm get-parameter --name /palworld-server/roster`, run
-`journalctl -u valheim` over SSM, and run
-`aws s3 ls "s3://$(terraform -chdir=terraform output -raw backups_bucket)/world/linux/" --profile aidb-personal --region us-east-1`.
-Do not trust the command's return code alone. And when adding a guard,
-**make it fail once on purpose** before believing it.
+`count` with the complete command in rule 5, and run `journalctl -u valheim` over SSM by
+setting `BOX_COMMAND='journalctl -u valheim'` and using the same SSM recipe in rule 5. Repeat
+the backup listing in rule 7. Do not trust the command's return code alone. And when adding
+a guard, **make it fail once on purpose** before believing it.
 
 ## Context
 

@@ -61,9 +61,9 @@ SSM at `/palworld-server/thunderstore_token` as a SecureString, or set `THUNDERS
 in the environment, which wins when both are present. Uploading by hand through the website
 still works and is the fallback if the token is ever unavailable.
 
-`manifest.json`, `README.md` and `icon.png` under `mods/modpack/` are generated. Do not
-hand-edit them; change `manifest.json` at the top of this directory and rebuild. The icon
-is drawn from code in `scripts/png.mts` rather than checked in as a binary.
+`manifest.json`, `README.md` and `icon.png` under `mods/modpack/` are generated and
+gitignored. Do not hand-edit them; change `manifest.json` at the top of this directory and
+rebuild. The icon is drawn from code in `scripts/png.mts` rather than checked in as a binary.
 
 ## Updating a mod
 
@@ -72,8 +72,9 @@ is drawn from code in `scripts/png.mts` rather than checked in as a binary.
 3. Deploy to the server, then run the verify step below and confirm it comes back CLEAN.
 4. Build and upload the pack.
 
-Do steps 3 and 4 close together. Between them the server and the published pack disagree,
-and anyone who updates in that window is kicked.
+Do steps 3 and 4 close together. Between them the server and the published pack disagree;
+ValheimPlus runs `enforceMod = true`, so a client with a different version is kicked with a
+message that does not explain why. Keep the window short and say in chat that it is open.
 
 ## Verifying the box matches
 
@@ -88,8 +89,9 @@ disk having failed to load looks exactly like one that worked.
 plugin, before that plugin's own startup runs, so one that loads and then disables itself
 still appears with the right version. That is exactly what ServersideQoL 2.0.4 did on the
 1.0.12 network-version bump: it logged a load, then refused to act while ore flowed through
-portals. Version matching alone cannot see that, so the verifier separately scans for the
-phrases a plugin prints when it has stopped acting, and any hit fails the run.
+portals for a day. Version matching alone cannot see that, so `mods-verify.mts` separately
+scans for the phrases a plugin prints when it has stopped acting; any hit fails the run.
+Do not weaken that check into a version comparison.
 
 Exit codes are 0 for clean, 1 for drift, and 2 for a log it could not read. A manifest entry
 with no `plugin_name` fails the run rather than riding along on someone else's match: leaving
@@ -99,13 +101,6 @@ That entry is still reported, as LIBRARY, and still owes a `plugin_name_note` sa
 check it, so the exemption is a stated answer rather than a silent skip.
 
 ## Mod behavior and rollout checks
-
-**A matching version does not mean a plugin is working.** BepInEx prints its load line when
-it constructs a plugin, before that plugin's own startup runs, so one that loads and then
-disables itself still appears at the right version. That is precisely what ServersideQoL
-2.0.4 did on the 1.0.12 network bump, and the ore flowed through portals for a day.
-`mods-verify.mts` scans separately for the phrases a plugin prints when it has stopped
-acting; do not weaken that into a version comparison.
 
 **A config value read back from the file is not a config value in effect.** PlantEverything
 gates whole sections behind an `Enable*Overrides` boolean that ships `false`:
@@ -123,16 +118,6 @@ worked and the other did not.
 growth times are SECONDS; every pickable `*RespawnTime` is MINUTES, matching vanilla's
 `Pickable.m_respawnTimeMinutes`. A berry bush at 300 is five hours, not five minutes. Read
 the comment above the key rather than comparing two numbers.
-
-**Upgrading a client-side mod is a two-sided operation with a window in the middle.**
-ValheimPlus runs `enforceMod = true`, so the server and every client must match exactly.
-Deploy to the box, verify CLEAN, bump `modpack.version_number`, rebuild, publish. Between
-the deploy and the publish the two disagree, and anyone who updates in that window is
-kicked with a message that does not explain itself. Keep the window short and say in chat
-that it is open.
-
-**Never hand-edit anything under `mods/modpack/`.** It is generated, and it is gitignored
-for that reason. Change `mods/manifest.json` and rebuild.
 
 ## What is installed where
 
