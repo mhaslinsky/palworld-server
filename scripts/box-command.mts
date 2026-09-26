@@ -118,9 +118,15 @@ export function invocationSucceeded(invocation: Invocation): boolean {
   return invocation.status === "Success" && invocation.responseCode === 0;
 }
 
-export function backupOutputVerified(stdoutText: string): boolean {
+function backupOutputHasDegradedMarker(stdoutText: string, stderrText: string): boolean {
+  return [stdoutText, stderrText].some((streamText) =>
+    streamText.split(/\r?\n/).some((outputLine) => /^BACKUP_DEGRADED(?:\s|$)/.test(outputLine)),
+  );
+}
+
+export function backupOutputVerified(stdoutText: string, stderrText = ""): boolean {
   const outputLines = stdoutText.split(/\r?\n/);
-  const hasDegradedMarker = outputLines.some((outputLine) => /^BACKUP_DEGRADED(?:\s|$)/.test(outputLine));
+  const hasDegradedMarker = backupOutputHasDegradedMarker(stdoutText, stderrText);
   const hasVerifiedMarker = outputLines.some((outputLine) => /^BACKUP_VERIFIED \S+ \d+$/.test(outputLine));
   return hasVerifiedMarker && !hasDegradedMarker;
 }
@@ -211,6 +217,17 @@ function failedOutcome(message: string, invocation?: Invocation): CommandOutcome
   };
 }
 
+function submittedCommandFailure(commandId: string, reason: string, invocation?: Invocation): CommandOutcome {
+  return failedOutcome(
+    `command ${commandId} was already submitted and must not be sent again: ${reason}`,
+    invocation,
+  );
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 function successfulOutcome(invocation: Invocation): CommandOutcome {
   return {
     exitCode: 0,
@@ -269,49 +286,71 @@ export async function executeBoxCommand(
   while (true) {
     const remainingBeforePollMs = dependencies.pollCeilingMs - (dependencies.now() - pollStartedAt);
     if (remainingBeforePollMs <= 0) {
-      return failedOutcome("command polling ceiling reached", lastInvocation);
+      return submittedCommandFailure(commandId, "command polling ceiling reached", lastInvocation);
     }
 
-    const invocationOutput = await dependencies.awsRunner(awsArguments([
-      "ssm",
-      "get-command-invocation",
-      "--command-id",
-      commandId,
-      "--instance-id",
-      instance.instanceId,
-      "--output",
-      "json",
-    ]), Math.min(AWS_CALL_TIMEOUT_MS, remainingBeforePollMs));
-    const invocation = parseInvocation(invocationOutput);
+    let invocationOutput: string;
+    try {
+      invocationOutput = await dependencies.awsRunner(awsArguments([
+        "ssm",
+        "get-command-invocation",
+        "--command-id",
+        commandId,
+        "--instance-id",
+        instance.instanceId,
+        "--output",
+        "json",
+      ]), Math.min(AWS_CALL_TIMEOUT_MS, remainingBeforePollMs));
+    } catch (error) {
+      const message = errorMessage(error);
+      if (!/\bInvocationDoesNotExist\b/.test(message)) {
+        return submittedCommandFailure(commandId, `get-command-invocation failed: ${message}`, lastInvocation);
+      }
+
+      const remainingAfterMissingInvocationMs = dependencies.pollCeilingMs - (dependencies.now() - pollStartedAt);
+      if (remainingAfterMissingInvocationMs <= 0) {
+        return submittedCommandFailure(commandId, "command polling ceiling reached", lastInvocation);
+      }
+      await dependencies.sleep(Math.min(dependencies.pollIntervalMs, remainingAfterMissingInvocationMs));
+      continue;
+    }
+
+    let invocation: Invocation;
+    try {
+      invocation = parseInvocation(invocationOutput);
+    } catch (error) {
+      return submittedCommandFailure(commandId, errorMessage(error), lastInvocation);
+    }
     lastInvocation = invocation;
 
     if (dependencies.now() - pollStartedAt >= dependencies.pollCeilingMs) {
-      return failedOutcome("command polling ceiling reached", invocation);
+      return submittedCommandFailure(commandId, "command polling ceiling reached", invocation);
     }
 
     const statusKind = classifyInvocationStatus(invocation.status);
     if (statusKind === "unknown") {
-      return failedOutcome(`unknown command invocation status: ${invocation.status}`, invocation);
+      return submittedCommandFailure(commandId, `unknown command invocation status: ${invocation.status}`, invocation);
     }
     if (statusKind === "terminal") {
       if (!invocationSucceeded(invocation)) {
-        return failedOutcome(
+        return submittedCommandFailure(
+          commandId,
           `command ended with Status=${invocation.status}, ResponseCode=${String(invocation.responseCode)}`,
           invocation,
         );
       }
-      if (requireBackupMarker && !backupOutputVerified(invocation.stdout)) {
-        const message = invocation.stdout.split(/\r?\n/).some((outputLine) => /^BACKUP_DEGRADED(?:\s|$)/.test(outputLine))
+      if (requireBackupMarker && !backupOutputVerified(invocation.stdout, invocation.stderr)) {
+        const message = backupOutputHasDegradedMarker(invocation.stdout, invocation.stderr)
           ? "backup command printed BACKUP_DEGRADED"
           : "backup command did not print BACKUP_VERIFIED <key> <size>";
-        return failedOutcome(message, invocation);
+        return submittedCommandFailure(commandId, message, invocation);
       }
       return successfulOutcome(invocation);
     }
 
     const remainingMs = dependencies.pollCeilingMs - (dependencies.now() - pollStartedAt);
     if (remainingMs <= 0) {
-      return failedOutcome("command polling ceiling reached", invocation);
+      return submittedCommandFailure(commandId, "command polling ceiling reached", invocation);
     }
     await dependencies.sleep(Math.min(dependencies.pollIntervalMs, remainingMs));
   }

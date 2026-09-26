@@ -44,7 +44,7 @@ function invocationResponse(
 }
 
 function createHarness(
-  responses: string[],
+  responses: Array<string | Error>,
   settings: { pollIntervalMs?: number; pollCeilingMs?: number } = {},
 ): TestHarness {
   const dependencyDefaults = defaultDependencies();
@@ -61,6 +61,9 @@ function createHarness(
       const response = responses.shift();
       if (response === undefined) {
         throw new Error("unexpected AWS call");
+      }
+      if (response instanceof Error) {
+        throw response;
       }
       return response;
     },
@@ -102,6 +105,21 @@ function successfulRunResponses(stdoutText = "command output\n", stderrText = ""
     "command-123\n",
     invocationResponse("Success", 0, stdoutText, stderrText),
   ];
+}
+
+function assertSubmittedCommandFailure(harness: TestHarness, commandId: string): void {
+  assert.match(
+    harness.stderrText(),
+    new RegExp(`command ${commandId} was already submitted and must not be sent again`),
+  );
+  assert.equal(harness.calls.filter((argumentsList) => argumentsList.includes("send-command")).length, 1);
+}
+
+function assertInvocationPollCount(harness: TestHarness, expectedCount: number): void {
+  assert.equal(
+    harness.calls.filter((argumentsList) => argumentsList.includes("get-command-invocation")).length,
+    expectedCount,
+  );
 }
 
 test("state reports zero matching instances as a failure", async () => {
@@ -220,6 +238,68 @@ test("run accepts Success with response code zero", async () => {
   assert.equal(harness.stdoutText(), "command output\n");
 });
 
+test("run retries InvocationDoesNotExist after send-command without resending", async () => {
+  const harness = createHarness([
+    runningServerResponse(),
+    "command-123\n",
+    new Error("An error occurred (InvocationDoesNotExist) when calling GetCommandInvocation"),
+    invocationResponse("Success", 0, "completed after registration\n"),
+  ]);
+
+  const exitCode = await runCli(["run", "true"], harness.dependencies, harness.output);
+
+  assert.equal(exitCode, 0);
+  assert.equal(harness.stdoutText(), "completed after registration\n");
+  assert.equal(harness.calls.filter((argumentsList) => argumentsList.includes("send-command")).length, 1);
+  assertInvocationPollCount(harness, 2);
+});
+
+test("run reports the submitted command when InvocationDoesNotExist persists to the polling ceiling", async () => {
+  const invocationDoesNotExist = new Error(
+    "An error occurred (InvocationDoesNotExist) when calling GetCommandInvocation",
+  );
+  const harness = createHarness([
+    runningServerResponse(),
+    "command-123\n",
+    invocationDoesNotExist,
+    invocationDoesNotExist,
+    invocationDoesNotExist,
+  ], { pollIntervalMs: 10, pollCeilingMs: 25 });
+
+  const exitCode = await runCli(["run", "true"], harness.dependencies, harness.output);
+
+  assert.equal(exitCode, 1);
+  assert.match(harness.stderrText(), /command polling ceiling reached/);
+  assertSubmittedCommandFailure(harness, "command-123");
+  assertInvocationPollCount(harness, 3);
+});
+
+test("run reports the submitted command when invocation polling throws another AWS error", async () => {
+  const harness = createHarness([
+    runningServerResponse(),
+    "command-123\n",
+    new Error("An error occurred (AccessDeniedException) when calling GetCommandInvocation"),
+  ]);
+
+  const exitCode = await runCli(["run", "true"], harness.dependencies, harness.output);
+
+  assert.equal(exitCode, 1);
+  assert.match(harness.stderrText(), /AccessDeniedException/);
+  assertSubmittedCommandFailure(harness, "command-123");
+  assertInvocationPollCount(harness, 1);
+});
+
+test("run reports the submitted command when invocation output is invalid JSON", async () => {
+  const harness = createHarness([runningServerResponse(), "command-123\n", "not-json"]);
+
+  const exitCode = await runCli(["run", "true"], harness.dependencies, harness.output);
+
+  assert.equal(exitCode, 1);
+  assert.match(harness.stderrText(), /get-command-invocation returned invalid JSON/);
+  assertSubmittedCommandFailure(harness, "command-123");
+  assertInvocationPollCount(harness, 1);
+});
+
 test("run rejects Success with a nonzero response code", async () => {
   const harness = createHarness([
     runningServerResponse(),
@@ -231,6 +311,7 @@ test("run rejects Success with a nonzero response code", async () => {
 
   assert.equal(exitCode, 1);
   assert.match(harness.stderrText(), /Status=Success, ResponseCode=7/);
+  assertSubmittedCommandFailure(harness, "command-123");
 });
 
 test("run rejects a Failed invocation", async () => {
@@ -244,6 +325,7 @@ test("run rejects a Failed invocation", async () => {
 
   assert.equal(exitCode, 1);
   assert.match(harness.stderrText(), /Status=Failed/);
+  assertSubmittedCommandFailure(harness, "command-123");
 });
 
 test("run rejects a TimedOut invocation", async () => {
@@ -257,6 +339,7 @@ test("run rejects a TimedOut invocation", async () => {
 
   assert.equal(exitCode, 1);
   assert.match(harness.stderrText(), /Status=TimedOut/);
+  assertSubmittedCommandFailure(harness, "command-123");
 });
 
 test("run rejects a Cancelled invocation", async () => {
@@ -270,6 +353,7 @@ test("run rejects a Cancelled invocation", async () => {
 
   assert.equal(exitCode, 1);
   assert.match(harness.stderrText(), /Status=Cancelled/);
+  assertSubmittedCommandFailure(harness, "command-123");
 });
 
 test("run rejects an unknown invocation status", async () => {
@@ -283,6 +367,7 @@ test("run rejects an unknown invocation status", async () => {
 
   assert.equal(exitCode, 1);
   assert.match(harness.stderrText(), /unknown command invocation status: Mystery/);
+  assertSubmittedCommandFailure(harness, "command-123");
 });
 
 test("run polls Pending before accepting a terminal status", async () => {
@@ -290,13 +375,15 @@ test("run polls Pending before accepting a terminal status", async () => {
     runningServerResponse(),
     "command-123\n",
     invocationResponse("Pending", undefined),
-    invocationResponse("Success", 0),
+    invocationResponse("Success", 0, "Success after Pending\n"),
   ]);
 
   const exitCode = await runCli(["run", "true"], harness.dependencies, harness.output);
 
   assert.equal(exitCode, 0);
   assert.deepEqual(harness.sleeps, [10]);
+  assertInvocationPollCount(harness, 2);
+  assert.equal(harness.stdoutText(), "Success after Pending\n");
 });
 
 test("run polls InProgress before accepting a terminal status", async () => {
@@ -304,13 +391,15 @@ test("run polls InProgress before accepting a terminal status", async () => {
     runningServerResponse(),
     "command-123\n",
     invocationResponse("InProgress", undefined),
-    invocationResponse("Success", 0),
+    invocationResponse("Success", 0, "Success after InProgress\n"),
   ]);
 
   const exitCode = await runCli(["run", "true"], harness.dependencies, harness.output);
 
   assert.equal(exitCode, 0);
   assert.deepEqual(harness.sleeps, [10]);
+  assertInvocationPollCount(harness, 2);
+  assert.equal(harness.stdoutText(), "Success after InProgress\n");
 });
 
 test("run polls Delayed before accepting a terminal status", async () => {
@@ -318,13 +407,15 @@ test("run polls Delayed before accepting a terminal status", async () => {
     runningServerResponse(),
     "command-123\n",
     invocationResponse("Delayed", undefined),
-    invocationResponse("Success", 0),
+    invocationResponse("Success", 0, "Success after Delayed\n"),
   ]);
 
   const exitCode = await runCli(["run", "true"], harness.dependencies, harness.output);
 
   assert.equal(exitCode, 0);
   assert.deepEqual(harness.sleeps, [10]);
+  assertInvocationPollCount(harness, 2);
+  assert.equal(harness.stdoutText(), "Success after Delayed\n");
 });
 
 test("run polls Cancelling before accepting a terminal status", async () => {
@@ -332,13 +423,15 @@ test("run polls Cancelling before accepting a terminal status", async () => {
     runningServerResponse(),
     "command-123\n",
     invocationResponse("Cancelling", undefined),
-    invocationResponse("Success", 0),
+    invocationResponse("Success", 0, "Success after Cancelling\n"),
   ]);
 
   const exitCode = await runCli(["run", "true"], harness.dependencies, harness.output);
 
   assert.equal(exitCode, 0);
   assert.deepEqual(harness.sleeps, [10]);
+  assertInvocationPollCount(harness, 2);
+  assert.equal(harness.stdoutText(), "Success after Cancelling\n");
 });
 
 test("run stops polling at one overall ceiling", async () => {
@@ -354,7 +447,8 @@ test("run stops polling at one overall ceiling", async () => {
 
   assert.equal(exitCode, 1);
   assert.match(harness.stderrText(), /command polling ceiling reached/);
-  assert.equal(harness.calls.filter((argumentsList) => argumentsList.includes("get-command-invocation")).length, 3);
+  assertSubmittedCommandFailure(harness, "command-123");
+  assertInvocationPollCount(harness, 3);
   assert.deepEqual(harness.sleeps, [10, 10, 5]);
   assert.deepEqual(harness.timeouts.slice(2), [25, 15, 5]);
   assert.equal(harness.stdoutText(), "last output\n");
@@ -373,7 +467,7 @@ test("backup accepts a BACKUP_VERIFIED key and size line", async () => {
   })));
 });
 
-test("backup rejects BACKUP_DEGRADED even when a verified marker is also present", async () => {
+test("backup rejects BACKUP_DEGRADED on stdout even when a verified marker is also present", async () => {
   const harness = createHarness(successfulRunResponses(
     "BACKUP_VERIFIED world/linux/test.tgz 12345\nBACKUP_DEGRADED world/linux-degraded/test.tgz 12345 - stale\n",
   ));
@@ -382,6 +476,20 @@ test("backup rejects BACKUP_DEGRADED even when a verified marker is also present
 
   assert.equal(exitCode, 1);
   assert.match(harness.stderrText(), /printed BACKUP_DEGRADED/);
+  assertSubmittedCommandFailure(harness, "command-123");
+});
+
+test("backup rejects BACKUP_DEGRADED on stderr when stdout has a verified marker", async () => {
+  const harness = createHarness(successfulRunResponses(
+    "BACKUP_VERIFIED world/linux/test.tgz 12345\n",
+    "BACKUP_DEGRADED world/linux-degraded/test.tgz 12345 - stale\n",
+  ));
+
+  const exitCode = await runCli(["backup"], harness.dependencies, harness.output);
+
+  assert.equal(exitCode, 1);
+  assert.match(harness.stderrText(), /printed BACKUP_DEGRADED/);
+  assertSubmittedCommandFailure(harness, "command-123");
 });
 
 test("backup rejects a successful invocation without a BACKUP_VERIFIED line", async () => {
@@ -391,6 +499,7 @@ test("backup rejects a successful invocation without a BACKUP_VERIFIED line", as
 
   assert.equal(exitCode, 1);
   assert.match(harness.stderrText(), /did not print BACKUP_VERIFIED/);
+  assertSubmittedCommandFailure(harness, "command-123");
 });
 
 test("run fails when send-command returns no command id", async () => {
@@ -431,7 +540,13 @@ test("every AWS call pins the profile and region and state lookup has no state f
     assert.ok(argumentsList.includes("us-east-1"));
   }
   assert.ok(harness.calls[0]?.includes("Name=tag:Name,Values=palworld-server"));
-  assert.ok(!harness.calls[0]?.includes("instance-state-name"));
+  const filtersIndex = harness.calls[0]?.indexOf("--filters") ?? -1;
+  const outputIndex = harness.calls[0]?.indexOf("--output") ?? -1;
+  assert.notEqual(filtersIndex, -1);
+  assert.ok(outputIndex > filtersIndex);
+  assert.deepEqual(harness.calls[0]?.slice(filtersIndex + 1, outputIndex), [
+    "Name=tag:Name,Values=palworld-server",
+  ]);
   assert.ok(harness.calls[1]?.includes("AWS-RunShellScript"));
 });
 

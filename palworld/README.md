@@ -17,6 +17,12 @@ Retirement record: AIDB plan
 
 Verify these notes on the local Windows server before relying on them; its current settings, paths, and Event Log writers have not been checked.
 
+### Save notes recorded on the AWS host
+
+- Force-save before any restart. Confirm `Level.sav`'s mtime advanced because an HTTP 200
+  on `/save` does not prove the world reached disk.
+- `POST /v1/api/save` needs `Content-Length: 0`; without it, the endpoint returns HTTP 411.
+
 ### World settings recorded on the AWS host
 
 - `OptionSettings` is a **single line**; keys must be inserted inside the parens. Keys

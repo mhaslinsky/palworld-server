@@ -75,7 +75,9 @@ previous three minutes, so a player connected longer can be missing.
 aws ssm get-parameter \
   --name /palworld-server/roster \
   --profile aidb-personal \
-  --region us-east-1
+  --region us-east-1 \
+  --query Parameter.Value \
+  --output text
 ```
 
 Valheim saves on its configured interval and on the SIGINT shutdown path in
