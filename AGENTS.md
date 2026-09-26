@@ -167,8 +167,9 @@ host and verify its contents there before reporting it deployed.
 The `aws_s3_bucket.backups` bucket stores healthy world backups under `world/linux/`,
 written by `scripts/valheim-backup.mts` on a 30-minute systemd timer. The freshness monitor
 for that prefix is configured in `terraform/backup_monitor.tf`. Before any risky operation,
-run this listing and confirm an object is no more than 75 minutes old, matching the monitor's
-stale threshold. Do not assume the timer is alive.
+check server state with the `aws ec2 describe-instances` lookup in rule 5: a returned instance
+ID means running; an empty successful response means stopped. Run this listing and verify that
+it contains a healthy object under `world/linux/`:
 
 ```bash
 aws s3 ls s3://palworld-server-backups-414700437904/world/linux/ \
@@ -176,10 +177,14 @@ aws s3 ls s3://palworld-server-backups-414700437904/world/linux/ \
   --region us-east-1
 ```
 
+When the instance is running, the newest object must be no more than 75 minutes old to match
+the monitor's stale threshold. When the instance is stopped, no new backups are expected; the
+newest object should date from the last shutdown because the `ExecStopPost` hook runs
+`valheim-backup.mts`. Do not assume the timer is alive.
+
 `world/linux-degraded/` holds captures whose save freshness could not be proven, so an
-object there is not a healthy backup.
-After changing anything in the backup path, prove an actual backup restores before
-cutover. This repository has no Valheim restore drill yet.
+object there is not a healthy backup. After changing anything in the backup path, verify that
+an actual backup restores before cutover. This repository has no Valheim restore drill yet.
 
 ## Current runbooks
 
