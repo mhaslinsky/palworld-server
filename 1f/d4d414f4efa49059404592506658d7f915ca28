@@ -1,0 +1,25 @@
+palworld/reference/README.md
+  s_7e402fc138787e::t_b263f0e26d07ec 58-59,77
+mods/README.md
+  s_7e402fc138787e::t_38261508cf2759 92-94
+  s_7e402fc138787e::t_b263f0e26d07ec 64-66,75-77
+AGENTS.md
+  s_7e402fc138787e::t_4e7b54d333f5a5 64-65
+  s_7e402fc138787e::t_164a7f86d714d0 66,69-147,170-180,187,205,212-215
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "1fd4d414f4efa49059404592506658d7f915ca28",
+  "prompts": {},
+  "sessions": {
+    "s_7e402fc138787e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0dd22-9a7e-70e0-8128-3ba030d7b8fe",
+        "model": "gpt-6-luna"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    }
+  }
+}
