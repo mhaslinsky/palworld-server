@@ -71,6 +71,18 @@ test("lines that are not plugin loads are ignored", () => {
   assert.equal(loaded.size, 8, "seven plugins plus the loader");
 });
 
+// BepInExPack 5.4.2351 appends the plugin GUID to every load line; the example is its own changelog's.
+test("load lines that carry a trailing GUID still parse", () => {
+  const log = `[Message:   BepInEx] BepInEx 5.4.23.5 - valheim_server (09/26/2026 03:00:00)
+[Info   :   BepInEx] Loading [Valheim Plus 0.10.2.0] (org.bepinex.plugins.valheim_plus)
+[Info   :   BepInEx] Loading [AzuExtendedPlayerInventory 2.5.1] (Azumatt.AzuExtendedPlayerInventory)
+[Message:   BepInEx] Chainloader startup complete (2 loaded, 0 skipped, 0 failed)`;
+  const loaded = parseLoadedPlugins(log);
+  assert.equal(loaded.get("Valheim Plus"), "0.10.2.0");
+  assert.equal(loaded.get("AzuExtendedPlayerInventory"), "2.5.1");
+  assert.equal(loaded.size, 3, "two plugins plus the loader");
+});
+
 test("a later load line within one boot wins", () => {
   const oneBoot = `[Info   :   BepInEx] Loading [ServersideQoL 2.0.4]
 [Info   :   BepInEx] Loading [ServersideQoL 2.0.7]`;
