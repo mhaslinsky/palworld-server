@@ -1,18 +1,8 @@
 # AGENTS.md
 
-Terraform for a Palworld dedicated server that a group of friends actually plays on.
-**This repo manages a live service with other people's progress in it.** Treat every
-apply as production.
+Terraform manages the live Valheim server in AWS. Palworld runs on the local Windows PC; its AWS estate retired on 2026-09-06. See [palworld/README.md](palworld/README.md) for archived scripts and notes.
 
-## The rules that exist because they were broken
-
-On 2026-07-18 an agent fixed the spelling of "pow world" -> "palworld" in a **comment**
-inside `terraform/user_data.sh.tftpl`, then ran `terraform apply -auto-approve` for
-unrelated work. The comment changed the rendered `user_data` hash; with
-`user_data_replace_on_change = true` Terraform replaced the live instance; the world
-lived on its root volume and was deleted with it. About 4.5 hours of five players'
-progress was lost. The plan said `aws_instance.server must be replaced` in plain text
-and was never read.
+## Production Terraform rules
 
 ### 1. Never `terraform apply -auto-approve`. Ever.
 
@@ -44,7 +34,7 @@ is part of a hash that can replace a running server.
 Changing any of these on a live instance destroys and recreates it. Treat an edit to
 one as a deliberate, backup-first operation, never a side effect:
 
-- `ami` (hence: **every AMI is pinned by id**, in `data.tf`, `presence.tf`, `windows.tf`
+- `ami` (hence: **every AMI is pinned by id**, in `terraform/data.tf`, `terraform/presence.tf`
   - never `most_recent = true` or `ami-windows-latest`, both of which drift into a
   silent replacement on an unrelated apply)
 - `user_data` / anything `templatefile()` renders into it
@@ -53,7 +43,8 @@ one as a deliberate, backup-first operation, never a side effect:
 ### 5. Do not re-arm the guards in `compute.tf`
 
 `prevent_destroy`, `delete_on_termination = false`, and
-`user_data_replace_on_change = false` exist because of the incident above. The world now
+`user_data_replace_on_change = false` exist because of the root-volume loss incident
+documented in `_global/personal/palworld-server/postmortems/2026-07-18-comment-edit-destroyed-live-world-postmortem.md`. The world now
 lives on its own EBS volume (`aws_ebs_volume.world`, also `prevent_destroy`), so a
 replacement is survivable rather than fatal - but all four are still load-bearing, and a
 replacement still drops every player and re-runs SteamCMD into whatever build is current.
@@ -70,10 +61,37 @@ setting, a comment in the template - will **stop and start the live server on ap
 disconnecting every player, while the script itself does NOT re-run. Both halves bite:
 players get dropped AND the change does not take effect.
 
+Every AWS CLI command in rules 5, 7, and 8 pins `--profile aidb-personal --region us-east-1`
+because the operator shell defaults to `us-east-2`, which is wrong for this estate. The box
+command script pins these values for its AWS calls.
+
 Read the plan for `aws_instance.server` at all, not just for `must be replaced`. An
-in-place `user_data` update is a player-facing restart: announce it, force-save, and
-confirm `Level.sav`'s mtime advanced first. Prefer keeping runtime-tunable values OUT
-of `user_data` entirely (SSM, like the Discord webhook and roster already are).
+in-place `user_data` update is a player-facing restart: announce it, check occupancy with
+the full roster command below, and wait, unless the owner says otherwise. Read `count`, not
+`names`: `count` is the A2S player count; `names` contains only journal names from the
+previous three minutes, so a player connected longer can be missing.
+
+```bash
+aws ssm get-parameter \
+  --name /palworld-server/roster \
+  --profile aidb-personal \
+  --region us-east-1 \
+  --query Parameter.Value \
+  --output text
+```
+
+Valheim saves on its configured interval and on the SIGINT shutdown path in
+`terraform/user_data.sh.tftpl`. Before restarting, run `node scripts/box-command.mts backup`.
+The script resolves the instance tagged `Name=palworld-server`, requires exactly one match
+in `running` state, sends the backup over SSM Run Command, and polls the invocation. It exits
+successfully only for `Status=Success`, `ResponseCode=0`, and a stdout line
+`BACKUP_VERIFIED <key> <size>`. `BACKUP_DEGRADED` is not success. The box sleeps when idle;
+for a `stopped` result, do not send a command or start the box. Stop and ask the owner to wake it.
+For any other state, wait and check again.
+
+This creates, integrity-checks, uploads, and verifies a backup, rather than only reading
+the save mtime. Prefer keeping runtime-tunable values OUT of `user_data` entirely (SSM,
+like the Discord webhook and roster already are).
 
 **The Valheim box's swap and memory cap live outside `user_data`.** `terraform/memory_guard.tf`
 manages them through an SSM association that runs `scripts/memory-guard.mts` every 30 minutes
@@ -84,248 +102,49 @@ the repo's, and the next scheduled run deletes it. Without the cap, the 4 GB box
 
 ### 6. Putting a script in S3 is NOT deploying it
 
-The boot-fetch loop in `windows_user_data.ps1.tftpl` runs from `user_data`, and
-**`user_data` runs on FIRST BOOT ONLY**. A stop/start does not re-run it. So editing
-`scripts/palworld-idle.ps1` or `scripts/palworld-launch.ps1` and running `terraform
-apply` updates the S3 object and changes **nothing on the running box**, forever.
-
-This fails silently in the worst way: the apply succeeds, the S3 object shows today's
-timestamp, `terraform plan` is clean, and the box goes on running whatever it fetched
-the day it was built. Observed 2026-07-29 - the on-box `palworld-launch.ps1` was
-**eleven days older** than the S3 copy, across several stop/starts, and nothing
-anywhere reported a problem. A watchdog fix sat in S3 looking shipped.
-
-After changing either script, deliver it and **verify on the box**:
-
-```powershell
-# over SSM Run Command, no RDP
-$aws = "C:\Program Files\Amazon\AWSCLIV2\aws.exe"
-$b = (Get-Content C:\PalServer\idle.conf.json -Raw | ConvertFrom-Json).BackupBucket
-& $aws s3 cp "s3://$b/scripts/windows/sync-scripts.ps1" C:\PalServer\scripts\sync-scripts.ps1 --only-show-errors
-& powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\PalServer\scripts\sync-scripts.ps1
-```
-
-`sync-scripts.ps1` hash-checks each file against S3's ETag, says `UPDATED` vs
-`unchanged` per script, and exits non-zero if any failed. Do not report a script change
-as deployed on the strength of a green `terraform apply`.
-
-Not affected: `update-server.ps1`, `seed-ue4ss-stage.ps1` and `seed-paks-stage.ps1` are
-pulled fresh from S3 by whoever runs them, so they are always current.
-
-Pak mods are outside the UE4SS stage, which overlays `Win64` only. There are **two** pak
-folders and they are not interchangeable - a pak in the wrong one is inert, loads nothing,
-and reports no error:
-
-| Live folder | Durable stage | Holds |
-|---|---|---|
-| `Pal\Content\Paks\~mods` | `D:\PalServer\paks-stage` | plain content paks (`CreativeMenu_P.pak`) |
-| `Pal\Content\Paks\LogicMods` | `D:\PalServer\logicmods-stage` | Blueprint mods UE4SS's `BPModLoaderMod` mounts by scanning that exact path |
-
-`palworld-launch.ps1` mirrors each stage into its own live folder before every launch,
-treating D: as the master - an unstaged pak is swept out. Each stage is authoritative for
-its own folder only, which is why they are separate: nesting one inside the other would
-make each one's sweep delete the other's mods.
-
-`seed-paks-stage.ps1` publishes a stage to `s3://<bucket>/<stage>/` and restores it with
-`-Restore`; pick the stage with `-Stage paks` (default) or `-Stage logicmods`. It refuses
-to publish an empty stage, because an empty baseline restores cleanly and leaves the
-server with no pak mods while every check passes.
-
-**The UE4SS install must be the WHOLE Okaetsu folder, not just `UE4SS.dll`.** The fork
-ships `ue4ss\MemberVariableLayout.ini`, ~1000 lines of byte offsets for this game build
-(`ClassPrivate = 0x10`, `NamePrivate = 0x18`, and so on). It was **missing** on this box
-until 2026-08-23: someone had installed by copying selected files, and the D: stage
-inherited the gap. Without it UE4SS falls back to built-in offsets, so every Lua member
-read lands on the wrong memory and returns garbage that is then dereferenced. That is
-where `EXCEPTION_ACCESS_VIOLATION reading address 0x0000000000000001` comes from.
-
-It cost four crashes across two nights, chased through two wrong theories, because the
-loader was "verified" by hashing one file. `UE4SS.dll` matching proves the DLL, not the
-installation. `seed-ue4ss-stage.ps1` now requires `MemberVariableLayout.ini`, so a stage
-missing it can never be published as a baseline again.
-
-The tell is worth memorising: mods that read member variables by name from Lua break,
-while mods that do not are fine. Auto Hatch reads `playerState.PlayerUId`, the chat
-struct's fields and an archive's `Bytes`, so it crashed on every join. Building
-Restrictions Disabler is a DLL doing AOB signature scans and Creative Menu is mostly
-Blueprint, so both looked perfectly healthy throughout and made the fault look
-Auto-Hatch-specific.
-
-**Still different from the release: `dwmapi.dll`** (ours `cfbd121b...`, Okaetsu's
-`6c6e7151...`), so the injector is probably upstream RE-UE4SS. Deliberately not swapped
-while the layout fix was being validated, since changing two variables at once would have
-made the result unattributable. Worth closing if anything like this recurs.
-
-**Auto Hatch (Nexus 1959) is ENABLED and working** as of 2026-08-23: it registers players,
-attaches to Ancient Hatcheries, and hatches eggs to the correct owner. It runs a hardened
-`main.lua` (see `reference/README.md`) whose casing fix is load-bearing for the
-`!autohatch on/off` chat commands. Disable it by renaming, not deleting, and **always in
-the stage** rather than only the live folder: the launcher treats the stage as master and
-would restore a live pak you deleted, and a running server holds a mounted pak locked so
-the live rename fails outright. Four files, both stages and both live folders.
-
-**Lua relative paths resolve against the process working directory**, which
-`palworld-launch.ps1` sets to `C:\PalServer`, NOT the `ue4ss` folder that UE4SS mod
-authors assume. Auto Hatch's `saveToJson` opens `.\Mods\AutoHatch\Scripts\AutoHatch.json`
-and threw until `C:\PalServer\Mods\AutoHatch\Scripts` was created. The deduction, not a
-guess: `io.open(path, "w")` creates the file, so "No such file or directory" means the
-DIRECTORY is missing, and the ue4ss-relative one already exists. The same assumption is
-why `BPModLoaderMod` reports `load_order.txt not present`. That directory lives on C: and
-so is lost on an instance replacement, costing players their saved on/off preference.
-
-**Testing a mod costs a 30-minute budget, not a 10-minute one.** `palworld-idle.ps1` stops
-the whole instance after `ThresholdMin` empty, and an empty soak plus a wait for a tester
-crossed it: the box powered off mid-run and `SendCommand` then failed `InvalidInstanceId`,
-which reads exactly like a broken script. Check `describe-instances` for
-`stopped / User initiated` before concluding anything from an SSM failure.
-
-**Snapshot `UE4SS.log` while testing a mod, or the recovery destroys the evidence.** The
-watchdog restarts within 2 min and the new run truncates it. Every finding above came from
-a rolling copy taken every 10 s into `D:\PalServer\autohatch-test`.
-
-A LogicMods pak additionally needs Okaetsu's `BPModLoaderMod` fix at
-`Win64\ue4ss\Mods\BPModLoaderMod\Scripts\main.lua`. Stock UE4SS races the map load on
-dedicated servers and silently fails to mount LogicMods - the server is joinable, the pak
-is present, and the mod simply does not exist. The stock file is kept beside it as
-`main.lua.stock`, and `seed-ue4ss-stage.ps1` matches the fix's header rather than testing
-for the file, because both files exist and only one works.
-
-That fix carries a **local patch**, and it is load-bearing. Upstream's `LoadMod` returns
-`false` on an invalid World without adding the mod to `ModsToRevalidate`, which only the
-Actor-invalid branch does. `LoadModsDelayed` then iterates an empty table, leaves
-`WasSuccessful` true, and prints `Finished loading LogicMods!` having loaded nothing. The
-observed result was a mod that logged a clean load and did not exist: every hook threw on
-a nil `_ModActor`. The patch registers the mod on that branch too. Keep it across any
-BPModLoaderMod update, and re-check it if a LogicMods mod ever reports loading but does
-nothing.
+Terraform uploads `a2s.mts`, `idle-logic.mts`, `valheim-idle.mts`, `backup-gates.mts`,
+and `valheim-backup.mts` to the backups bucket. `terraform/user_data.sh.tftpl` copies
+them into `/opt/valheim` only on first boot, so updating those S3 objects does not update
+the running host. `memory-guard.mts` is re-copied by its SSM association in
+`terraform/memory_guard.tf`. For a changed script, deliver the updated file to the running
+host and verify its contents there before reporting it deployed.
 
 ### 7. Backups: check, don't assume
 
-- Rolling backups land in `s3://palworld-server-backups-<account>/world/linux/` every
-  30 min, written by `scripts/backup-to-s3.sh` on a systemd timer.
-- A Lambda checks freshness every 15 min and alerts Discord.
-- Before any risky operation, confirm a **recent** object exists - do not assume the
-  timer is alive:
-  `aws s3 ls s3://palworld-server-backups-414700437904/world/linux/ | tail -3`
-- `scripts/restore-drill.ps1` proves a backup actually restores. Run it after changing
-  anything in the backup path, and before cutover.
+The `aws_s3_bucket.backups` bucket stores healthy world backups under `world/linux/`,
+written by `scripts/valheim-backup.mts` on a 30-minute systemd timer. The freshness monitor
+for that prefix is configured in `terraform/backup_monitor.tf`. Before any risky operation,
+run `node scripts/box-command.mts state`. For exactly one `running` instance, the newest
+backup must be no more than 75 minutes old. For exactly one `stopped` instance, no new backup
+is expected and the newest object should date from the last shutdown. Any other state means
+wait and check again; zero or multiple matches are failures, never evidence that the box is
+stopped. Run this listing and verify that it contains a healthy object under `world/linux/`:
 
-### 7b. Game updates are watched, never applied automatically
+```bash
+aws s3 ls s3://palworld-server-backups-414700437904/world/linux/ \
+  --profile aidb-personal \
+  --region us-east-1
+```
 
-`palworld-server-version-monitor` (Lambda, every 30 min) compares Steam's public
-build for app `2394010` against the build actually installed, and alerts Discord when
-they differ. It re-nags every 12 h while the box is behind, so one alert scrolling
-past at 3am does not read as "no problem".
+When stopped, the newest object should date from the last shutdown because the `ExecStopPost`
+hook runs `valheim-backup.mts`. Do not assume the timer is alive.
 
-- The installed side comes from `/palworld-server/installed_build_windows`, which
-  `palworld-idle.ps1` publishes every cycle from Steam's `appmanifest`. That publish
-  sits **above** the watchdog's early exit on purpose: a server crash-looping after a
-  patch is exactly when the installed build matters, and exactly the cycle the
-  watchdog returns from early.
-- The **comparison** does not key off instance state. The box sleeps most of the time
-  and a patch that lands while it sleeps still matters before the next start.
-- Instance state is read for one thing: judging the publisher. The compared value is
-  whatever the box last wrote, so a dead publisher freezes it and the monitor would
-  report OK forever against a build the box no longer runs. Only the value's AGE
-  betrays that, and age only means anything while the box is running, so freshness is
-  enforced when running and past boot grace and ignored when stopped. This is why
-  `palworld-idle.ps1` republishes the build every cycle even when unchanged: that
-  write IS the liveness signal, so do not "optimise" it into a write-on-change.
-- It alerts and stops there. Auto-updating a modded server is the wrong default: on
-  2026-08-12 the base patch landed at 03:01Z and mod 1898's compatible build did not
-  appear until 05:44Z, so an unattended update in that window yields a joinable
-  server with relaxed building silently vanilla and every check green.
-- The check failing is itself an alert (`UNKNOWN`). `api.steamcmd.net` is a
-  third-party mirror, and an outage must never read as "no patch available".
+`world/linux-degraded/` holds captures whose save freshness could not be proven, so an
+object there is not a healthy backup. After changing anything in the backup path, verify that
+an actual backup restores before cutover. This repository has no Valheim restore drill yet.
 
-### 7c. When a monitor cannot alert, the SNS topic is what tells you
+## Current runbooks
 
-Both monitors alert to Discord themselves and **throw** when a Discord delivery fails,
-so the invocation errors and a CloudWatch alarm fires on `palworld-server-alerts`.
-That topic has two subscribers, and knowing which covers what matters:
+- For alert changes, inspect `terraform/backup_monitor.tf`, `terraform/mod_monitor.tf`, `terraform/alarm_forwarder.tf`, and `discord-bot/alarm-forwarder/index.mjs`. The SNS Discord subscription uses the monitor webhook; only a confirmed email subscriber provides independent coverage, so verify live subscriptions before relying on them.
+- Start mod work with [mods/README.md](mods/README.md), especially [Mod behavior and rollout checks](mods/README.md#mod-behavior-and-rollout-checks), and `mods/manifest.json`. When adding a mod, read its README's declared target game build and record the target-build gap on the manifest entry when one exists. Compare each mod's declared target against `game_version` rather than its upload date; check setting gates and units, and test runtime behavior before treating a mod as working. Verify the server before publishing a matching client pack.
 
-- **Email** (`alert_email` in tfvars). The only channel independent of Discord, so it
-  is the one that covers a dead or misconfigured webhook. AWS requires clicking a
-  confirmation mail; until that happens the subscription reads `PendingConfirmation`
-  and delivers **nothing**, which looks identical to being set up.
-- **Discord**, via `palworld-server-alarm-forwarder` (SNS cannot post to Discord
-  directly - AWS Chatbot has no Discord support and a raw HTTPS subscription sends an
-  envelope Discord rejects). It posts to the **same webhook the monitors use**, by
-  deliberate choice, so it does NOT cover a broken webhook: that case is circular. It
-  does cover a monitor crashing for other reasons and a monitor not running at all,
-  since both alarms use `treat_missing_data = "breaching"`.
+## Archived Palworld safeguards
 
-The forwarder has no alarm on its own errors on purpose: it would route through the
-topic it subscribes to. It is best-effort, and email is the guarantee.
+- Keep plain content paks and `LogicMods` in separate, nonempty stages; staging is authoritative and a missing mod can fail silently.
+- For archived UE4SS mods, stage the full Okaetsu folder, preserve the local `BPModLoaderMod` patch, create Lua paths under `C:\PalServer`, and snapshot `UE4SS.log` during tests.
+- Read the archived Windows Event Log registry and bootstrap notes in [palworld/README.md](palworld/README.md), and confirm they apply locally before use.
 
-### 7d. `mods/manifest.json` is the only record of what runs; three things can drift
-
-Every mod on the estate is pinned there, server and client. Edit it FIRST, then deploy.
-The reverse makes it a second opinion rather than a record, which is the failure it was
-added to end.
-
-Three things drift apart, and each has its own check. Run all three before saying the mod
-state is fine, because each is blind to the others:
-
-| Drift | Check |
-|---|---|
-| the box stops matching the manifest | `ssh <box> 'cat /home/steam/valheim/BepInEx/LogOutput.log' \| node scripts/mods-verify.mts` |
-| a mod ships a new version upstream | `node scripts/mods-upstream.mts` |
-| the published pack stops matching the manifest | the same command; it checks both |
-
-**A fourth drift exists and NONE of those three can see it: a mod's own readme declaring a
-target game build older than `game_version`.** The three checks compare the box against the
-manifest, the manifest against Thunderstore's latest version, and the pack against the
-manifest. All three are satisfied by a mod that was uploaded yesterday and built for a game
-build three patches back, because upload date is not target build. Read the readme's declared
-target when adding a mod, and record the gap on the entry when one exists. Found 2026-09-19 on
-`Wire-WiresGrassTweaks`, chosen expressly on currency grounds over a rival rejected for being
-pre-1.0, whose own readme says "Built for Valheim 1.0.12" against an estate running 1.0.15.
-
-The last two are also watched off-box by `palworld-server-mod-monitor`, a Lambda on a
-three-day schedule that posts to Discord and re-nags every run until somebody acts. It gets
-its pins from Terraform rendering `mods/manifest.json`, so it cannot hold an opinion the
-committed manifest does not, and a failed Thunderstore lookup alerts as UNKNOWN rather than
-passing quietly. The first drift is NOT watched: it needs the box running and the box
-sleeps most of the time, so run the verifier by hand after any server-side mod change.
-
-Publish with `node scripts/modpack-publish.mts`, which needs a team service account token
-in SSM at `/palworld-server/thunderstore_token`. Uploading through the website still works
-and is the fallback.
-
-**A matching version does not mean a plugin is working.** BepInEx prints its load line when
-it constructs a plugin, before that plugin's own startup runs, so one that loads and then
-disables itself still appears at the right version. That is precisely what ServersideQoL
-2.0.4 did on the 1.0.12 network bump, and the ore flowed through portals for a day.
-`mods-verify.mts` scans separately for the phrases a plugin prints when it has stopped
-acting; do not weaken that into a version comparison.
-
-**A config value read back from the file is not a config value in effect.** PlantEverything
-gates whole sections behind an `Enable*Overrides` boolean that ships `false`:
-`EnableCropOverrides`, `EnableSeedOverrides`, `EnableVineOverrides`. With the gate off the
-values are parsed and ignored, so `grep` returns exactly what you wrote while the game runs
-vanilla. On 2026-09-13 the crop grow times were set to 900/1200, read back correct, reported
-applied, and did nothing; a player noticing a turnip still at an hour is what caught it.
-Before reporting any setting as live, find the gate that governs its section, and prefer a
-check the game itself produces: PlantEverything's `[UI]` timers show a planted crop's real
-growth time in seconds. Note the neighbouring sections (`[Berries]`, `[Mushrooms]`,
-`[Saplings]`, `[Flowers]`, `[Debris]`) have NO gate, which is why one half of the same change
-worked and the other did not.
-
-**PlantEverything's units differ by key and the file says so, per setting.** Crop and sapling
-growth times are SECONDS; every pickable `*RespawnTime` is MINUTES, matching vanilla's
-`Pickable.m_respawnTimeMinutes`. A berry bush at 300 is five hours, not five minutes. Read
-the comment above the key rather than comparing two numbers.
-
-**Upgrading a client-side mod is a two-sided operation with a window in the middle.**
-ValheimPlus runs `enforceMod = true`, so the server and every client must match exactly.
-Deploy to the box, verify CLEAN, bump `modpack.version_number`, rebuild, publish. Between
-the deploy and the publish the two disagree, and anyone who updates in that window is
-kicked with a message that does not explain itself. Keep the window short and say in chat
-that it is open.
-
-**Never hand-edit anything under `mods/modpack/`.** It is generated, and it is gitignored
-for that reason. Change `mods/manifest.json` and rebuild.
+## Behavior verification
 
 ### 8. Verify on the box, not by exit code
 
@@ -335,112 +154,17 @@ This codebase has produced several failures that reported success:
 - a roster publish that failed every cycle because `aws` is not on `PATH` in a
   Scheduled Task's SYSTEM context, inside a bare `try/catch`
 - a restore that "succeeded" while serving a freshly generated **empty** world
-- a `user_data` that never ran at all because an em-dash in a comment broke the parse
+- a `user_data` that never ran at all because an em dash in a comment broke the parse
 - a systemd timer that was `start`ed but never `enable`d, so it worked perfectly
   until the next reboot and then never came back. `systemctl status` said `active`
   right up to the reboot; only `is-enabled` would have said `disabled`. **Check
   `is-enabled`, not just `is-active`** - and prefer `enable --now` to `start`.
 
-So: after a change, ask the running system what it thinks is true (`/v1/api/settings`,
-`/v1/api/info`, `aws s3 ls`, the served world GUID) rather than trusting the command's
-return code. And when adding a guard, **make it fail once on purpose** before believing
-it.
-
-### 8b. Windows Event Log IDs (source `Palworld`)
-
-`Write-Output` from a Scheduled Task running as SYSTEM goes nowhere a human will read,
-so every best-effort failure in `palworld-idle.ps1` also writes here. Check it first
-when the box is behaving oddly but nothing has alerted:
-
-```powershell
-Get-EventLog -LogName Application -Source Palworld -Newest 30 | Format-Table TimeGenerated, EventID, EntryType, Message -AutoSize
-```
-
-**The source is shared by every writer, so ids are allocated across the whole repo, not
-per file - and the writers include `terraform/windows_user_data.ps1.tftpl`, not just
-`scripts/*.ps1`.** Four ids carried two meanings each before this registry existed, and
-each was found by widening the search rather than by thinking harder: `106` meant both
-"SteamCMD install failed" and "watchdog stuck disabled", `107` both "UE4SS restore
-failed" and "stale build stranded", `109` both "may serve an EMPTY world" and "alert
-dropped", `110` both "backup failed" and "Discord POST failed". Filtering for a severe id
-and getting unrelated noise defeats the point of having ids.
-
-**Before assigning an id, check BOTH locations.** Grepping only `scripts/` is how half of
-these got in:
-
-```bash
-grep -ho 'EventId 1[0-9][0-9]' scripts/*.ps1 terraform/*.tftpl | sort -u
-```
-
-`windows_user_data.ps1.tftpl` owns 102, 106, 107 and 108 and **must not be edited to
-resolve a collision**: it is rendered into `user_data`, so a change there stops and starts
-the live server on apply (rule 5). The other side always moves.
-
-| ID | Writer | Meaning |
-|----|--------|---------|
-| 101 | launch | `PalServer` shipping exe missing. |
-| 102 | user_data | A bootstrap script fetched from S3 was unusable. |
-| 103 | idle | Roster publish failed. The off-box backup monitor reads a stale roster as "the idle watcher is dead". |
-| 104 | idle | Watchdog: the launcher script is missing, so a crashed server cannot be restarted. |
-| 105 | idle | Watchdog: the launcher exited non-zero; the server did not start. |
-| 106 | user_data | SteamCMD install failed after 3 attempts; the shipping exe is missing. (Overlaps 101's meaning from a different stage of the box's life. Left as-is because the template cannot be edited safely.) |
-| 107 | user_data | Ambiguous RAW disks; the save volume was not initialized. |
-| 108 | user_data | UE4SS restore failed, its durable stage is missing, or the restore was incomplete and the server is vanilla. |
-| 109 | launch | No staged `GameUserSettings.ini`; the server may serve an **EMPTY world** while the real save sits intact on D:. |
-| 110 | backup | Backup failed. |
-| 111 | idle | A duplicate `PalServer` was reaped (which one was kept, and why). |
-| 112 | launch | Launch failed: no process object, exited within 10s, or no process appeared within 10s. |
-| 113 | launch | Timed out after 30s waiting for the start lock while no server is running. |
-| 114 | idle | **FAILED** to kill duplicate `PalServer` processes. This is the condition that exhausted memory on 2026-07-31. |
-| 115 | launch | Pak-mod staging: removed unstaged, restored from stage, failed to restore, or removed under vanilla mode. |
-| 116 | idle | An alert was dropped because no webhook resolved. The message body is in the entry. |
-| 117 | idle | The Discord POST itself failed (revoked token, deleted webhook, 429, outage). The message body is in the entry. |
-| 118 | idle | Installed-build publish failed or threw. The version monitor loses its freshness signal. |
-| 119 | idle | `update.lock` has been HELD over an hour. The watchdog and idle-shutdown have been standing down that whole time, so the box is billing and a crashed server will not be restarted. Logged once per stuck lock. |
-| 120 | idle | The Discord webhook could not be resolved from SSM. **Alerts from this box are down.** |
-| 121 | idle | The appmanifest was unreadable AND the UNKNOWN sentinel could not be published, so a stale build id is stranded in SSM. |
-| 122 | launch | `PalworldIdle` was disabled at startup. Error = could NOT be re-enabled, so there is no watchdog and no idle shutdown; Warning = it was re-armed. |
-| 123 | update | The updater could not resolve the webhook; update progress and results will not reach Discord. |
-| 124 | update | The updater's Discord POST failed. The message body is in the entry, and the SSM command output still has the text. |
-| 125 | idle | `update.lock` state could NOT be determined. The cycle stands down, so the watchdog and idle-shutdown are both inactive until it clears; if it persists the box will not stop on its own. |
-
-116, 117 and 120 are the ones worth understanding: alerting is best-effort by design,
-because `Send-Notify` is called from the shutdown and save-verification paths where
-throwing would trade "I could not tell you" for "I stopped protecting the world".
-Best-effort is correct. Silent best-effort was the bug, and these ids are what make a
-dropped alert recoverable rather than destroyed.
-
-## Live-service etiquette
-
-- Check who is online first: `aws ssm get-parameter --name /palworld-server/roster`.
-- A restart disconnects players for 1-2 min. Announce via the REST `/announce` endpoint
-  and wait, unless the owner says otherwise.
-- Force-save before any restart, and confirm `Level.sav`'s mtime advanced - an HTTP 200
-  on `/save` is not proof the world reached disk.
-- `POST /v1/api/save` needs `Content-Length: 0` or it returns HTTP 411.
-- `OptionSettings` is a **single line**; keys must be inserted inside the parens. Keys
-  appended on a new line are ignored, and keys near the tail are the first casualty if
-  the line is ever truncated - insert at the front.
-- Game-balance settings live in the INI, not the world save. Restoring a save does not
-  restore them, and a rebuilt instance comes up with engine defaults - which ejects
-  every Pal over the base cap onto the ground.
-
-## Platform notes
-
-- **Windows**: `PalServer.exe` (the wrapper) hangs in session 0 - launch
-  `Pal\Binaries\Win64\PalServer-Win64-Shipping.exe` directly. SteamCMD's first run only
-  self-updates and skips `app_update`, so the install needs a retry loop.
-- `windows_user_data.ps1.tftpl` **must stay pure ASCII** - EC2Launch does not decode it
-  as UTF-8 and a single em-dash breaks the PowerShell parse. Check:
-  `grep -P '[^\x00-\x7F]'`.
-- PowerShell 5.1 reads a BOM-less `.ps1` as ANSI; injected scripts get a UTF-8 BOM from
-  the injector for exactly this reason.
-- Windows bootstrap scripts ship via S3 (`scripts/windows/` in the backups bucket), not
-  embedded in `user_data` - that hit EC2's hard 16 KB limit, and S3 hosting means a
-  script fix does not force an instance rebuild.
-- Palworld does not auto-load an existing world. `DedicatedServerName` in
-  `GameUserSettings.ini` decides, and a fresh install generates its own GUID - this is
-  how a restore ends up serving an empty world.
+So: after a change, ask the running system what it thinks is true: read the roster's
+`count` with the complete command in rule 5, run
+`node scripts/box-command.mts run 'journalctl -u valheim -n 200 --no-pager'`, and repeat the
+backup listing in rule 7. Do not trust the command's return code alone. When adding a guard,
+**make it fail once on purpose** before believing it.
 
 ## Context
 

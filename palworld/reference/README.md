@@ -55,7 +55,9 @@ stage would otherwise lose it with no record of what was lost.
 
 sha256 `2f31e30cb4132f3f2b4864b242e7484fb05ca4ebde85fd433db61faac3e1d60e`.
 
-The patch is described in AGENTS.md rule 6. Short version: upstream's `LoadMod` returns
+The [Archived Palworld safeguards section of AGENTS.md](../../AGENTS.md) says to preserve this
+local patch while staging archived UE4SS mods.
+Short version: upstream's `LoadMod` returns
 `false` on an invalid World without registering the mod for revalidation, so the retry
 loop iterates an empty table and prints `Finished loading LogicMods!` having loaded
 nothing. Search this file for `LOCAL PATCH` to find it.
@@ -73,7 +75,7 @@ the original mod's pak stays enabled as machinery AutoHatchFix drives, and this 
 disabled. Kept here as the hardened reference copy the replacement was built from.
 
 It did not fix the crash, and was never going to: the crash was a missing
-`MemberVariableLayout.ini` (AGENTS.md rule 6). What it does carry is one load-bearing
+`MemberVariableLayout.ini`. What it does carry is one load-bearing
 correction plus the instrumentation that found the real cause.
 
 The correction: stock reads `messageStruct.senderPlayerUId` with a lower-case s on lines

@@ -61,9 +61,9 @@ SSM at `/palworld-server/thunderstore_token` as a SecureString, or set `THUNDERS
 in the environment, which wins when both are present. Uploading by hand through the website
 still works and is the fallback if the token is ever unavailable.
 
-`manifest.json`, `README.md` and `icon.png` under `mods/modpack/` are generated. Do not
-hand-edit them; change `manifest.json` at the top of this directory and rebuild. The icon
-is drawn from code in `scripts/png.mts` rather than checked in as a binary.
+`manifest.json`, `README.md` and `icon.png` under `mods/modpack/` are generated and
+gitignored. Do not hand-edit them; change `manifest.json` at the top of this directory and
+rebuild. The icon is drawn from code in `scripts/png.mts` rather than checked in as a binary.
 
 ## Updating a mod
 
@@ -72,8 +72,18 @@ is drawn from code in `scripts/png.mts` rather than checked in as a binary.
 3. Deploy to the server, then run the verify step below and confirm it comes back CLEAN.
 4. Build and upload the pack.
 
-Do steps 3 and 4 close together. Between them the server and the published pack disagree,
-and anyone who updates in that window is kicked.
+Do steps 3 and 4 close together. Between them the server and the published pack disagree;
+ValheimPlus runs `enforceMod = true`, so a client with a different version is kicked with a
+message that does not explain why. Keep the window short and say in chat that it is open.
+
+Three things can drift: the box versus `manifest.json`, a newer upstream version, and the
+published pack versus the manifest. Run all three checks before saying mod state is healthy:
+`mods-verify.mts` checks the box, while `mods-upstream.mts` checks upstream versions and the
+published pack. Each check misses the other drift.
+
+Only the upstream and pack checks are watched off-box. The box-versus-manifest check needs
+the server running, and the box sleeps most of the time, so run `mods-verify.mts` by hand
+after any server-side mod change.
 
 ## Verifying the box matches
 
@@ -88,8 +98,9 @@ disk having failed to load looks exactly like one that worked.
 plugin, before that plugin's own startup runs, so one that loads and then disables itself
 still appears with the right version. That is exactly what ServersideQoL 2.0.4 did on the
 1.0.12 network-version bump: it logged a load, then refused to act while ore flowed through
-portals. Version matching alone cannot see that, so the verifier separately scans for the
-phrases a plugin prints when it has stopped acting, and any hit fails the run.
+portals for a day. Version matching alone cannot see that, so `mods-verify.mts` separately
+scans for the phrases a plugin prints when it has stopped acting; any hit fails the run.
+Do not weaken that check into a version comparison.
 
 Exit codes are 0 for clean, 1 for drift, and 2 for a log it could not read. A manifest entry
 with no `plugin_name` fails the run rather than riding along on someone else's match: leaving
@@ -97,6 +108,25 @@ it out of the matched set would let "I could not check this" read as a pass. The
 is `library: true`, for a package holding no plugin at all, where no log could ever show it.
 That entry is still reported, as LIBRARY, and still owes a `plugin_name_note` saying what does
 check it, so the exemption is a stated answer rather than a silent skip.
+
+## Mod behavior and rollout checks
+
+**A config value read back from the file is not a config value in effect.** PlantEverything
+gates whole sections behind an `Enable*Overrides` boolean that ships `false`:
+`EnableCropOverrides`, `EnableSeedOverrides`, `EnableVineOverrides`. With the gate off the
+values are parsed and ignored, so `grep` returns exactly what you wrote while the game runs
+vanilla. On 2026-09-13 the crop grow times were set to 900/1200, read back correct, reported
+applied, and did nothing; a player noticing a turnip still at an hour is what caught it.
+Before reporting any setting as live, find the gate that governs its section, and prefer a
+check the game itself produces: PlantEverything's `[UI]` timers show a planted crop's real
+growth time in seconds. Note the neighbouring sections (`[Berries]`, `[Mushrooms]`,
+`[Saplings]`, `[Flowers]`, `[Debris]`) have NO gate, which is why one half of the same change
+worked and the other did not.
+
+**PlantEverything's units differ by key and the file says so, per setting.** Crop and sapling
+growth times are SECONDS; every pickable `*RespawnTime` is MINUTES, matching vanilla's
+`Pickable.m_respawnTimeMinutes`. A berry bush at 300 is five hours, not five minutes. Read
+the comment above the key rather than comparing two numbers.
 
 ## What is installed where
 
