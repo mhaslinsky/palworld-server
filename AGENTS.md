@@ -64,8 +64,8 @@ players get dropped AND the change does not take effect.
 Read the plan for `aws_instance.server` at all, not just for `must be replaced`. An
 in-place `user_data` update is a player-facing restart: announce it, check who is online
 using the live SSM roster (`terraform/ssm.tf`, published from A2S player counts by
-`scripts/valheim-idle.mts`) or an A2S query in `scripts/a2s.mts`, and wait until the
-server is empty. Valheim saves on its configured interval and on the SIGINT shutdown
+`scripts/valheim-idle.mts`) or an A2S query in `scripts/a2s.mts`, and wait, unless the
+owner says otherwise. Valheim saves on its configured interval and on the SIGINT shutdown
 path in `terraform/user_data.sh.tftpl`; before restarting, confirm the newest chunk-file
 mtime under `worlds_local/<World>/` passes the freshness check in
 `scripts/valheim-backup.mts`. Prefer keeping runtime-tunable values OUT of `user_data`
