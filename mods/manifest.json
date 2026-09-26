@@ -7,28 +7,28 @@
   "modpack": {
     "namespace": "valheimsquad",
     "name": "Utgarde_Client_Pack",
-    "version_number": "1.18.0",
+    "version_number": "1.19.0",
     "website_url": "https://github.com/mhaslinsky/palworld-server",
     "description": "Client mods for the Utgarde Valheim server, pinned to the versions the server runs."
   },
   "verified": {
     "server": {
-      "at": "2026-09-26T04:47:11Z",
-      "method": "scripts/mods-verify.mts against the boot after ServersideQoL, AutoStore and ContainerSigns went to 2.1.0 (SSM command 558ae835; seven files, each sha256-checked before the stop, old copies in /home/steam/mod-backup-20260926-sqol). CLEAN at 22. The patcher loaded as 'ServersideQoL.Patchers 2.1.0.0' beside 'Loading [ServersideQoL 2.1.0]', so the two artifacts moved together, and PortalProgression 2.0.11 loaded under the 2.1.0 core. Loader unchanged from the 04:25Z boot: 21/21 GUID load lines, 'Chainloader startup complete (21 loaded, 0 skipped, 0 failed)'. Log sha256 9d64c7ce4247560f4ee5a4dc4a91c82d5a8d5efaadc463070dde380c91c8e05f, matched on both ends. World load: Game server connected 04:47:04, Zonesystem Awake 04:47:05, DungeonDB Start 04:47:11. The 04:25Z boot before it verified BepInExPack 5.4.2351, PlantEverything 1.21.3 and Server Devcommands 1.114 the same way (#69).",
+      "at": "2026-09-26T04:57:08Z",
+      "method": "scripts/mods-verify.mts against the boot after AdventureBackpacks went to 2.2.0 (SSM command 5566a3be; the DLL sha256-checked before the stop, old DLL and vapok.mods.adventurebackpacks.cfg kept in /home/steam/mod-backup-20260926-ab220). CLEAN at 22, with 'Loading [Adventure Backpacks 2.2.0]' and 'Chainloader startup complete (21 loaded, 0 skipped, 0 failed)'. Log sha256 74695fa74ca2c47db51a7240c2e1d01e8bde9650ff54a21440936aef67c06432, matched on both ends. World load: Game server connected 04:57:01, Zonesystem Awake 04:57:02, DungeonDB Start 04:57:08. The regenerated server config has no [Server Config] and no automation section, so the server sets none of the four automation switches that 2.2.0 made client-local. The 04:47Z boot before it verified the ServersideQoL 2.1.0 family the same way (#70).",
       "game": "l-1.0.16, network version 40, BepInExPack 5.4.2351. The previous record said l-1.0.15; the game had already moved at 2026-09-25 19:10:58Z, so that line was stale for the 01:07Z boot it described.",
-      "errors": "15 '[Error' lines and zero 'Exception' lines, unchanged across the last four verified boots.",
+      "errors": "15 '[Error' lines and zero 'Exception' lines, unchanged across the last five verified boots; none of them names a backpack.",
       "unverified": "PortalProgression's ore GATING after this core bump: the load line is not evidence, because this module logged a clean load and silently stopped gating on the 1.0.12 network bump. Needs a player to carry ore to a portal. Also carried: OdinOnDemand players surviving a restart, and the Build On Ship client checks.",
-      "idle": "valheim-idle.timer re-armed after the 04:46Z restart, active and enabled."
+      "idle": "valheim-idle.timer re-armed after the 04:56Z restart, active and enabled."
     },
     "client_jetragon": {
       "at": "2026-09-26T02:50:00Z",
       "method": "Gale Default profile read over SSH after the 1.16.0 update, then this session's LogOutput.log from the last BepInEx banner. Updating the pack in Gale left OdinOnDemand and AdventureBackpacks at their old versions, the same Gale behaviour seen on 1.14.1, so Mike updated the three changed mods one at a time rather than Update all. Afterwards each package's manifest.json read OdinOnDemand 1.3.0, AdventureBackpacks 2.1.13 and ValheimVisualEnhanced 0.5.18, with PlantEverything 1.21.2 and GentleDeath 1.0.13 unmoved. The live OdinOnDemand.dll is the local patch build 638edefa..., put there by C:\\Users\\mhasl\\ood-patch\\deploy.ps1 over stock 85be0e14.... The session log shows 'Loading [OdinOnDemand 1.3.0]', the patch's startup line, 'Moved settings from ...OdinOnDemand/config.cfg', 'Loading [Adventure Backpacks 2.1.13]' and 'Got connection' at 22:44:27 local with no refusal, which is the first client connection on 1.3.0's new network format. The migrated com.valmedia.odinondemand.cfg holds 'Muxed Native Access = true'. Four videos took the native HTTP path, VLC held its 2000 ms lead, and Mike confirmed by ear that audio sounds right. 6 '[Error' lines and 0 exceptions in the session, none from OdinOnDemand or AdventureBackpacks.",
-      "stale": "Pack 1.17.0 removes PortalPreview, and Gale does not uninstall a mod when a pack drops it, so jetragon still has it until it is removed by hand in Gale."
+      "stale": "Pack 1.19.0 moves AdventureBackpacks to 2.2.0, which is enforced, so jetragon is refused until Gale updates it. The record above describes 1.18.0."
     },
     "pack": {
-      "at": "2026-09-26T04:27:04Z",
-      "method": "scripts/modpack-publish.mts from this branch. Its post-check read 404, the same per-version index lag as 1.16.0 and 1.17.0. The package index reports 1.18.0 as latest and is_active with 23 dependencies, including BepInExPack_Valheim-5.4.2351, PlantEverything-1.21.3 and GentleDeath-1.0.14 by name. The time is Thunderstore's own date_created.",
-      "window": "The server ran the new loader from 04:25:06Z and the pack went live at 04:27:04Z. None of the three client-side changes is enforced, so a 1.17.0 client is not refused in that window or after it."
+      "at": "2026-09-26T04:58:05Z",
+      "method": "scripts/modpack-publish.mts from this branch. Its post-check read 404, the same per-version index lag as every publish tonight. The package index reports 1.19.0 as latest, depending on Vapok-AdventureBackpacks-2.2.0 by name. The time is Thunderstore's own date_created.",
+      "window": "The server ran AdventureBackpacks 2.2.0 from 04:56:12Z and the pack went live at 04:58:05Z. AdventureBackpacks is enforced, so a client on 1.18.0 or older is refused from 04:56Z until it updates."
     }
   },
   "mods": [
@@ -166,17 +166,18 @@
     },
     {
       "thunderstore": "Vapok-AdventureBackpacks",
-      "version": "2.1.13",
+      "version": "2.2.0",
       "side": "both",
       "enforced": true,
       "why": "Craftable, wearable backpacks with tiers. Replaces ArgusMagnus-ServersideQoL_Backpack, which was server-only and therefore cheaper to deploy, but was an invisible container opened by an emote rather than an item in the world. Since the pack reaches every player anyway, the deployment saving bought nothing. Jotunn-based, so a client without it is kicked at connect exactly like ValheimPlus.",
       "artifact_sha256": {
-        "AdventureBackpacks.dll": "5773e28a4e8a7f27b839f1fbc4ab2272c5349e7e38d671f683950e30d47d4541"
+        "AdventureBackpacks.dll": "ddd3480d9b20125632825756d8cc9234193b9558e7ed217884b52fa01a3ea86a"
       },
       "plugin_name": "Adventure Backpacks",
       "note": "Ships a Translations/ folder beside the DLL; 35 json files as of 2.1.13 (15 at 2.1.10, the other 20 are new languages from 2.1.11), copied on both sides. 2.1.10 hard-requires Jotunn 2.30.2, so the two can never be bumped independently: the floor was 2.26.1 at 2.0.4 and 2.30.1 at 2.0.9. Two fixes in this range earn the jump on this estate specifically. 2.1.9 fixes dedicated servers failing to load backpacks while waiting on a user-interface event, which is a server-side fault this box was exposed to. 2.1.9 also fixes cold effects bleeding through when a weather mod is running, naming Seasonality, which this estate runs with every season set to two days, so winter arrives often.",
       "telemetry": "2.0.6 added anonymous telemetry its changelog described as defaulting to enabled with auto-opt-in on launch. 2.0.9 REVERSED that, and 2.1.10 holds the line: read off the box's regenerated config on 2026-09-22, 'Enable Anonymous Telemetry' under [Local Config] is false and marked [Not Synced with Server], so the server cannot set it for players either way. That is a re-read at 2.1.10, not the 2.0.9 reading carried forward. The same section carries 'Show Splash on Startup = true', also client-local, so players see a splash on first launch after updating.",
-      "upgrade_2_1_13": "Dependencies are unchanged from 2.1.10 (BepInExPack 5.4.2350, Jotunn 2.30.2, YamlDotNet 16.3.1). What earns it here: 2.1.13 fixes backpacks carrying ore or metal being blocked at Stone Portals, and adds safety checks against crafting and inventory errors on dedicated servers; 2.1.11 adds more dedicated-server protections and null safety when crafting from a backpack; 2.1.12 fixes a config sync problem in a library. Enforced, so it moved with the pack."
+      "upgrade_2_1_13": "Dependencies are unchanged from 2.1.10 (BepInExPack 5.4.2350, Jotunn 2.30.2, YamlDotNet 16.3.1). What earns it here: 2.1.13 fixes backpacks carrying ore or metal being blocked at Stone Portals, and adds safety checks against crafting and inventory errors on dedicated servers; 2.1.11 adds more dedicated-server protections and null safety when crafting from a backpack; 2.1.12 fixes a config sync problem in a library. Enforced, so it moved with the pack.",
+      "upgrade_2_2_0": "Taken 2026-09-26, the same night as 2.1.13, while only jetragon had updated to the 1.18.0 pack, so no other player had to update twice. Only the DLL changed (the 35 translation files are byte-identical to 2.1.13) and the dependencies are unchanged. It adds crafting from the backpack with a consumption priority and a keep-one-of-each safeguard. It also moves Craft From Backpack, Craft Output To Backpack, Auto Store and Inventory Overflow from server-synced [Server Config] to a client-local [Automation (Local Only)] section, so the server can no longer set them for players and each player's own config decides. This server never set them (defaults applied), so the move changes nothing here unless a player's local defaults differ."
     },
     {
       "thunderstore": "Landoria-GentleDeath",
