@@ -2,7 +2,7 @@
   "_comment": "Pinned source of truth for every mod on the Valheim estate. The server install, Mike's client, and the published client modpack are all generated from or checked against this file. Edit it FIRST, then deploy; never the other way round.",
   "_versions": "`version` is what Thunderstore calls the release and is what the modpack pins. `plugin_name` and `plugin_version` are what BepInEx prints in LogOutput.log, which is what scripts/mods-verify.mts compares against. They differ: the loader is packaged as 5.4.2350 and logs 5.4.23.5. A null plugin_name means the entry cannot be verified from the log, and the verifier reports that rather than passing it.",
   "world": "Utgarde",
-  "game_version": "1.0.15",
+  "game_version": "1.0.16",
   "network_version": 40,
   "modpack": {
     "namespace": "valheimsquad",
@@ -13,12 +13,12 @@
   },
   "verified": {
     "server": {
-      "at": "2026-09-26T01:08:00Z",
-      "method": "scripts/mods-verify.mts against BepInEx/LogOutput.log from the first boot with OdinOnDemand 1.3.0 and AdventureBackpacks 2.1.13, installed over SSM (command f27ab96d) with valheim.service stopped. CLEAN at 22, the same count as before, with both rows at their new versions. All 37 files (two DLLs and 35 translation json files) were fetched through presigned URLs, because the instance role reads only scripts/linux/*, and every one was sha256-checked against the package before the service stopped. The replaced 1.2.5 and 2.1.10 files are kept in /home/steam/mod-backup-20260926. The log was fetched whole as gzip plus base64 with sha256 423daeae8e760ce09a99d024bf389f44b93b6bf6889a1196db1ec181dd9dd36a matching on both ends and holds exactly one 'Chainloader startup complete'. World load confirmed separately: Game server connected 01:07:31, Zonesystem Awake 01:07:32, DungeonDB Start 01:07:37. UDP 2456 and 2457 bound by valheim_server.",
-      "game": "l-1.0.15, network version 40, BepInExPack 5.4.2350",
-      "errors": "15 '[Error' lines and zero 'Exception' lines, the same set as the 2026-09-25 boot: 13 vanilla headless lines (AsyncResourceUpload, the video decode shaders, the intro cinematic, the custom render path shader) and the 2 ValheimPlus free placement rotation lines that Build On Ship causes. Neither upgraded mod added a line.",
-      "unverified": "Carried and not re-checked: PortalProgression's GATING (needs a player carrying ore through a portal), whether OdinOnDemand media players survive a relog and a restart, and the three Build On Ship client checks. New: nobody has connected on pack 1.16.0 yet, so OdinOnDemand 1.3.0's new network format and AdventureBackpacks 2.1.13 have only been seen from the server side, and 2.1.13's Stone Portal fix has not been exercised.",
-      "shutdown": "The idle timer was re-armed at 01:12:06Z (active and enabled) and fired at once: the box had been empty since the 00:31Z start, so it shut itself down, writing world backup 20260926T011216Z on the way. The install had already captured 20260926T010629Z when it stopped the service. The next start is the first one a player will see on these mods."
+      "at": "2026-09-26T04:26:01Z",
+      "method": "scripts/mods-verify.mts against BepInEx/LogOutput.log from the first boot on BepInExPack 5.4.2351, PlantEverything 1.21.3 and Server Devcommands 1.114, installed over SSM (command 4fa3e0ea) with valheim.service stopped and the operator's go-ahead to drop the one player still connected. CLEAN at 22. All five files were fetched over presigned URLs and sha256-checked before the stop; the replaced files are in /home/steam/mod-backup-20260926-move2, and a rollback script was prepared before the install. The new loader is proven by more than the banner, which reads 5.4.23.5 on both builds: BepInEx.dll 36bdb9af..., BepInEx.Preloader.dll c38f9847... and libdoorstop_x64.so 07ec6ee2... hash-match on the box, all 21 load lines carry the GUID suffix only 5.4.2351 prints, and startup ended 'Chainloader startup complete (21 loaded, 0 skipped, 0 failed)'. The log was fetched whole as gzip plus base64 with sha256 6a9a29ffeb8229739c6638f207fe7e14bf20812f0dbd8b333853470f6405caed matching on both ends. World load: Game server connected 04:25:55, Zonesystem Awake 04:25:56, DungeonDB Start 04:26:01.",
+      "game": "l-1.0.16, network version 40, BepInExPack 5.4.2351. The previous record said l-1.0.15; the game had already moved at 2026-09-25 19:10:58Z, so that line was stale for the 01:07Z boot it described.",
+      "errors": "15 '[Error' lines and zero 'Exception' lines, the same count as the two previous verified boots. None came from the upgraded mods.",
+      "unverified": "Carried: PortalProgression's ore gate, OdinOnDemand players surviving a relog and restart, and the Build On Ship client checks. New: no client has joined on pack 1.18.0 yet, and PlantEverything 1.21.2 clients talking to a 1.21.3 server rests on reading the DLL (no ServerSync minimum version set), not on a connection.",
+      "idle": "valheim-idle.timer re-armed at 04:26:52Z, active and enabled."
     },
     "client_jetragon": {
       "at": "2026-09-26T02:50:00Z",
@@ -26,9 +26,9 @@
       "stale": "Pack 1.17.0 removes PortalPreview, and Gale does not uninstall a mod when a pack drops it, so jetragon still has it until it is removed by hand in Gale."
     },
     "pack": {
-      "at": "2026-09-26T02:49:33Z",
-      "method": "scripts/modpack-publish.mts after a rebuild from this branch; the built README.md and manifest.json were grepped for 'preview' and returned nothing. The script's post-check read HTTP 404 for the version, the same index lag as 1.16.0 an hour earlier, whose controls (1.15.0 200, 9.9.9 404) showed the endpoint lags rather than lies. The package index reports valheimsquad-Utgarde_Client_Pack 1.17.0 as latest and is_active with 23 dependencies, none of them PortalPreview. The time is Thunderstore's own date_created.",
-      "window": "None that matters: PortalPreview is client-only with no network sync, so a player on 1.16.0 and a player on 1.17.0 can share the server. Gale does not uninstall a mod a pack drops, so each player removes it by hand."
+      "at": "2026-09-26T04:27:04Z",
+      "method": "scripts/modpack-publish.mts from this branch. Its post-check read 404, the same per-version index lag as 1.16.0 and 1.17.0. The package index reports 1.18.0 as latest and is_active with 23 dependencies, including BepInExPack_Valheim-5.4.2351, PlantEverything-1.21.3 and GentleDeath-1.0.14 by name. The time is Thunderstore's own date_created.",
+      "window": "The server ran the new loader from 04:25:06Z and the pack went live at 04:27:04Z. None of the three client-side changes is enforced, so a 1.17.0 client is not refused in that window or after it."
     }
   },
   "mods": [
@@ -415,5 +415,6 @@
       "plugin_name": null,
       "plugin_name_note": "client-side only, so it never appears in the server's load log"
     }
-  ]
+  ],
+  "game_version_note": "Moved from 1.0.15 at 2026-09-25 19:10:58Z (appmanifest LastUpdated, buildid 25527701), pulled in by the SteamCMD validate that runs before every server start. Nobody noticed until BepInExPack 5.4.2351's 'Valheim Version:' line printed it at 04:25Z on 2026-09-26; the journal's own 'Valheim version: l-1.0.16 (network version 40)' line confirms it on the 02:41Z boot too. The network version stayed at 40, so clients on 1.0.16 connect ('Network version check, their:40, mine:40'). Mods whose readmes declare 1.0.15 are now one patch behind on the fourth drift."
 }
