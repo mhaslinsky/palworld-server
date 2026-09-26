@@ -13,12 +13,12 @@
   },
   "verified": {
     "server": {
-      "at": "2026-09-26T04:26:01Z",
-      "method": "scripts/mods-verify.mts against BepInEx/LogOutput.log from the first boot on BepInExPack 5.4.2351, PlantEverything 1.21.3 and Server Devcommands 1.114, installed over SSM (command 4fa3e0ea) with valheim.service stopped and the operator's go-ahead to drop the one player still connected. CLEAN at 22. All five files were fetched over presigned URLs and sha256-checked before the stop; the replaced files are in /home/steam/mod-backup-20260926-move2, and a rollback script was prepared before the install. The new loader is proven by more than the banner, which reads 5.4.23.5 on both builds: BepInEx.dll 36bdb9af..., BepInEx.Preloader.dll c38f9847... and libdoorstop_x64.so 07ec6ee2... hash-match on the box, all 21 load lines carry the GUID suffix only 5.4.2351 prints, and startup ended 'Chainloader startup complete (21 loaded, 0 skipped, 0 failed)'. The log was fetched whole as gzip plus base64 with sha256 6a9a29ffeb8229739c6638f207fe7e14bf20812f0dbd8b333853470f6405caed matching on both ends. World load: Game server connected 04:25:55, Zonesystem Awake 04:25:56, DungeonDB Start 04:26:01.",
+      "at": "2026-09-26T04:47:11Z",
+      "method": "scripts/mods-verify.mts against the boot after ServersideQoL, AutoStore and ContainerSigns went to 2.1.0 (SSM command 558ae835; seven files, each sha256-checked before the stop, old copies in /home/steam/mod-backup-20260926-sqol). CLEAN at 22. The patcher loaded as 'ServersideQoL.Patchers 2.1.0.0' beside 'Loading [ServersideQoL 2.1.0]', so the two artifacts moved together, and PortalProgression 2.0.11 loaded under the 2.1.0 core. Loader unchanged from the 04:25Z boot: 21/21 GUID load lines, 'Chainloader startup complete (21 loaded, 0 skipped, 0 failed)'. Log sha256 9d64c7ce4247560f4ee5a4dc4a91c82d5a8d5efaadc463070dde380c91c8e05f, matched on both ends. World load: Game server connected 04:47:04, Zonesystem Awake 04:47:05, DungeonDB Start 04:47:11. The 04:25Z boot before it verified BepInExPack 5.4.2351, PlantEverything 1.21.3 and Server Devcommands 1.114 the same way (#69).",
       "game": "l-1.0.16, network version 40, BepInExPack 5.4.2351. The previous record said l-1.0.15; the game had already moved at 2026-09-25 19:10:58Z, so that line was stale for the 01:07Z boot it described.",
-      "errors": "15 '[Error' lines and zero 'Exception' lines, the same count as the two previous verified boots. None came from the upgraded mods.",
-      "unverified": "Carried: PortalProgression's ore gate, OdinOnDemand players surviving a relog and restart, and the Build On Ship client checks. New: no client has joined on pack 1.18.0 yet, and PlantEverything 1.21.2 clients talking to a 1.21.3 server rests on reading the DLL (no ServerSync minimum version set), not on a connection.",
-      "idle": "valheim-idle.timer re-armed at 04:26:52Z, active and enabled."
+      "errors": "15 '[Error' lines and zero 'Exception' lines, unchanged across the last four verified boots.",
+      "unverified": "PortalProgression's ore GATING after this core bump: the load line is not evidence, because this module logged a clean load and silently stopped gating on the 1.0.12 network bump. Needs a player to carry ore to a portal. Also carried: OdinOnDemand players surviving a restart, and the Build On Ship client checks.",
+      "idle": "valheim-idle.timer re-armed after the 04:46Z restart, active and enabled."
     },
     "client_jetragon": {
       "at": "2026-09-26T02:50:00Z",
