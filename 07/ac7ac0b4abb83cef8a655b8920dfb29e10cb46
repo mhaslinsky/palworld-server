@@ -1,0 +1,30 @@
+AGENTS.md
+  s_30b999cc4aad20::t_d08ad2104d3c2b 3
+  s_30b999cc4aad20::t_48cb1f1ea457c5 77,86
+  s_30b999cc4aad20::t_20a4ce54e7e7bd 84
+  s_30b999cc4aad20::t_4637c83ade251b 5,75,80,82-83
+  s_30b999cc4aad20::t_7313ad38c02e0c 46
+  s_30b999cc4aad20::t_653ac820cd98c5 78
+palworld/README.md
+  s_30b999cc4aad20::t_4c7ca72f9fce0a 18,49,55,63
+  s_30b999cc4aad20::t_709680e8838c11 25-27,38,42,71,95
+  s_30b999cc4aad20::t_80eb7d7e3c81f1 15-17,19-22,28-34,36,41,43-46,50-54,56,62,64-70,72-94,96-100
+  s_30b999cc4aad20::t_653ac820cd98c5 23-24,37,39-40,47-48,61,101-104
+  s_30b999cc4aad20::t_d08ad2104d3c2b 35,57-60
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "07ac7ac0b4abb83cef8a655b8920dfb29e10cb46",
+  "prompts": {},
+  "sessions": {
+    "s_30b999cc4aad20": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0dc37-34ad-7a52-9250-3d60c9178074",
+        "model": "gpt-6-luna"
+      },
+      "human_author": "Michael Haslinsky <mike.haslinsky@creditgenie.com>"
+    }
+  }
+}
