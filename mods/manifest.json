@@ -146,7 +146,12 @@
         "ServersideQoL.AutoProcess.deps.json": "785ff58ba1668ece62592da8e531e7e4475f85f9e200632588aae0f85e1e06e5"
       },
       "note": "Declares ServersideQoL 2.1.0 only, which is the core pinned here. Read off the config the server generated on 2026-09-30, not out of the DLL. A container is a feeding source when it is within FeedFromContainersRange of the station, default 4 m, and NO sign is needed for that: any chest within 4 m of a smelter feeds it, including one used for something else. A ContainerSigns automatic sign only overrides the range per chest, by writing the FeedFromContainersRangeSignPrefix (the arrows emoji) and a number on it, capped by FeedFromContainersMaxRange (64). It only feeds while no player is within FeedFromContainersMinPlayerDistance (4 m) of the station, and it leaves FeedFromContainersLeaveAtLeastFuel and FeedFromContainersLeaveAtLeastOre (1 each) behind. CapacityMultiplier and TimePerProductMultiplier also exist and both sit at the vanilla 1; changing either is a gameplay change, not a tuning detail. The earlier wording of this note said a chest is designated by the items its sign lists; the config does not say that.",
-      "unverified": "Two things nothing has exercised. Its config has no output setting, so the loop only closes if the bars and charcoal a station drops are picked up into a chest by AutoStore. And the per-chest range override on a sign has not been tried; it works only on the automatic signs ContainerSigns adds. Prove both with real ore and wood before saying the loop works."
+      "unverified": "The operator reported on 2026-09-30 that the automation is working in game, after testing it with real ore and wood. That report did not say which parts were exercised, and it is not a log line or a captured observation. Not separately confirmed: that the bars and charcoal a station drops were collected into a chest by AutoStore (which only picks an item up into a chest that already holds that item), and that the per-chest range override written on a sign takes effect.",
+      "operator_report": {
+        "at": "2026-09-30",
+        "said": "It's working.",
+        "source": "the operator, in the session that installed it"
+      }
     },
     {
       "thunderstore": null,
