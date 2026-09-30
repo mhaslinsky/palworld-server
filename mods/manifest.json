@@ -7,7 +7,7 @@
   "modpack": {
     "namespace": "valheimsquad",
     "name": "Utgarde_Client_Pack",
-    "version_number": "1.19.0",
+    "version_number": "1.20.0",
     "website_url": "https://github.com/mhaslinsky/palworld-server",
     "description": "Client mods for the Utgarde Valheim server, pinned to the versions the server runs."
   },
@@ -130,10 +130,23 @@
       "side": "server",
       "why": "Content signs on chests, and how a chest is designated for other ServersideQoL modules.",
       "plugin_name": "ServersideQoL.ContainerSigns",
-      "note": "2.0.11 moved two settings out of this mod: AutoPickupMaxRange went to AutoStore and FeedFromContainersMaxRange went to AutoProcess, which this estate does not install. Both were sitting at the default of 64 here, so nothing needed re-homing, but a future custom value set on the wrong side of that split goes silently inert. 2.1.0 reads the new AutoStore sign prefix and fixes the range emoji on some platforms.",
+      "note": "2.0.11 moved two settings out of this mod: AutoPickupMaxRange went to AutoStore and FeedFromContainersMaxRange went to AutoProcess, which this estate now installs. Both were sitting at the default of 64 here, so nothing needed re-homing, but a future custom value set on the wrong side of that split goes silently inert. 2.1.0 reads the new AutoStore sign prefix and fixes the range emoji on some platforms.",
       "artifact_sha256": {
         "ServersideQoL.ContainerSigns.dll": "b1db6d30a9c4186aac3fb19c7b39c77f8b473775b506dbf2e5b576c4f5d412dc"
       }
+    },
+    {
+      "thunderstore": "ArgusMagnus-ServersideQoL_AutoProcess",
+      "version": "2.1.0",
+      "side": "server",
+      "why": "Feeds smelters, kilns and other stations from nearby chests, so wood goes into a kiln and ore plus fuel into a smelter without anyone standing there. Asked for by the operator 2026-09-29. Server-only: players install nothing and nothing is version-gated.",
+      "plugin_name": "ServersideQoL.AutoProcess",
+      "artifact_sha256": {
+        "ServersideQoL.AutoProcess.dll": "93d616797c6f28cde4832fa3d47f6873a39548e68d528a4466d24255b8f362a9",
+        "ServersideQoL.AutoProcess.deps.json": "785ff58ba1668ece62592da8e531e7e4475f85f9e200632588aae0f85e1e06e5"
+      },
+      "note": "Declares ServersideQoL 2.1.0 only, which is the core pinned here. Config keys read out of the DLL, not observed running: FeedFromContainers, FeedFromContainersMaxRange (moved here from ContainerSigns in 2.0.11), FeedFromContainersRange, FeedFromContainersRangeSignPrefix (2.1.0, a per-chest range on its sign), FeedFromContainersMinPlayerDistance, FeedFromContainersLeaveAtLeastFuel and FeedFromContainersLeaveAtLeastOre. It reads chests through the ContainerSigns registry by item name, so a chest is designated by the items its sign lists.",
+      "unverified": "Nothing has run on the box. Its config names no output handling, so the loop only closes if the bars and charcoal a smelter or kiln drops are picked up into a chest by AutoStore. The README says the generated config file is the real documentation: read it after the first boot, and prove the loop with real ore and wood before saying it works. Also confirm the sign wording that designates the chest."
     },
     {
       "thunderstore": null,
@@ -179,6 +192,19 @@
       "telemetry": "2.0.6 added anonymous telemetry its changelog described as defaulting to enabled with auto-opt-in on launch. 2.0.9 REVERSED that, and 2.1.10 holds the line: read off the box's regenerated config on 2026-09-22, 'Enable Anonymous Telemetry' under [Local Config] is false and marked [Not Synced with Server], so the server cannot set it for players either way. That is a re-read at 2.1.10, not the 2.0.9 reading carried forward. The same section carries 'Show Splash on Startup = true', also client-local, so players see a splash on first launch after updating.",
       "upgrade_2_1_13": "Dependencies are unchanged from 2.1.10 (BepInExPack 5.4.2350, Jotunn 2.30.2, YamlDotNet 16.3.1). What earns it here: 2.1.13 fixes backpacks carrying ore or metal being blocked at Stone Portals, and adds safety checks against crafting and inventory errors on dedicated servers; 2.1.11 adds more dedicated-server protections and null safety when crafting from a backpack; 2.1.12 fixes a config sync problem in a library. Enforced, so it moved with the pack.",
       "upgrade_2_2_0": "Taken 2026-09-26, the same night as 2.1.13, while only jetragon had updated to the 1.18.0 pack, so no other player had to update twice. Only the DLL changed (the 35 translation files are byte-identical to 2.1.13) and the dependencies are unchanged. It adds crafting from the backpack with a consumption priority and a keep-one-of-each safeguard. It also moves Craft From Backpack, Craft Output To Backpack, Auto Store and Inventory Overflow from server-synced [Server Config] to a client-local [Automation (Local Only)] section, so the server can no longer set them for players and each player's own config decides. This server never set them (defaults applied), so the move changes nothing here unless a player's local defaults differ."
+    },
+    {
+      "thunderstore": "RandyKnapp-EquipmentAndQuickSlots",
+      "version": "3.1.3",
+      "side": "client",
+      "why": "Dedicated slots for worn gear (head, chest, legs, shoulder, utility, trinket) plus up to six hotkeyable quick slots. Picked by the operator 2026-09-29 over shudnal-ExtraSlots, which adds food, ammo and misc slots with progression gating and an AdventureBackpacks integration; the simpler mod won. Declares BepInExPack 5.4.2201 and Jotunn 2.29.2, both under the versions already here.",
+      "artifact_sha256": {
+        "plugins/EquipmentAndQuickSlots.dll": "b08d791cc1324fc24c5aff591784ce867a8179d5b887797372506bb8626c6d9a"
+      },
+      "plugin_name": null,
+      "plugin_name_note": "client-side only, so it never appears in the server's load log",
+      "note": "Its readme says it is client-installable and not needed on the server; a server copy would sync the balance settings (slot toggles, quick slot count, keep-on-death) and admin-control them. Not installed on the server, so each player's own config decides, and Utility Slot Count defaults to 1 and is off by default. It declares ExtraSlots, ComfyQuickSlots, AzuExtendedPlayerInventory and ExtendedPlayerInventory incompatible, so BepInEx refuses to load it beside any of them; none is pinned here. Per its changelog, 3.0.0 migrates a character's items into the new slots on first login with NO downgrade path, so removing the mod later needs the slots cleared first. Its 3.0.1 notes cover ValheimPlus with the [Inventory] section enabled.",
+      "unverified": "Not tested against Vapok-AdventureBackpacks 2.2.0 here; ExtraSlots documents an AdventureBackpacks integration and this mod's readme does not mention it. Its declared game target was not read. Watch the first login of the first player who updates: an item that is missing afterwards is what eaqs_restorebackup is for."
     },
     {
       "thunderstore": "Landoria-GentleDeath",
@@ -273,24 +299,6 @@
       },
       "plugin_name": null,
       "plugin_name_note": "client-side only, so it never appears in the server's load log"
-    },
-    {
-      "thunderstore": "ontrigger-ValheimPerformanceOptimizations",
-      "version": "1.2.2",
-      "side": "client",
-      "why": "Rendering and loading optimisations, taken to buy frame headroom for the draw distance and effects the rest of this batch adds rather than to fix a performance problem. Declares no dependencies.",
-      "artifact_sha256": {
-        "ValheimPerformanceOptimizations.dll": "37b610dd6229e5eb91800ff9a5ce611bdcf57a3a5382f6712fb8bf59e7252892",
-        "VPOBurst_Managed.dll": "05af1ca87068ac676b3cf56a02e1aa797ed1f4a703e95497c60fc5fbfc7b383d",
-        "VPOBurst_win_x86_64.dll": "bc112b1a74fef0d5028e7abb3014026183175df7724853dccb44a188d57bda46",
-        "Unity.Burst.dll": "136bc1d7814bcc0bcf660baf4fd9f1ef012b47d4dc233ca230b52ad4f5d55468",
-        "Unity.Burst.Unsafe.dll": "9d9c1ff52411decbee5d9f0d1cd61ebeaa222077aa77a52101ea3debafae98e2",
-        "Unity.Mathematics.dll": "63473793debb38805e5e5da3b8927056f4b71b4d0cc4a63aca777599306ed5bd"
-      },
-      "plugin_name": null,
-      "plugin_name_note": "client-side only, so it never appears in the server's load log",
-      "why_not_server_side": "The package advertises itself as working on servers, but its author's own readme says 'I have not tested this mod on servers'. It also ships Unity.Burst.dll, Unity.Burst.Unsafe.dll and Unity.Mathematics.dll into the GAME's Managed directory rather than into BepInEx/plugins, and this box re-runs SteamCMD on boot, which owns that directory. Almost every optimisation it lists is rendering work a headless server never does: light flicker culling, reflection probes, particle culling, audiosource culling. Only the ZDO ownership scan is server-relevant. Untested-by-author plus writing into a SteamCMD-managed directory, for one server-side win, is a poor trade on a live world.",
-      "artifact_sha256_note": "Six of the seven binaries this package ships. The seventh, VPOBurst_linux_x86_64.so, was not hashed because the download sweep matched *.dll only; it is irrelevant here in any case, since this mod is client-only and the clients are Windows. The three Unity DLLs are recorded specifically because they land in the game's Managed directory rather than BepInEx/plugins."
     },
     {
       "thunderstore": "MagiCorp-Render_Limits_Fix",
