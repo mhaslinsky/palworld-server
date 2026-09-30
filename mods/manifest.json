@@ -13,12 +13,12 @@
   },
   "verified": {
     "server": {
-      "at": "2026-09-26T04:57:08Z",
-      "method": "scripts/mods-verify.mts against the boot after AdventureBackpacks went to 2.2.0 (SSM command 5566a3be; the DLL sha256-checked before the stop, old DLL and vapok.mods.adventurebackpacks.cfg kept in /home/steam/mod-backup-20260926-ab220). CLEAN at 22, with 'Loading [Adventure Backpacks 2.2.0]' and 'Chainloader startup complete (21 loaded, 0 skipped, 0 failed)'. Log sha256 74695fa74ca2c47db51a7240c2e1d01e8bde9650ff54a21440936aef67c06432, matched on both ends. World load: Game server connected 04:57:01, Zonesystem Awake 04:57:02, DungeonDB Start 04:57:08. The regenerated server config has no [Server Config] and no automation section, so the server sets none of the four automation switches that 2.2.0 made client-local. The 04:47Z boot before it verified the ServersideQoL 2.1.0 family the same way (#70).",
+      "at": "2026-09-30T03:47:03Z",
+      "method": "scripts/mods-verify.mts against the boot after ServersideQoL_AutoProcess 2.1.0 was installed (SSM, world backup world/linux/20260930T034554Z.tgz taken with the server stopped; both AutoProcess files sha256-checked against this manifest on the box before and after install). CLEAN at 23, with 'Loading [ServersideQoL.AutoProcess 2.1.0]' and 'Chainloader startup complete (22 loaded, 0 skipped, 0 failed)'. World load: Game server connected 03:46:57Z, Zonesystem Awake 03:46:58Z, DungeonDB Start 03:47:03Z. valheim.service and valheim-idle.timer were both active and enabled afterwards.",
       "game": "l-1.0.16, network version 40, BepInExPack 5.4.2351. The previous record said l-1.0.15; the game had already moved at 2026-09-25 19:10:58Z, so that line was stale for the 01:07Z boot it described.",
-      "errors": "15 '[Error' lines and zero 'Exception' lines, unchanged across the last five verified boots; none of them names a backpack.",
-      "unverified": "PortalProgression's ore GATING after this core bump: the load line is not evidence, because this module logged a clean load and silently stopped gating on the 1.0.12 network bump. Needs a player to carry ore to a portal. Also carried: OdinOnDemand players surviving a restart, and the Build On Ship client checks.",
-      "idle": "valheim-idle.timer re-armed after the 04:56Z restart, active and enabled."
+      "errors": "0 'Exception' lines in the full boot log. The verifier ran on a copy truncated to 24000 bytes by SSM's output cap, so its scan for a plugin that stopped after loading covered only that part; the load lines it matches on are at the top and were all present.",
+      "unverified": "PortalProgression's ore GATING after this core bump: the load line is not evidence, because this module logged a clean load and silently stopped gating on the 1.0.12 network bump. Needs a player to carry ore to a portal. Also carried: OdinOnDemand players surviving a restart, and the Build On Ship client checks. AutoProcess's own behaviour is unverified for the reasons in its entry.",
+      "idle": "valheim-idle.timer re-armed after the 03:46Z restart, active and enabled. systemd also warned that valheim.service changed on disk and needs a daemon-reload; the change was not made by this install and was not reloaded."
     },
     "client_jetragon": {
       "at": "2026-09-26T02:50:00Z",
@@ -26,9 +26,9 @@
       "stale": "Pack 1.19.0 moves AdventureBackpacks to 2.2.0, which is enforced, so jetragon is refused until Gale updates it. The record above describes 1.18.0."
     },
     "pack": {
-      "at": "2026-09-26T04:58:05Z",
-      "method": "scripts/modpack-publish.mts from this branch. Its post-check read 404, the same per-version index lag as every publish tonight. The package index reports 1.19.0 as latest, depending on Vapok-AdventureBackpacks-2.2.0 by name. The time is Thunderstore's own date_created.",
-      "window": "The server ran AdventureBackpacks 2.2.0 from 04:56:12Z and the pack went live at 04:58:05Z. AdventureBackpacks is enforced, so a client on 1.18.0 or older is refused from 04:56Z until it updates."
+      "at": "2026-09-30T04:11:35Z",
+      "method": "scripts/modpack-publish.mts from a checkout matching main. Its post-check read 404, the same per-version lag as earlier publishes; the package index then reported 1.20.0 as latest with RandyKnapp-EquipmentAndQuickSlots-3.1.3 among its dependencies, and scripts/mods-upstream.mts reported it published. The time is Thunderstore's own date_created.",
+      "window": "None that kicks anyone. EquipmentAndQuickSlots is client-side and not a version gate, and the removal of ValheimPerformanceOptimizations is not one either, so a client on 1.19.0 connects normally and simply lacks the new slots until it updates."
     }
   },
   "mods": [
@@ -139,14 +139,14 @@
       "thunderstore": "ArgusMagnus-ServersideQoL_AutoProcess",
       "version": "2.1.0",
       "side": "server",
-      "why": "Feeds smelters, kilns and other stations from nearby chests, so wood goes into a kiln and ore plus fuel into a smelter without anyone standing there. Asked for by the operator 2026-09-29. Server-only: players install nothing and nothing is version-gated.",
+      "why": "Feeds smelters and kilns from nearby chests, so wood goes into a kiln and ore plus fuel into a smelter without anyone standing there. Asked for by the operator 2026-09-29. Server-only: players install nothing and nothing is version-gated.",
       "plugin_name": "ServersideQoL.AutoProcess",
       "artifact_sha256": {
         "ServersideQoL.AutoProcess.dll": "93d616797c6f28cde4832fa3d47f6873a39548e68d528a4466d24255b8f362a9",
         "ServersideQoL.AutoProcess.deps.json": "785ff58ba1668ece62592da8e531e7e4475f85f9e200632588aae0f85e1e06e5"
       },
-      "note": "Declares ServersideQoL 2.1.0 only, which is the core pinned here. Config keys read out of the DLL, not observed running: FeedFromContainers, FeedFromContainersMaxRange (moved here from ContainerSigns in 2.0.11), FeedFromContainersRange, FeedFromContainersRangeSignPrefix (2.1.0, a per-chest range on its sign), FeedFromContainersMinPlayerDistance, FeedFromContainersLeaveAtLeastFuel and FeedFromContainersLeaveAtLeastOre. It reads chests through the ContainerSigns registry by item name, so a chest is designated by the items its sign lists.",
-      "unverified": "Nothing has run on the box. Its config names no output handling, so the loop only closes if the bars and charcoal a smelter or kiln drops are picked up into a chest by AutoStore. The README says the generated config file is the real documentation: read it after the first boot, and prove the loop with real ore and wood before saying it works. Also confirm the sign wording that designates the chest."
+      "note": "Declares ServersideQoL 2.1.0 only, which is the core pinned here. Read off the config the server generated on 2026-09-30, not out of the DLL. A container is a feeding source when it is within FeedFromContainersRange of the station, default 4 m, and NO sign is needed for that: any chest within 4 m of a smelter feeds it, including one used for something else. A ContainerSigns automatic sign only overrides the range per chest, by writing the FeedFromContainersRangeSignPrefix (the arrows emoji) and a number on it, capped by FeedFromContainersMaxRange (64). It only feeds while no player is within FeedFromContainersMinPlayerDistance (4 m) of the station, and it leaves FeedFromContainersLeaveAtLeastFuel and FeedFromContainersLeaveAtLeastOre (1 each) behind. CapacityMultiplier and TimePerProductMultiplier also exist and both sit at the vanilla 1; changing either is a gameplay change, not a tuning detail. The earlier wording of this note said a chest is designated by the items its sign lists; the config does not say that.",
+      "unverified": "Two things nothing has exercised. Its config has no output setting, so the loop only closes if the bars and charcoal a station drops are picked up into a chest by AutoStore. And the per-chest range override on a sign has not been tried; it works only on the automatic signs ContainerSigns adds. Prove both with real ore and wood before saying the loop works."
     },
     {
       "thunderstore": null,
