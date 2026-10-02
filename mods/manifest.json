@@ -244,12 +244,13 @@
       "thunderstore": "OdinPlus-OdinHorse",
       "version": "1.7.7",
       "side": "both",
+      "enforced": true,
       "why": "Ground transport: a tameable, rideable, breedable horse with armour and an attachable cart. Added 2026-09-18 because overland travel to the traders and back is the group's standing complaint, and vanilla offers nothing below the Plains lox saddle. Chosen on maintenance rather than features: it is the only mod in this category still shipping, updated 2026-09-15, against a field where the nearest alternatives (BeastsOfBurden 2021, CraftyCartsRemake and ValheimRAFT early 2026) are stale. Declares no dependencies and bundles its assets in a 10.5 MB DLL, so it needs nothing else on the box. Config syncs from the server like ValheimPlus.",
       "artifact_sha256": {
         "OdinHorse.dll": "110b4d378de2b2e4f08e5cf8cc707f09c029fe806997ff7de243a70eb649df41"
       },
       "plugin_name": "OdinHorse",
-      "note": "Whether it rejects a client that lacks it is UNVERIFIED. It is not Jotunn-based, so the mod-enforcement path that kicks a client missing AdventureBackpacks or the trough does not apply, but it does add prefabs and a client without them is untested. Shipping it in the pack in the same pass as the server install is what keeps that question academic. Its own readme opens by telling you to back up character and world files before installing or updating. 1.7.1 through 1.7.3 are a piecemanager bump and added localisations, with no behaviour change the changelog names.",
+      "note": "It DOES enforce an exact version, despite not being Jotunn-based: on 2026-10-02 the operator joined the 1.7.7 server with 1.7.3 still in Gale and was refused with a message that the client had 1.7.3 and needed 1.7.7. So every OdinHorse bump is a two-sided change with a kick window, like AdventureBackpacks. Whether it rejects a client that lacks it entirely is still untested. Its own readme opens by telling you to back up character and world files before installing or updating. 1.7.1 through 1.7.3 are a piecemanager bump and added localisations, with no behaviour change the changelog names.",
       "upgrade_1_7_7": "Taken 2026-10-02 in pack 1.21.0, the day 1.7.7 was published. Player-visible changes: the Wait Here key moves from T to Y (1.7.4), horses jump on Jump while riding and Use dismounts (1.7.6), and mounted combat arrives (1.7.5), on by default only for NEW configs (1.7.6, 1.7.7), so this server's existing Raelaziel.OdinHorse.cfg keeps whatever it had. The readme says all players need the mod for mounted combat. OdinHorse 1.7.8 was published at 01:16Z during this deploy (Cart Width/Height settings, a fix for error spam when a ridden horse dies, dual-wield animation compatibility) and is NOT taken yet."
     },
     {
