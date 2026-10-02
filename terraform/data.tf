@@ -27,6 +27,9 @@ data "aws_subnet" "selected" {
 data "aws_ami" "ubuntu" {
   most_recent = true
   owners      = ["099720109477"] # Canonical
+  # A pinned id outlives its public listing: AWS hides deprecated AMIs from lookups,
+  # which fails every plan. This one deprecates 2028-07-02.
+  include_deprecated = true
 
   filter {
     name   = "image-id"
