@@ -7,18 +7,19 @@
   "modpack": {
     "namespace": "valheimsquad",
     "name": "Utgarde_Client_Pack",
-    "version_number": "1.20.0",
+    "version_number": "1.21.0",
     "website_url": "https://github.com/mhaslinsky/palworld-server",
     "description": "Client mods for the Utgarde Valheim server, pinned to the versions the server runs."
   },
   "verified": {
     "server": {
-      "at": "2026-09-30T03:47:03Z",
-      "method": "scripts/mods-verify.mts against the boot after ServersideQoL_AutoProcess 2.1.0 was installed (SSM, world backup world/linux/20260930T034554Z.tgz taken with the server stopped; both AutoProcess files sha256-checked against this manifest on the box before and after install). CLEAN at 23, with 'Loading [ServersideQoL.AutoProcess 2.1.0]' and 'Chainloader startup complete (22 loaded, 0 skipped, 0 failed)'. World load: Game server connected 03:46:57Z, Zonesystem Awake 03:46:58Z, DungeonDB Start 03:47:03Z. valheim.service and valheim-idle.timer were both active and enabled afterwards.",
-      "game": "l-1.0.16, network version 40, BepInExPack 5.4.2351. The previous record said l-1.0.15; the game had already moved at 2026-09-25 19:10:58Z, so that line was stale for the 01:07Z boot it described.",
-      "errors": "0 'Exception' lines in the full boot log. The verifier ran on a copy truncated to 24000 bytes by SSM's output cap, so its scan for a plugin that stopped after loading covered only that part; the load lines it matches on are at the top and were all present.",
-      "unverified": "PortalProgression's ore GATING after this core bump: the load line is not evidence, because this module logged a clean load and silently stopped gating on the 1.0.12 network bump. Needs a player to carry ore to a portal. Also carried: OdinOnDemand players surviving a restart, and the Build On Ship client checks. AutoProcess's own behaviour is unverified for the reasons in its entry.",
-      "idle": "valheim-idle.timer re-armed after the 03:46Z restart, active and enabled. systemd also warned that valheim.service changed on disk and needs a daemon-reload; the change was not made by this install and was not reloaded."
+      "at": "2026-10-02T01:16:32Z",
+      "method": "scripts/mods-verify.mts against the FULL boot log after the October batch (ServersideQoL, ContainerSigns and AutoProcess 2.2.0, AdventureBackpacks 2.2.5, OdinHorse 1.7.7, BuildOnShip 3.6.3, WebMap 2.1.6, Muted Mist 1.0.1, Server devcommands 1.115.0). The box downloaded each package from Thunderstore itself and every one of the 84 staged files matched a sha256 list built from the same packages off-box before anything live was touched; all 84 live hashes matched again after the copy. Replaced files kept beside the originals as .bak.20261002T011515Z, and WebMap web/ and tools/ moved aside whole. World backup world/linux/20261002T011415Z.tgz verified (BACKUP_VERIFIED) before the stop. CLEAN at 23, with \"Loaded 1 patcher method from [ServersideQoL.Patchers 2.2.0.0]\" and \"Chainloader startup complete (22 loaded, 0 skipped, 0 failed)\". The log was fetched gzipped so the 24000-byte SSM cap did not truncate it (33692 bytes). World load: Game server connected 01:16:25Z, Zonesystem Awake 01:16:26Z, DungeonDB Start 01:16:32Z.",
+      "game": "l-1.0.16, network version 40, BepInExPack 5.4.2351.",
+      "errors": "0 Exception lines in the full log. The ValheimPlus line \"Failed to apply `Player_UpdatePlacementGhost_Transpile`. Free placement rotation will not work.\" is the known BuildOnShip conflict (see that entry); the rest are the headless video and render warnings every boot prints.",
+      "config": "Read back after the boot: [Player] restSecondsPerComfortLevel = 120 in org.bepinex.plugins.valheim_plus.cfg (backup .pre-rested.20261002T011515Z) and [User] web_edit_bases = false in com.valheimwebmap.server.cfg (backup .pre-webedit.20261002T011515Z), the key written before 2.1.6 first read the file and kept by BepInEx.",
+      "unverified": "PortalProgression ore gating against core 2.2.0, and AutoStore 2.1.0 against it: both declare an older core and only a player carrying ore to a portal settles the first. The rested duration in game: the setting is in effect only if a player sees a longer Rested timer. Carried from earlier: OdinOnDemand players surviving a restart, and the Build On Ship client checks.",
+      "idle": "valheim.service and valheim-idle.timer active and enabled after the restart."
     },
     "client_jetragon": {
       "at": "2026-09-26T02:50:00Z",
@@ -60,7 +61,8 @@
       "plugin_name": "Valheim Plus",
       "plugin_version": "0.10.2.0",
       "note": "10.2.0 is the Valheim 1.0.15 compatibility release, published 2026-09-19, the day after the game build moved. The 10.1.2 it replaces shipped 2026-09-14 and predates the patch, so the estate ran a pre-patch V+ on a post-patch server for four days. Two behaviour changes ship with it and NEITHER bites this box, both read off the regenerated config on 2026-09-22. difficultyScaleRange defaulted to 2 metres whenever the Game section was enabled, which was a bug, and now defaults to 100; here [Game] carries enabled = false, so the 200 set in that section is inert and always was. Oven settings now affect only the oven rather than every fuel-burning cooking station. The new [FrigidKiln] and [FrostFoundry] sections for the 1.0.15 Deep North stations were written into the config at lines 912 and 957, which is independent evidence the new DLL generated it rather than inheriting the old one. enforceMod = true at line 2041, so the client pack has to match this pin exactly.",
-      "config_craft_from_chest": "Set on the box 2026-09-26 05:30Z at the operator's request: [CraftFromChest] range 20 -> 50, allowCraftingFromCarts and allowCraftingFromShips false -> true. enabled, checkFromWorkbench (range measured from the workbench when inside its area) and ignorePrivateAreaCheck = false (wards still block other bases) unchanged. Edited while stopped, read back after the restart unchanged; [Server] serverSyncsConfig = true pushes it to clients, so no pack change. Backup beside the file as org.bepinex.plugins.valheim_plus.cfg.pre-cfc50.<stamp>. Craft From Backpack is a different mod's setting (AdventureBackpacks 2.2.0, client-local and on by default)."
+      "config_craft_from_chest": "Set on the box 2026-09-26 05:30Z at the operator's request: [CraftFromChest] range 20 -> 50, allowCraftingFromCarts and allowCraftingFromShips false -> true. enabled, checkFromWorkbench (range measured from the workbench when inside its area) and ignorePrivateAreaCheck = false (wards still block other bases) unchanged. Edited while stopped, read back after the restart unchanged; [Server] serverSyncsConfig = true pushes it to clients, so no pack change. Backup beside the file as org.bepinex.plugins.valheim_plus.cfg.pre-cfc50.<stamp>. Craft From Backpack is a different mod's setting (AdventureBackpacks 2.2.0, client-local and on by default).",
+      "config_rested": "Set on the box 2026-10-02 at the operator's request: [Player] restSecondsPerComfortLevel 60 -> 120. [Player] was already enabled (cropNotifier lives there), and serverSyncsConfig pushes it to every player. It changes only the per-comfort-level term: on the Valheim wiki's formula of 8 minutes at comfort 1 plus one step per further level, comfort 18 goes from 25 to 42 minutes and comfort 21 from 28 to 48. The 8-minute base does not scale, so a low-comfort campfire gains little. The operator chose 120 over 150 (50 minutes at comfort 18) to keep it a little lower."
     },
     {
       "thunderstore": "ValheimModding-Jotunn",
@@ -94,16 +96,17 @@
     },
     {
       "thunderstore": "ArgusMagnus-ServersideQoL",
-      "version": "2.1.0",
+      "version": "2.2.0",
       "side": "server",
       "why": "Framework the three ServersideQoL modules below plug into. 2.0.4 silently stopped on the 1.0.12 network-version bump and took PortalProgression down with it, so this pin is load-bearing after every game patch.",
       "plugin_name": "ServersideQoL",
       "note": "Ships TWO artifacts and they must move together: plugins/ServersideQoL.dll and patchers/ServersideQoL.Patchers.dll, which BepInEx loads first and which patches assembly_valheim. Upgrading only the plugin leaves the patcher a version behind, and the load log reports both, so check the 'Loaded 1 patcher method from [ServersideQoL.Patchers ...]' line as well as the plugin line. 2.0.14 turns config auto-reload on by default and fixes occasional item loss when a module modifies a container on a non-dedicated server.",
       "artifact_sha256": {
-        "plugins/ServersideQoL.dll": "8b487debdbc91dd621d70393af6420a694bf81e6d84af7317f0a604813e2aa44",
-        "patchers/ServersideQoL.Patchers.dll": "2a9d95d2cf1c6ae93632219470e8e59bccf137ad85ac4e5003cf0e65bce74ff1"
+        "plugins/ServersideQoL.dll": "65a6c461d37b86d3b29f42d3071119df8dbdf16f32f9c5b83ecb1587d9be74b1",
+        "patchers/ServersideQoL.Patchers.dll": "fa496f44c4b91fdf04b76ca513caebff5a88f59585a7df463208d11d82ee0b19"
       },
-      "upgrade_2_1_0": "Taken 2026-09-26 at the operator's request once moves 1 and 2 were done, after it had been held as hours old. Its own fixes are for TameAssist feeding from containers and a host-inventory bug on non-dedicated servers, neither of which this estate runs, so the reason is currency rather than a fix. Declares BepInExPack 5.4.2351 and YamlDotNet 16.3.1, both already here. Both artifacts and plugins/ServersideQoL.deps.json changed and were installed together."
+      "upgrade_2_1_0": "Taken 2026-09-26 at the operator's request once moves 1 and 2 were done, after it had been held as hours old. Its own fixes are for TameAssist feeding from containers and a host-inventory bug on non-dedicated servers, neither of which this estate runs, so the reason is currency rather than a fix. Declares BepInExPack 5.4.2351 and YamlDotNet 16.3.1, both already here. Both artifacts and plugins/ServersideQoL.deps.json changed and were installed together.",
+      "upgrade_2_2_0": "Taken 2026-10-02 with ContainerSigns and AutoProcess 2.2.0, which both declare this core version exactly. Its own changelog line is only that the host-install warning prints once, but the release also carries a Fermenter tap RPC that AutoProcess 2.2.0 uses and an opt-out for reinitialising processors on config change (commits 8558a2b and 103569 upstream). Dependencies unchanged (BepInExPack 5.4.2351, YamlDotNet 16.3.1). PortalProgression 2.0.11 and AutoStore 2.1.0 stay on their pins because nothing newer exists; both declare an older core, and upstream does not say whether they run against 2.2.0, so the ore gate needs re-checking in game."
     },
     {
       "thunderstore": "ArgusMagnus-ServersideQoL_PortalProgression",
@@ -126,24 +129,25 @@
     },
     {
       "thunderstore": "ArgusMagnus-ServersideQoL_ContainerSigns",
-      "version": "2.1.0",
+      "version": "2.2.0",
       "side": "server",
       "why": "Content signs on chests, and how a chest is designated for other ServersideQoL modules.",
       "plugin_name": "ServersideQoL.ContainerSigns",
       "note": "2.0.11 moved two settings out of this mod: AutoPickupMaxRange went to AutoStore and FeedFromContainersMaxRange went to AutoProcess, which this estate now installs. Both were sitting at the default of 64 here, so nothing needed re-homing, but a future custom value set on the wrong side of that split goes silently inert. 2.1.0 reads the new AutoStore sign prefix and fixes the range emoji on some platforms.",
       "artifact_sha256": {
-        "ServersideQoL.ContainerSigns.dll": "b1db6d30a9c4186aac3fb19c7b39c77f8b473775b506dbf2e5b576c4f5d412dc"
-      }
+        "ServersideQoL.ContainerSigns.dll": "29f0e59112e38397b5fdc8c04d642de17d9588d892aa5c400246122e1cfafb17"
+      },
+      "upgrade_2_2_0": "Taken 2026-10-02. Changes to the *RangeSignPrefix settings now apply without a restart. Declares ServersideQoL 2.2.0, so it moved with the core."
     },
     {
       "thunderstore": "ArgusMagnus-ServersideQoL_AutoProcess",
-      "version": "2.1.0",
+      "version": "2.2.0",
       "side": "server",
       "why": "Feeds smelters and kilns from nearby chests, so wood goes into a kiln and ore plus fuel into a smelter without anyone standing there. Asked for by the operator 2026-09-29. Server-only: players install nothing and nothing is version-gated.",
       "plugin_name": "ServersideQoL.AutoProcess",
       "artifact_sha256": {
-        "ServersideQoL.AutoProcess.dll": "93d616797c6f28cde4832fa3d47f6873a39548e68d528a4466d24255b8f362a9",
-        "ServersideQoL.AutoProcess.deps.json": "785ff58ba1668ece62592da8e531e7e4475f85f9e200632588aae0f85e1e06e5"
+        "ServersideQoL.AutoProcess.dll": "e0940bed896de9cb6b9333c29cebe6590e8ed947ce71489b4d786390dea9b7d3",
+        "ServersideQoL.AutoProcess.deps.json": "77fb86ed7d5854159dd7199522d7d35e6f6d7710dd8c566a3a960204772cc2df"
       },
       "note": "Declares ServersideQoL 2.1.0 only, which is the core pinned here. Read off the config the server generated on 2026-09-30, not out of the DLL. A container is a feeding source when it is within FeedFromContainersRange of the station, default 4 m, and NO sign is needed for that: any chest within 4 m of a smelter feeds it, including one used for something else. A ContainerSigns automatic sign only overrides the range per chest, by writing the FeedFromContainersRangeSignPrefix (the arrows emoji) and a number on it, capped by FeedFromContainersMaxRange (64). It only feeds while no player is within FeedFromContainersMinPlayerDistance (4 m) of the station, and it leaves FeedFromContainersLeaveAtLeastFuel and FeedFromContainersLeaveAtLeastOre (1 each) behind. CapacityMultiplier and TimePerProductMultiplier also exist and both sit at the vanilla 1; changing either is a gameplay change, not a tuning detail. The earlier wording of this note said a chest is designated by the items its sign lists; the config does not say that.",
       "unverified": "The operator reported on 2026-09-30 that the automation is working in game, after testing it with real ore and wood. That report did not say which parts were exercised, and it is not a log line or a captured observation. Not separately confirmed: that the bars and charcoal a station drops were collected into a chest by AutoStore (which only picks an item up into a chest that already holds that item), and that the per-chest range override written on a sign takes effect.",
@@ -151,7 +155,8 @@
         "at": "2026-09-30",
         "said": "It's working.",
         "source": "the operator, in the session that installed it"
-      }
+      },
+      "upgrade_2_2_0": "Taken 2026-10-02. Adds FeedFermenters and TapFermenters (feed a fermenter from nearby chests and tap it when ready) and FeedFromContainersLeaveAtLeastFermentable; both switches ship false and were left false, so no behaviour changed. Every existing default is unchanged. Declares ServersideQoL 2.2.0."
     },
     {
       "thunderstore": null,
@@ -185,18 +190,19 @@
     },
     {
       "thunderstore": "Vapok-AdventureBackpacks",
-      "version": "2.2.0",
+      "version": "2.2.5",
       "side": "both",
       "enforced": true,
       "why": "Craftable, wearable backpacks with tiers. Replaces ArgusMagnus-ServersideQoL_Backpack, which was server-only and therefore cheaper to deploy, but was an invisible container opened by an emote rather than an item in the world. Since the pack reaches every player anyway, the deployment saving bought nothing. Jotunn-based, so a client without it is kicked at connect exactly like ValheimPlus.",
       "artifact_sha256": {
-        "AdventureBackpacks.dll": "ddd3480d9b20125632825756d8cc9234193b9558e7ed217884b52fa01a3ea86a"
+        "AdventureBackpacks.dll": "9c9827059ee4d65e6b693f15e834e6508445df8700c4c39f52d52484fd845f9e"
       },
       "plugin_name": "Adventure Backpacks",
       "note": "Ships a Translations/ folder beside the DLL; 35 json files as of 2.1.13 (15 at 2.1.10, the other 20 are new languages from 2.1.11), copied on both sides. 2.1.10 hard-requires Jotunn 2.30.2, so the two can never be bumped independently: the floor was 2.26.1 at 2.0.4 and 2.30.1 at 2.0.9. Two fixes in this range earn the jump on this estate specifically. 2.1.9 fixes dedicated servers failing to load backpacks while waiting on a user-interface event, which is a server-side fault this box was exposed to. 2.1.9 also fixes cold effects bleeding through when a weather mod is running, naming Seasonality, which this estate runs with every season set to two days, so winter arrives often.",
       "telemetry": "2.0.6 added anonymous telemetry its changelog described as defaulting to enabled with auto-opt-in on launch. 2.0.9 REVERSED that, and 2.1.10 holds the line: read off the box's regenerated config on 2026-09-22, 'Enable Anonymous Telemetry' under [Local Config] is false and marked [Not Synced with Server], so the server cannot set it for players either way. That is a re-read at 2.1.10, not the 2.0.9 reading carried forward. The same section carries 'Show Splash on Startup = true', also client-local, so players see a splash on first launch after updating.",
       "upgrade_2_1_13": "Dependencies are unchanged from 2.1.10 (BepInExPack 5.4.2350, Jotunn 2.30.2, YamlDotNet 16.3.1). What earns it here: 2.1.13 fixes backpacks carrying ore or metal being blocked at Stone Portals, and adds safety checks against crafting and inventory errors on dedicated servers; 2.1.11 adds more dedicated-server protections and null safety when crafting from a backpack; 2.1.12 fixes a config sync problem in a library. Enforced, so it moved with the pack.",
-      "upgrade_2_2_0": "Taken 2026-09-26, the same night as 2.1.13, while only jetragon had updated to the 1.18.0 pack, so no other player had to update twice. Only the DLL changed (the 35 translation files are byte-identical to 2.1.13) and the dependencies are unchanged. It adds crafting from the backpack with a consumption priority and a keep-one-of-each safeguard. It also moves Craft From Backpack, Craft Output To Backpack, Auto Store and Inventory Overflow from server-synced [Server Config] to a client-local [Automation (Local Only)] section, so the server can no longer set them for players and each player's own config decides. This server never set them (defaults applied), so the move changes nothing here unless a player's local defaults differ."
+      "upgrade_2_2_0": "Taken 2026-09-26, the same night as 2.1.13, while only jetragon had updated to the 1.18.0 pack, so no other player had to update twice. Only the DLL changed (the 35 translation files are byte-identical to 2.1.13) and the dependencies are unchanged. It adds crafting from the backpack with a consumption priority and a keep-one-of-each safeguard. It also moves Craft From Backpack, Craft Output To Backpack, Auto Store and Inventory Overflow from server-synced [Server Config] to a client-local [Automation (Local Only)] section, so the server can no longer set them for players and each player's own config decides. This server never set them (defaults applied), so the move changes nothing here unless a player's local defaults differ.",
+      "upgrade_2_2_5": "Taken 2026-10-02 in pack 1.21.0. Dependencies unchanged. A BALANCE CHANGE ships with it: 2.2.4 makes every backpack give armor, 1 per backpack level by default, and adds a choice of whether the speed penalty shrinks with upgrades. Left at defaults. Fixes in range that matter here: 2.2.2 stops ore inside a backpack bypassing portal restrictions in rare cases, 2.2.3 stops a death or tombstone pickup scattering a backpack's contents on the ground, and 2.2.4 hardens dedicated-server startup."
     },
     {
       "thunderstore": "RandyKnapp-EquipmentAndQuickSlots",
@@ -236,28 +242,30 @@
     },
     {
       "thunderstore": "OdinPlus-OdinHorse",
-      "version": "1.7.3",
+      "version": "1.7.7",
       "side": "both",
       "why": "Ground transport: a tameable, rideable, breedable horse with armour and an attachable cart. Added 2026-09-18 because overland travel to the traders and back is the group's standing complaint, and vanilla offers nothing below the Plains lox saddle. Chosen on maintenance rather than features: it is the only mod in this category still shipping, updated 2026-09-15, against a field where the nearest alternatives (BeastsOfBurden 2021, CraftyCartsRemake and ValheimRAFT early 2026) are stale. Declares no dependencies and bundles its assets in a 10.5 MB DLL, so it needs nothing else on the box. Config syncs from the server like ValheimPlus.",
       "artifact_sha256": {
-        "OdinHorse.dll": "424b2406ac4c4f024e57c349277e3a4da03ab95802c23a955247167b3751a99d"
+        "OdinHorse.dll": "110b4d378de2b2e4f08e5cf8cc707f09c029fe806997ff7de243a70eb649df41"
       },
       "plugin_name": "OdinHorse",
-      "note": "Whether it rejects a client that lacks it is UNVERIFIED. It is not Jotunn-based, so the mod-enforcement path that kicks a client missing AdventureBackpacks or the trough does not apply, but it does add prefabs and a client without them is untested. Shipping it in the pack in the same pass as the server install is what keeps that question academic. Its own readme opens by telling you to back up character and world files before installing or updating. 1.7.1 through 1.7.3 are a piecemanager bump and added localisations, with no behaviour change the changelog names."
+      "note": "Whether it rejects a client that lacks it is UNVERIFIED. It is not Jotunn-based, so the mod-enforcement path that kicks a client missing AdventureBackpacks or the trough does not apply, but it does add prefabs and a client without them is untested. Shipping it in the pack in the same pass as the server install is what keeps that question academic. Its own readme opens by telling you to back up character and world files before installing or updating. 1.7.1 through 1.7.3 are a piecemanager bump and added localisations, with no behaviour change the changelog names.",
+      "upgrade_1_7_7": "Taken 2026-10-02 in pack 1.21.0, the day 1.7.7 was published. Player-visible changes: the Wait Here key moves from T to Y (1.7.4), horses jump on Jump while riding and Use dismounts (1.7.6), and mounted combat arrives (1.7.5), on by default only for NEW configs (1.7.6, 1.7.7), so this server's existing Raelaziel.OdinHorse.cfg keeps whatever it had. The readme says all players need the mod for mounted combat. OdinHorse 1.7.8 was published at 01:16Z during this deploy (Cart Width/Height settings, a fix for error spam when a ridden horse dies, dual-wield animation compatibility) and is NOT taken yet."
     },
     {
       "thunderstore": "Skarif-BuildOnShip",
-      "version": "3.4.3",
+      "version": "3.6.3",
       "side": "both",
       "why": "Build on the vanilla Karve and Longship: walls, crafting stations, chests, beds that set a respawn point, and portals that travel with the ship. Picked on 2026-09-23 over zolantris-ValheimRAFT 5.0.4 because the operator wanted to use the existing ships rather than build custom ones from pieces. Known conflict: ValheimPlus says its free placement rotation (LeftAlt, C and V while placing a piece) will not work with this mod installed, because both mods rewrite the same placement code. It is in the pack on trial anyway. If losing free rotation costs you more than building on ships gives you, tell the operator and it can come out.",
       "risk": "MAINTENANCE risk only. Every version on Thunderstore is dated 2026-09-16 to 2026-09-21, and recent changelog entries fix \"disappearing structures\" and \"duplicate portals on ships\", so the mod is young and still settling. On the fourth drift the readme declares only \"Valheim 0.219+\", a floor rather than a tested build, so the check against game_version 1.0.15 is INDETERMINATE. Sole declared dependency is BepInExPack 5.4.2333, older than the 5.4.2350 here.",
       "conflict": "ValheimPlus free placement rotation is lost while this mod is installed, which is why the why above warns players. The pinned DLL patches Player.UpdatePlacementGhost, including a transpiler (ShipBuildingMod.Player_Patches.UpdatePlacementGhost_Transpiler), and that is the method ValheimPlus's Player_UpdatePlacementGhost_Transpile rewrites. BepInEx breaks load-order ties by GUID, so ShipBuildMod (com.custom.shipbuildmod) loads ahead of ValheimPlus (org.bepinex.plugins.valheim_plus), at server log lines 23 and 48, and ValheimPlus then fails to find the code it expects. Proven on the server by a before and after: the first boot with Build On Ship, 2026-09-25 05:37Z, logged 'Failed to apply `Player_UpdatePlacementGhost_Transpile`. Free placement rotation will not work.' twice, while the journal shows that line on no earlier boot back to 2026-09-10. That includes all 71 boots since a config snapshot first shows [FreePlacementRotation] enabled (2026-09-12 01:58Z), the last of them at 00:03Z the same day with every mod but this one. The loss is real, not cosmetic: enabled = true in the server's ValheimPlus config (read 2026-09-25), and serverSyncsConfig pushes it to clients. A client logging the same line is expected, because the pack loads the same two mods in the same GUID order, but it is UNVERIFIED; the first player to press LeftAlt while placing a piece settles it. Shipped anyway on the operator's call, 2026-09-25: 'Ship both anyway', then 'if it breaks we can always remove it'. Removing this mod restores rotation but may strand pieces built on ships (see note), so take a world backup first.",
       "artifact_sha256": {
-        "BuildOnShip.dll": "f8ecf2aaa80da13c3f8aa2b7bea17eaff7259b47488794eecd8997e0ee8dd7b2"
+        "BuildOnShip.dll": "a8bfd397ced85c01f8a8956bfdf83850176551308918a1b70b5a024a9b16b572"
       },
       "plugin_name": "ShipBuildMod",
       "plugin_version": "4.0.0",
-      "note": "The DLL's BepInPlugin attribute is com.custom.shipbuildmod, ShipBuildMod, 4.0.0, so the log shows 4.0.0 against Thunderstore's 3.4.3. Read off the DLL, then confirmed on the first server boot with it (2026-09-25 05:37Z), which logged 'Loading [ShipBuildMod 4.0.0]' and the mod's own 'ShipBuildMod v4.0.0 loaded successfully.' It declares no BepInProcess restriction, so it loads under the dedicated server. It carries no ServerSync and no Jotunn NetworkCompatibility, so nothing refuses a client that lacks it; what such a client sees on a built-on ship is UNVERIFIED. The ship link is stored in ZDO fields (ShipBuild_ParentUUID, ShipBuild_ShipUUID, ShipBuild_LocalPos, ShipBuild_LocalRot), so assume removing the mod strands built pieces and take a world backup before uninstalling. Ship portals are ordinary portal pieces, so PortalProgression's ore gate should apply to them unchanged; UNVERIFIED."
+      "note": "The DLL's BepInPlugin attribute is com.custom.shipbuildmod, ShipBuildMod, 4.0.0, so the log shows 4.0.0 against Thunderstore's 3.4.3. Read off the DLL, then confirmed on the first server boot with it (2026-09-25 05:37Z), which logged 'Loading [ShipBuildMod 4.0.0]' and the mod's own 'ShipBuildMod v4.0.0 loaded successfully.' It declares no BepInProcess restriction, so it loads under the dedicated server. It carries no ServerSync and no Jotunn NetworkCompatibility, so nothing refuses a client that lacks it; what such a client sees on a built-on ship is UNVERIFIED. The ship link is stored in ZDO fields (ShipBuild_ParentUUID, ShipBuild_ShipUUID, ShipBuild_LocalPos, ShipBuild_LocalRot), so assume removing the mod strands built pieces and take a world backup before uninstalling. Ship portals are ordinary portal pieces, so PortalProgression's ore gate should apply to them unchanged; UNVERIFIED.",
+      "upgrade_3_6_3": "Taken 2026-10-02 in pack 1.21.0. The changelog is thin: 3.5.0 says 'Fix 20.09.26. Ship control', 3.6.0 has no entry, and 3.6.1 to 3.6.3 each say 'nothing'. The DLL still declares ShipBuildMod 4.0.0, so the log line does not move. The free placement rotation conflict above is not mentioned upstream and is assumed to persist."
     },
     {
       "thunderstore": "RustyMods-Seasonality",
@@ -273,14 +281,15 @@
     },
     {
       "thunderstore": "f00d4tehg0dz-ValheimWebMap",
-      "version": "2.1.5",
+      "version": "2.1.6",
       "side": "server",
       "why": "Browser map of the live world, served from the box over the Cloudflare tunnel, showing the terrain every player has explored plus player pins and pin sharing. Server-side only: it renders from the world the server holds, so clients install nothing. Chosen over Mubs-WebMap and the other h0tw1r3 forks because it is the one still shipping, and because it keeps the 3D view and renders history rather than only what is explored while it runs.",
       "artifact_sha256": {
-        "WebMap.dll": "07fdae8b12945fe5cceb0c8ac243debfbe3248ad483853188a37cf815015bbd8"
+        "WebMap.dll": "9848b61a147481a0b04f799823033ad93b8f15022b35c8d9c311f77bf6939274"
       },
       "plugin_name": "WebMap",
-      "note": "Ships a web/ tree beside the DLL and writes rendered tiles into plugins/WebMap/map_data, which reached 110 MB on first full reveal, so it is not a candidate for the backup set. Its zip uses Windows path separators, so a plain extractall produces files literally named 'plugins\\WebMap\\web\\js\\app.js'; normalise the separators on extract. The three h0tw1r3 forks share the config filename com.github.h0tw1r3.valheim.webmap.cfg, so a fork swap that leaves the old file behind silently inherits the previous fork's values."
+      "note": "Ships a web/ tree beside the DLL and writes rendered tiles into plugins/WebMap/map_data, which reached 110 MB on first full reveal, so it is not a candidate for the backup set. Its zip uses Windows path separators, so a plain extractall produces files literally named 'plugins\\WebMap\\web\\js\\app.js'; normalise the separators on extract. The three h0tw1r3 forks share the config filename com.github.h0tw1r3.valheim.webmap.cfg, so a fork swap that leaves the old file behind silently inherits the previous fork's values.",
+      "upgrade_2_1_6": "Taken 2026-10-02. Adds renaming and hiding auto-detected bases from the web page, 3D view links, sharper 2D close-ups, and base_min_pieces / base_min_per_cell. The base editing is open to anyone who can load the map unless [User] web_edit_bases = false, and the map is served publicly over the tunnel, so web_edit_bases was set false on the box before the first 2.1.6 boot; the token holder can still edit. The web/ tree was replaced with the release's copy and map_data was left alone."
     },
     {
       "thunderstore": "Pumpkin-ValheimVisualEnhanced",
@@ -296,14 +305,15 @@
     },
     {
       "thunderstore": "Wire-WiresGrassTweaks",
-      "version": "0.2.3",
+      "version": "0.2.301",
       "side": "client",
       "why": "Grass density and draw distance, so clutter stops popping in a few metres ahead of the player. Chosen on currency rather than popularity: ShadowField-GrassTweaks has ten times the downloads and is recommended by other mods' readmes, but was last updated 2025-07-26, before Valheim 1.0. This one was updated 2026-09-14 and declares no dependencies at all. Its own readme nonetheless says 'Built for Valheim 1.0.12', three patches behind this estate's 1.0.15, which is a real qualification on the currency argument above: recent upload date and declared target build are different things, and none of the three drift checks compares the latter against game_version.",
       "artifact_sha256": {
-        "WiresGrassTweaks.dll": "5ac628f63a8b414f5b49bba57f28bf5d2ea0e9c7b45e5d5f84ee428bfb1c873f"
+        "WiresGrassTweaks.dll": "f56d8e6953b8d10c3a9d47ece485853b90ae93de1194011eec1654e6c465fca7"
       },
       "plugin_name": null,
-      "plugin_name_note": "client-side only, so it never appears in the server's load log"
+      "plugin_name_note": "client-side only, so it never appears in the server's load log",
+      "upgrade_0_2_301": "Taken 2026-10-02 in pack 1.21.0. The author's whole changelog for it: 'the old 0.2.3 was actually 0.2.2 and i uploaded the wrong dll 2 weeks ago' and '0.2.301 is Quite literally just the real 0.2.3'. So the 0.2.3 pinned here was the 0.2.2 build all along. What 0.2.3 changes over 0.2.2 is not stated. The readme still says 'Built for Valheim 1.0.12', against game_version 1.0.16."
     },
     {
       "thunderstore": "MagiCorp-Render_Limits_Fix",
@@ -318,14 +328,15 @@
     },
     {
       "thunderstore": "VentureValheim-Muted_Mist",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "side": "both",
       "why": "Thins the Mistlands mist instead of deleting it. One setting, TransparencyIntensity, where 0 hides the mist entirely and 1 is vanilla; the estate runs 0.7, a gentle trim. Chosen over Vapok-NoFogBruh, which removes fog outright and was rejected as effectively cheating in the Mistlands, and over ComfyMods-Dramamist, which does the same job but predates Valheim 1.0.",
       "artifact_sha256": {
-        "VentureValheim.MutedMist.dll": "7c093f4275bedacc900efa755aaf4f2438e0019bc80bdbb2ecfae72156511290"
+        "VentureValheim.MutedMist.dll": "7e2c12adacf28aca51e5636d9df53e911f247dbdb567adabe80329d3127b6743"
       },
       "plugin_name": "MutedMist",
-      "note": "Config changes take effect LIVE, with no restart, which is unusual on this estate and makes it the cheapest setting here to tune in place. Installed server-side deliberately: its readme says a server install enforces the configuration on clients, and leaving it off the server would let each player choose, but it is the only mod in this batch that declares a Jotunn dependency, which is the one kick path this estate has actually seen fire. That made it the likeliest to enforce a version match, not the only thing that conceivably could; it was afterwards observed not to enforce one. One shared value is the cheaper trade. Its shipped default is TransparencyIntensity = 0.2, which is near-invisible mist, NOT vanilla; 0.7 here is therefore a raise off the default rather than a cut from vanilla. Read the generated config before assuming a mod's default is the vanilla behaviour."
+      "note": "Config changes take effect LIVE, with no restart, which is unusual on this estate and makes it the cheapest setting here to tune in place. Installed server-side deliberately: its readme says a server install enforces the configuration on clients, and leaving it off the server would let each player choose, but it is the only mod in this batch that declares a Jotunn dependency, which is the one kick path this estate has actually seen fire. That made it the likeliest to enforce a version match, not the only thing that conceivably could; it was afterwards observed not to enforce one. One shared value is the cheaper trade. Its shipped default is TransparencyIntensity = 0.2, which is near-invisible mist, NOT vanilla; 0.7 here is therefore a raise off the default rather than a cut from vanilla. Read the generated config before assuming a mod's default is the vanilla behaviour.",
+      "upgrade_1_0_1": "Taken 2026-10-02 in pack 1.21.0. Its one change lets a client change 'admin' settings locally when the SERVER lacks the mod; this server has it, so enforcement is unchanged. Dependencies move to BepInExPack 5.4.2351 and Jotunn 2.30.2, both already here. Its only declared game target is 1.0.0's 'Release for game version 1.0.7'."
     },
     {
       "thunderstore": "TastyChickenLegs-TreesReborn",
@@ -420,17 +431,18 @@
     },
     {
       "thunderstore": "JereKuusela-Server_devcommands",
-      "version": "1.114.0",
+      "version": "1.115.0",
       "side": "server",
       "admin_only": true,
       "why": "Admin console tooling: enables devcommands and the admin utilities around them on a dedicated server, which vanilla refuses to a remote admin. Installed on the box by hand on 2026-09-20 at 19:45 UTC and found by scripts/mods-verify.mts on 2026-09-22, which reported it UNEXPECTED because no record mentioned it.",
       "why_not_in_pack": "Operator tooling, like the ConfigurationManager entry below. It grants console powers that are admin-gated anyway, so shipping it to five players installs something none of them can use. Recorded here rather than left out, because an absent entry reads as an oversight and the verifier will flag it as drift on every run until it is written down.",
       "plugin_name": "Server Devcommands",
       "note": "1.114 adds an alternative biome to minimap texts and stops the bind system running invalid or missing commands. It declares BepInExPack 5.4.2351, so it moved with the loader. It lives in its own plugins/JereKuusela-Server_devcommands/ directory rather than loose in plugins/, which is why a directory listing alone does not make it obvious.",
-      "plugin_version": "1.114",
+      "plugin_version": "1.115",
       "artifact_sha256": {
-        "ServerDevcommands.dll": "98f156db3675a30dc44de9650f2050e371f3b5ee69942efceee2c244fdeb4341"
-      }
+        "ServerDevcommands.dll": "f41812ac8c7c759ca60e84beef716c438fb766adda592f8a9365a86514bbda15"
+      },
+      "upgrade_1_115_0": "Taken 2026-10-02. Adds a setting to disable the help command and fixes the alternative biome text using the wrong coordinate."
     },
     {
       "thunderstore": "Azumatt-Official_BepInEx_ConfigurationManager",
