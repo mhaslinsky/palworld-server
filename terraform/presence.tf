@@ -25,6 +25,8 @@ locals {
 data "aws_ami" "al2023_arm" {
   most_recent = true
   owners      = ["amazon"]
+  # Deprecated 2026-09-30, after which the lookup returned nothing and failed every plan.
+  include_deprecated = true
 
   filter {
     name   = "image-id"
