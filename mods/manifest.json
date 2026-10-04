@@ -331,13 +331,14 @@
       "thunderstore": "VentureValheim-Muted_Mist",
       "version": "1.0.1",
       "side": "both",
-      "why": "Thins the Mistlands mist instead of deleting it. One setting, TransparencyIntensity, where 0 hides the mist entirely and 1 is vanilla; the estate runs 0.7, a gentle trim. Chosen over Vapok-NoFogBruh, which removes fog outright and was rejected as effectively cheating in the Mistlands, and over ComfyMods-Dramamist, which does the same job but predates Valheim 1.0.",
+      "why": "Thins the Mistlands mist instead of deleting it. One setting, TransparencyIntensity, where 0 hides the mist entirely and 1 is vanilla. The estate ran 0.7, a gentle trim, through the Mistlands, and has run 0 since the group beat the Queen (operator, 2026-10-04): the mist was the price of the biome, and it was paid. Chosen over Vapok-NoFogBruh, which removes fog outright and was rejected as effectively cheating in the Mistlands, and over ComfyMods-Dramamist, which does the same job but predates Valheim 1.0.",
       "artifact_sha256": {
         "VentureValheim.MutedMist.dll": "7e2c12adacf28aca51e5636d9df53e911f247dbdb567adabe80329d3127b6743"
       },
       "plugin_name": "MutedMist",
       "note": "Config changes take effect LIVE, with no restart, which is unusual on this estate and makes it the cheapest setting here to tune in place. Installed server-side deliberately: its readme says a server install enforces the configuration on clients, and leaving it off the server would let each player choose, but it is the only mod in this batch that declares a Jotunn dependency, which is the one kick path this estate has actually seen fire. That made it the likeliest to enforce a version match, not the only thing that conceivably could; it was afterwards observed not to enforce one. One shared value is the cheaper trade. Its shipped default is TransparencyIntensity = 0.2, which is near-invisible mist, NOT vanilla; 0.7 here is therefore a raise off the default rather than a cut from vanilla. Read the generated config before assuming a mod's default is the vanilla behaviour.",
-      "upgrade_1_0_1": "Taken 2026-10-02 in pack 1.21.0. Its one change lets a client change 'admin' settings locally when the SERVER lacks the mod; this server has it, so enforcement is unchanged. Dependencies move to BepInExPack 5.4.2351 and Jotunn 2.30.2, both already here. Its only declared game target is 1.0.0's 'Release for game version 1.0.7'."
+      "upgrade_1_0_1": "Taken 2026-10-02 in pack 1.21.0. Its one change lets a client change 'admin' settings locally when the SERVER lacks the mod; this server has it, so enforcement is unchanged. Dependencies move to BepInExPack 5.4.2351 and Jotunn 2.30.2, both already here. Its only declared game target is 1.0.0's 'Release for game version 1.0.7'.",
+      "config_state": "Set live on the box 2026-10-04T02:44:05Z with two players online: TransparencyIntensity 0.7 to 0 in /home/steam/valheim/BepInEx/config/com.orianaventure.mod.MutedMist.cfg, previous file kept as .pre-nomist.20261004T024405Z. The server log printed 'MutedMist: Attempting to reload configuration...' at the same second, with no restart. Clients receive the value through server sync, so the client pack does not change."
     },
     {
       "thunderstore": "TastyChickenLegs-TreesReborn",
