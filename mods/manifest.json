@@ -477,7 +477,7 @@
       "thunderstore": "ArgusMagnus-ServersideQoL_ContainerSigns",
       "version": "2.2.0",
       "removed": "2026-10-09 16:23Z; server DLLs and deps.json moved to /home/steam/valheim/disabled-plugins/ServersideQoL-trim.20261009T162337Z",
-      "why": "The operator did not want the chest content signs. What happened to signs already placed on chests was not checked; the chests themselves were not touched."
+      "why": "It takes chests. Whenever a signed chest's contents change, it rebuilds the content list and, if the text stored on the chest differs, calls ContainerRegistryProcessor.RequestOwnership(chest), which asks the current owner to release the chest so the server can write the new text (end of Process in ServersideQoL.ContainerSigns/ContainerAndSignProcessor.cs upstream, read 2026-10-09). Every RSN pull or villager deposit into a signed chest therefore triggered a takeover, the same family as AutoSort. The rate was not measured here: the restart overwrote the pre-removal log. Reinstall only with RSN and ValheimVillages gone. The signs it had placed are ordinary sign pieces and stay in the world with their last text; not checked in game."
     },
     {
       "thunderstore": "ArgusMagnus-ServersideQoL_AutoProcess",
