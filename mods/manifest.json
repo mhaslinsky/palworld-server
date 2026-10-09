@@ -100,7 +100,7 @@
       "thunderstore": "ArgusMagnus-ServersideQoL",
       "version": "2.2.0",
       "side": "server",
-      "why": "Framework the three ServersideQoL modules below plug into. 2.0.4 silently stopped on the 1.0.12 network-version bump and took PortalProgression down with it, so this pin is load-bearing after every game patch.",
+      "why": "Framework the AutoStore module below plugs into; the Cheer emote stacking is the only ServersideQoL feature still in use. PortalProgression, AutoProcess and ContainerSigns were removed 2026-10-09 (see removed_mods). 2.0.4 silently stopped on the 1.0.12 network-version bump, so this pin is load-bearing after every game patch.",
       "plugin_name": "ServersideQoL",
       "note": "Ships TWO artifacts and they must move together: plugins/ServersideQoL.dll and patchers/ServersideQoL.Patchers.dll, which BepInEx loads first and which patches assembly_valheim. Upgrading only the plugin leaves the patcher a version behind, and the load log reports both, so check the 'Loaded 1 patcher method from [ServersideQoL.Patchers ...]' line as well as the plugin line. 2.0.14 turns config auto-reload on by default and fixes occasional item loss when a module modifies a container on a non-dedicated server.",
       "artifact_sha256": {
@@ -111,55 +111,16 @@
       "upgrade_2_2_0": "Taken 2026-10-02 with ContainerSigns and AutoProcess 2.2.0, which both declare this core version exactly. Its own changelog line is only that the host-install warning prints once, but the release also carries a Fermenter tap RPC that AutoProcess 2.2.0 uses and an opt-out for reinitialising processors on config change (commits 8558a2b and 103569 upstream). Dependencies unchanged (BepInExPack 5.4.2351, YamlDotNet 16.3.1). PortalProgression 2.0.11 and AutoStore 2.1.0 stay on their pins because nothing newer exists; both declare an older core, and upstream does not say whether they run against 2.2.0, so the ore gate needs re-checking in game."
     },
     {
-      "thunderstore": "ArgusMagnus-ServersideQoL_PortalProgression",
-      "version": "2.0.11",
-      "side": "server",
-      "why": "Boss-gated ore through portals. The group voted for progression gating over free teleporting.",
-      "plugin_name": "ServersideQoL.PortalProgression",
-      "note": "2.0.11 is this module's latest and it declares a hard dependency on ServersideQoL 2.0.11, while the core here runs 2.0.14. That mismatch is normal for this author, who releases the core more often than the modules, and the estate has run a newer core under a 2.0.11 module since 2026-09-18 with the load log clean. The pin is Thunderstore's resolver, not a runtime check. Verify this module by BEHAVIOUR after any core bump rather than by its load line: it is the module that logged a clean load and silently stopped gating ore on the 1.0.12 network bump, which is the incident the whole verification habit exists for."
-    },
-    {
       "thunderstore": "ArgusMagnus-ServersideQoL_AutoStore",
       "version": "2.1.0",
       "side": "server",
-      "why": "Auto-sort, auto-pickup, and stack-into-nearby-chests on the Cheer emote.",
+      "why": "Stack-into-nearby-chests on the Cheer emote, the one ServersideQoL feature the operator kept on 2026-10-09. Auto-sort and auto-pickup are off (see config_state).",
       "plugin_name": "ServersideQoL.AutoStore",
       "artifact_sha256": {
         "ServersideQoL.AutoStore.dll": "2d3ca80732daabac2c5c3855a5c735485fb6737cb1bb1d153a7f26305756821a"
       },
       "note": "2.1.0 adds AutoPickupRangeSignPrefix (a per-chest pickup range written on its sign) and SuppressContainerModifiedEffectSound. Both are new options with defaults, so nothing here changes until someone sets them.",
       "config_state": "AutoSort = false and AutoPickup = false since 2026-10-06 23:52Z (backup .pre-rsn.20261006T235245Z beside ArgusMagnus.ServersideQoL.AutoStore.cfg). Both take and release chest ownership on a loop, which made Runic Storage Network refuse builds (see that entry). Stacking into nearby chests on the Cheer emote is unchanged. The edit was made live; ServersideQoL's AutoReload watches the file but logs nothing on reload, and the server has restarted since, so the values are in effect from the file either way. 2026-10-09: AutoSort turned on at 00:14Z (backup .pre-autosort.20261009T001414Z) and off again at 02:27Z (backup .pre-autosort-off.20261009T022709Z): with it on, 96 of 103 network builds on the operator's client fell back to the slow path because ServersideQoL kept taking chests (about 100 takeovers in 30 minutes), and builds sped up once it was off. [General] DiagnosticLogs = true in ArgusMagnus.ServersideQoL.cfg since 00:14Z."
-    },
-    {
-      "thunderstore": "ArgusMagnus-ServersideQoL_ContainerSigns",
-      "version": "2.2.0",
-      "side": "server",
-      "why": "Content signs on chests, and how a chest is designated for other ServersideQoL modules.",
-      "plugin_name": "ServersideQoL.ContainerSigns",
-      "note": "2.0.11 moved two settings out of this mod: AutoPickupMaxRange went to AutoStore and FeedFromContainersMaxRange went to AutoProcess, which this estate now installs. Both were sitting at the default of 64 here, so nothing needed re-homing, but a future custom value set on the wrong side of that split goes silently inert. 2.1.0 reads the new AutoStore sign prefix and fixes the range emoji on some platforms.",
-      "artifact_sha256": {
-        "ServersideQoL.ContainerSigns.dll": "29f0e59112e38397b5fdc8c04d642de17d9588d892aa5c400246122e1cfafb17"
-      },
-      "upgrade_2_2_0": "Taken 2026-10-02. Changes to the *RangeSignPrefix settings now apply without a restart. Declares ServersideQoL 2.2.0, so it moved with the core."
-    },
-    {
-      "thunderstore": "ArgusMagnus-ServersideQoL_AutoProcess",
-      "version": "2.2.0",
-      "side": "server",
-      "why": "Feeds smelters and kilns from nearby chests, so wood goes into a kiln and ore plus fuel into a smelter without anyone standing there. Asked for by the operator 2026-09-29. Server-only: players install nothing and nothing is version-gated.",
-      "plugin_name": "ServersideQoL.AutoProcess",
-      "artifact_sha256": {
-        "ServersideQoL.AutoProcess.dll": "e0940bed896de9cb6b9333c29cebe6590e8ed947ce71489b4d786390dea9b7d3",
-        "ServersideQoL.AutoProcess.deps.json": "77fb86ed7d5854159dd7199522d7d35e6f6d7710dd8c566a3a960204772cc2df"
-      },
-      "note": "Declares ServersideQoL 2.1.0 only, which is the core pinned here. Read off the config the server generated on 2026-09-30, not out of the DLL. A container is a feeding source when it is within FeedFromContainersRange of the station, default 4 m, and NO sign is needed for that: any chest within 4 m of a smelter feeds it, including one used for something else. A ContainerSigns automatic sign only overrides the range per chest, by writing the FeedFromContainersRangeSignPrefix (the arrows emoji) and a number on it, capped by FeedFromContainersMaxRange (64). It only feeds while no player is within FeedFromContainersMinPlayerDistance (4 m) of the station, and it leaves FeedFromContainersLeaveAtLeastFuel and FeedFromContainersLeaveAtLeastOre (1 each) behind. CapacityMultiplier and TimePerProductMultiplier also exist and both sit at the vanilla 1; changing either is a gameplay change, not a tuning detail. The earlier wording of this note said a chest is designated by the items its sign lists; the config does not say that.",
-      "unverified": "The operator reported on 2026-09-30 that the automation is working in game, after testing it with real ore and wood. That report did not say which parts were exercised, and it is not a log line or a captured observation. Not separately confirmed: that the bars and charcoal a station drops were collected into a chest by AutoStore (which only picks an item up into a chest that already holds that item), and that the per-chest range override written on a sign takes effect.",
-      "operator_report": {
-        "at": "2026-09-30",
-        "said": "It's working.",
-        "source": "the operator, in the session that installed it"
-      },
-      "upgrade_2_2_0": "Taken 2026-10-02. Adds FeedFermenters and TapFermenters (feed a fermenter from nearby chests and tap it when ready) and FeedFromContainersLeaveAtLeastFermentable; both switches ship false and were left false, so no behaviour changed. Every existing default is unchanged. Declares ServersideQoL 2.2.0."
     },
     {
       "thunderstore": null,
@@ -505,6 +466,24 @@
       "added": "2026-10-07 01:20Z, pack 1.24.0",
       "removed": "2026-10-07, pack 1.25.0; server DLL moved to /home/steam/valheim/disabled-plugins/Searica-AdvancedTerrainModifiers",
       "why": "Two players with 1.5.5 saw different terrain heights in the same place. Read from the decompiled DLL, not reproduced: its prefix on TerrainComp.ApplyOperation calls ClaimOwnership() before every edit, so the editing client applies the change locally instead of routing it to the zone's owner the way vanilla does (RPC_ApplyOperation runs only on the owner). Two players terraforming near each other can both believe they own the zone, keep their own heights and ignore each other's updates. Its radius and sharpness are also applied from the executing client's local scroll state (InternalDoOperation prefixes). Do not reinstall it for a multiplayer world without testing two players editing the same zone."
+    },
+    {
+      "thunderstore": "ArgusMagnus-ServersideQoL_PortalProgression",
+      "version": "2.0.11",
+      "removed": "2026-10-09 16:23Z; server DLLs and deps.json moved to /home/steam/valheim/disabled-plugins/ServersideQoL-trim.20261009T162337Z",
+      "why": "The group is at the Deep North, so the boss-gated ore rule had stopped earning its keep. The operator chose vanilla's portals world modifier instead (`setworldmodifier portals casual` from the F5 console), which lets all ore through and is undone with `setworldmodifier portals default`. Until that modifier is set, vanilla blocks all ore at portals. Removed with nobody online (roster count 0), so no ore was held mid-portal."
+    },
+    {
+      "thunderstore": "ArgusMagnus-ServersideQoL_ContainerSigns",
+      "version": "2.2.0",
+      "removed": "2026-10-09 16:23Z; server DLLs and deps.json moved to /home/steam/valheim/disabled-plugins/ServersideQoL-trim.20261009T162337Z",
+      "why": "The operator did not want the chest content signs. What happened to signs already placed on chests was not checked; the chests themselves were not touched."
+    },
+    {
+      "thunderstore": "ArgusMagnus-ServersideQoL_AutoProcess",
+      "version": "2.2.0",
+      "removed": "2026-10-09 16:23Z; server DLLs and deps.json moved to /home/steam/valheim/disabled-plugins/ServersideQoL-trim.20261009T162337Z",
+      "why": "The operator reported smelter feeding was not working, and it was the last ServersideQoL module taking chests (anything within 4 m of a station) away from clients, which Runic Storage Network waits on. Smelters now hold 1000 ore through ValheimPlus, so hand-loading is rare."
     }
   ]
 }
