@@ -7,19 +7,18 @@
   "modpack": {
     "namespace": "valheimsquad",
     "name": "Utgarde_Client_Pack",
-    "version_number": "1.26.0",
+    "version_number": "1.27.0",
     "website_url": "https://github.com/mhaslinsky/palworld-server",
     "description": "Client mods for the Utgarde Valheim server, pinned to the versions the server runs."
   },
   "verified": {
     "server": {
-      "at": "2026-10-02T01:16:32Z",
-      "method": "scripts/mods-verify.mts against the FULL boot log after the October batch (ServersideQoL, ContainerSigns and AutoProcess 2.2.0, AdventureBackpacks 2.2.5, OdinHorse 1.7.7, BuildOnShip 3.6.3, WebMap 2.1.6, Muted Mist 1.0.1, Server devcommands 1.115.0). The box downloaded each package from Thunderstore itself and every one of the 84 staged files matched a sha256 list built from the same packages off-box before anything live was touched; all 84 live hashes matched again after the copy. Replaced files kept beside the originals as .bak.20261002T011515Z, and WebMap web/ and tools/ moved aside whole. World backup world/linux/20261002T011415Z.tgz verified (BACKUP_VERIFIED) before the stop. CLEAN at 23, with \"Loaded 1 patcher method from [ServersideQoL.Patchers 2.2.0.0]\" and \"Chainloader startup complete (22 loaded, 0 skipped, 0 failed)\". The log was fetched gzipped so the 24000-byte SSM cap did not truncate it (33692 bytes). World load: Game server connected 01:16:25Z, Zonesystem Awake 01:16:26Z, DungeonDB Start 01:16:32Z.",
+      "at": "2026-10-11T17:36:03Z",
+      "method": "scripts/mods-verify.mts against the full boot log (fetched gzipped under the SSM cap) after the pack 1.27.0 batch: AdventureBackpacks 2.2.5 to 2.3.2, new UtgardeBackpacks 0.1.0, ServersideQoL 2.2.1, OdinHorse 1.9.0, TreesReborn 1.1.6. Each install script hash-checked the live files before touching anything and the new ones afterwards (~/Developer/.orchestration/rsn/install-utgarde-backpacks-server.mts, install-ab232-server.mts, install-bumps-20261011-server.mts). Nobody was online, so the backup of record is the shutdown backup world/linux/20261011T051334Z.tgz; the box had cold-booted, so a fresh capture read degraded on save age with an unchanged world. CLEAN at 23, 'Loaded 1 patcher method from [ServersideQoL.Patchers 2.2.1.0]', 'Registered BackpackAshlands and BackpackDeepNorth with AdventureBackpacks.', 'Chainloader startup complete (22 loaded, 0 skipped, 0 failed)'. World load: Game server connected 17:35:56Z, DungeonDB Start 17:36:03Z.",
       "game": "l-1.0.16, network version 40, BepInExPack 5.4.2351.",
-      "errors": "0 Exception lines in the full log. The ValheimPlus line \"Failed to apply `Player_UpdatePlacementGhost_Transpile`. Free placement rotation will not work.\" is the known BuildOnShip conflict (see that entry); the rest are the headless video and render warnings every boot prints.",
-      "config": "Read back after the boot: [Player] restSecondsPerComfortLevel = 120 in org.bepinex.plugins.valheim_plus.cfg (backup .pre-rested.20261002T011515Z) and [User] web_edit_bases = false in com.valheimwebmap.server.cfg (backup .pre-webedit.20261002T011515Z), the key written before 2.1.6 first read the file and kept by BepInEx.",
-      "unverified": "PortalProgression ore gating against core 2.2.0, and AutoStore 2.1.0 against it: both declare an older core and only a player carrying ore to a portal settles the first. The rested duration in game: the setting is in effect only if a player sees a longer Rested timer. Carried from earlier: OdinOnDemand players surviving a restart, and the Build On Ship client checks.",
-      "idle": "valheim.service and valheim-idle.timer active and enabled after the restart."
+      "errors": "0 Exception lines in the boot log. 14 error lines, all seen on earlier boots: ValheimVillages 'Base prefab ... not found' at registration, and the headless video-shader warnings.",
+      "unverified": "Everything in game: the two new backpacks (recipes, sizes, feather fall, fire and frost resistance), the AdventureBackpacks 2.3.x container tabs next to RSN, OdinHorse 1.9.0 mounted combat and lances, TreesReborn stump removal. A player has not yet connected on pack 1.27.0.",
+      "idle": "valheim.service active and enabled, valheim-idle.timer enabled, after the restart."
     },
     "client_jetragon": {
       "at": "2026-09-26T02:50:00Z",
@@ -27,9 +26,9 @@
       "stale": "Pack 1.19.0 moves AdventureBackpacks to 2.2.0, which is enforced, so jetragon is refused until Gale updates it. The record above describes 1.18.0."
     },
     "pack": {
-      "at": "2026-09-30T04:11:35Z",
-      "method": "scripts/modpack-publish.mts from a checkout matching main. Its post-check read 404, the same per-version lag as earlier publishes; the package index then reported 1.20.0 as latest with RandyKnapp-EquipmentAndQuickSlots-3.1.3 among its dependencies, and scripts/mods-upstream.mts reported it published. The time is Thunderstore's own date_created.",
-      "window": "None that kicks anyone. EquipmentAndQuickSlots is client-side and not a version gate, and the removal of ValheimPerformanceOptimizations is not one either, so a client on 1.19.0 connects normally and simply lacks the new slots until it updates."
+      "at": "2026-10-11T17:38:25Z",
+      "method": "scripts/modpack-publish.mts from branch utgarde-backpacks-pack. Its post-check read 404, the usual per-version lag; the package index then reported 1.27.0 as latest with Vapok-AdventureBackpacks-2.3.2, valheimsquad-UtgardeBackpacks-0.1.0, OdinPlus-OdinHorse-1.9.0 and TastyChickenLegs-TreesReborn-1.1.6 among its dependencies. The time is Thunderstore's own date_created.",
+      "window": "KICKS EVERYONE until they update: AdventureBackpacks, OdinHorse and UtgardeBackpacks all enforce a matching version, so a client on 1.26.0 is refused by a 1.27.0 server."
     }
   },
   "mods": [
@@ -98,14 +97,15 @@
     },
     {
       "thunderstore": "ArgusMagnus-ServersideQoL",
-      "version": "2.2.0",
+      "version": "2.2.1",
       "side": "server",
       "why": "Framework the AutoStore module below plugs into; the Cheer emote stacking is the only ServersideQoL feature still in use. PortalProgression, AutoProcess and ContainerSigns were removed 2026-10-09 (see removed_mods). 2.0.4 silently stopped on the 1.0.12 network-version bump, so this pin is load-bearing after every game patch.",
       "plugin_name": "ServersideQoL",
       "note": "Ships TWO artifacts and they must move together: plugins/ServersideQoL.dll and patchers/ServersideQoL.Patchers.dll, which BepInEx loads first and which patches assembly_valheim. Upgrading only the plugin leaves the patcher a version behind, and the load log reports both, so check the 'Loaded 1 patcher method from [ServersideQoL.Patchers ...]' line as well as the plugin line. 2.0.14 turns config auto-reload on by default and fixes occasional item loss when a module modifies a container on a non-dedicated server.",
+      "upgrade_2_2_1": "Taken 2026-10-11 with the pack 1.27.0 batch at the operator's request to bring every server mod current. The only change is a Harmony transpiler fix on macOS, irrelevant to this Linux box. Plugin, patcher and ServersideQoL.deps.json replaced together; the old three are in /home/steam/valheim/disabled-plugins/bumps-20261011. The boot logged 'Loaded 1 patcher method from [ServersideQoL.Patchers 2.2.1.0]', and AutoStore 2.1.0 loaded beside the 2.2.1 core.",
       "artifact_sha256": {
-        "plugins/ServersideQoL.dll": "65a6c461d37b86d3b29f42d3071119df8dbdf16f32f9c5b83ecb1587d9be74b1",
-        "patchers/ServersideQoL.Patchers.dll": "fa496f44c4b91fdf04b76ca513caebff5a88f59585a7df463208d11d82ee0b19"
+        "plugins/ServersideQoL.dll": "de347ae03124433bce34d152cc9f6796d407e45622856916b9ca03262cb9f8f2",
+        "patchers/ServersideQoL.Patchers.dll": "919543a9a679e884c6a2ec9dafd6dcfad17fcfdda769abd29078f56015d5d35c"
       },
       "upgrade_2_1_0": "Taken 2026-09-26 at the operator's request once moves 1 and 2 were done, after it had been held as hours old. Its own fixes are for TameAssist feeding from containers and a host-inventory bug on non-dedicated servers, neither of which this estate runs, so the reason is currency rather than a fix. Declares BepInExPack 5.4.2351 and YamlDotNet 16.3.1, both already here. Both artifacts and plugins/ServersideQoL.deps.json changed and were installed together.",
       "upgrade_2_2_0": "Taken 2026-10-02 with ContainerSigns and AutoProcess 2.2.0, which both declare this core version exactly. Its own changelog line is only that the host-install warning prints once, but the release also carries a Fermenter tap RPC that AutoProcess 2.2.0 uses and an opt-out for reinitialising processors on config change (commits 8558a2b and 103569 upstream). Dependencies unchanged (BepInExPack 5.4.2351, YamlDotNet 16.3.1). PortalProgression 2.0.11 and AutoStore 2.1.0 stay on their pins because nothing newer exists; both declare an older core, and upstream does not say whether they run against 2.2.0, so the ore gate needs re-checking in game."
@@ -154,19 +154,33 @@
     },
     {
       "thunderstore": "Vapok-AdventureBackpacks",
-      "version": "2.2.5",
+      "version": "2.3.2",
       "side": "both",
       "enforced": true,
       "why": "Craftable, wearable backpacks with tiers. Replaces ArgusMagnus-ServersideQoL_Backpack, which was server-only and therefore cheaper to deploy, but was an invisible container opened by an emote rather than an item in the world. Since the pack reaches every player anyway, the deployment saving bought nothing. Jotunn-based, so a client without it is kicked at connect exactly like ValheimPlus.",
       "artifact_sha256": {
-        "AdventureBackpacks.dll": "9c9827059ee4d65e6b693f15e834e6508445df8700c4c39f52d52484fd845f9e"
+        "AdventureBackpacks.dll": "7f0fb74c97a18449c7cd5f7b0d30f95590ce1f1321351265c23ca3920251fa87"
       },
       "plugin_name": "Adventure Backpacks",
       "note": "Ships a Translations/ folder beside the DLL; 35 json files as of 2.1.13 (15 at 2.1.10, the other 20 are new languages from 2.1.11), copied on both sides. 2.1.10 hard-requires Jotunn 2.30.2, so the two can never be bumped independently: the floor was 2.26.1 at 2.0.4 and 2.30.1 at 2.0.9. Two fixes in this range earn the jump on this estate specifically. 2.1.9 fixes dedicated servers failing to load backpacks while waiting on a user-interface event, which is a server-side fault this box was exposed to. 2.1.9 also fixes cold effects bleeding through when a weather mod is running, naming Seasonality, which this estate runs with every season set to two days, so winter arrives often.",
       "telemetry": "2.0.6 added anonymous telemetry its changelog described as defaulting to enabled with auto-opt-in on launch. 2.0.9 REVERSED that, and 2.1.10 holds the line: read off the box's regenerated config on 2026-09-22, 'Enable Anonymous Telemetry' under [Local Config] is false and marked [Not Synced with Server], so the server cannot set it for players either way. That is a re-read at 2.1.10, not the 2.0.9 reading carried forward. The same section carries 'Show Splash on Startup = true', also client-local, so players see a splash on first launch after updating.",
       "upgrade_2_1_13": "Dependencies are unchanged from 2.1.10 (BepInExPack 5.4.2350, Jotunn 2.30.2, YamlDotNet 16.3.1). What earns it here: 2.1.13 fixes backpacks carrying ore or metal being blocked at Stone Portals, and adds safety checks against crafting and inventory errors on dedicated servers; 2.1.11 adds more dedicated-server protections and null safety when crafting from a backpack; 2.1.12 fixes a config sync problem in a library. Enforced, so it moved with the pack.",
       "upgrade_2_2_0": "Taken 2026-09-26, the same night as 2.1.13, while only jetragon had updated to the 1.18.0 pack, so no other player had to update twice. Only the DLL changed (the 35 translation files are byte-identical to 2.1.13) and the dependencies are unchanged. It adds crafting from the backpack with a consumption priority and a keep-one-of-each safeguard. It also moves Craft From Backpack, Craft Output To Backpack, Auto Store and Inventory Overflow from server-synced [Server Config] to a client-local [Automation (Local Only)] section, so the server can no longer set them for players and each player's own config decides. This server never set them (defaults applied), so the move changes nothing here unless a player's local defaults differ.",
-      "upgrade_2_2_5": "Taken 2026-10-02 in pack 1.21.0. Dependencies unchanged. A BALANCE CHANGE ships with it: 2.2.4 makes every backpack give armor, 1 per backpack level by default, and adds a choice of whether the speed penalty shrinks with upgrades. Left at defaults. Fixes in range that matter here: 2.2.2 stops ore inside a backpack bypassing portal restrictions in rare cases, 2.2.3 stops a death or tombstone pickup scattering a backpack's contents on the ground, and 2.2.4 hardens dedicated-server startup."
+      "upgrade_2_2_5": "Taken 2026-10-02 in pack 1.21.0. Dependencies unchanged. A BALANCE CHANGE ships with it: 2.2.4 makes every backpack give armor, 1 per backpack level by default, and adds a choice of whether the speed penalty shrinks with upgrades. Left at defaults. Fixes in range that matter here: 2.2.2 stops ore inside a backpack bypassing portal restrictions in rare cases, 2.2.3 stops a death or tombstone pickup scattering a backpack's contents on the ground, and 2.2.4 hardens dedicated-server startup.",
+      "upgrade_2_3_2": "Taken 2026-10-11 in pack 1.27.0, because UtgardeBackpacks needs the backpack-registration API that arrived in 2.2.6. Dependencies unchanged. 2.3.0 adds chest and backpack tabs on every container and opens the backpack beside crafting stations, both on by default and client-local, and untested next to RSN; 2.3.1 and 2.3.2 fix controller input on those tabs. Installed on the server 2026-10-11, first as 2.3.1 (Valheim back up 17:11:38Z) and then 2.3.2 (~/Developer/.orchestration/rsn/install-utgarde-backpacks-server.mts, install-ab232-server.mts); the 2.2.5 and 2.3.1 DLLs are kept in /home/steam/valheim/disabled-plugins. The 35 translation files were replaced from the package.",
+      "config_state": "Set 2026-10-11 with Valheim stopped: Effective Quality Level: Ashlands and DeepNorth from 0 to 1 in [Effect: Feather Fall], [Effect: Frost Resistance] and [Effect: Cold Immunity] of vapok.mods.adventurebackpacks.cfg (six lines; backup .pre-utgarde.<stamp> beside it). The existing file held 0 for both biomes, which overrides the UtgardeBackpacks default; the plugin logs a warning for any of these that does not read 1, and the boot after the change logged none."
+    },
+    {
+      "thunderstore": "valheimsquad-UtgardeBackpacks",
+      "version": "0.1.0",
+      "side": "both",
+      "enforced": true,
+      "why": "Adds an Ashlands and a Deep North backpack to AdventureBackpacks, whose author has not shipped tiers past the Mistlands. Operator spec, 2026-10-11: each tier bigger than the last (Ashlands 24 to 40 slots and +40 carry per level, Deep North 28 to 48 slots and +50 per level), and feather fall from quality 1 on both, because once the Mistlands pack gives it, it must never go away. Our own package: source in the local repo ~/Developer/UtgardeBackpacks, published under the estate's Thunderstore team.",
+      "artifact_sha256": {
+        "UtgardeBackpacks.dll": "a0d66f75b3f7e3cf387d97a01466d647465fd4a052634f5f57f86989899df078"
+      },
+      "plugin_name": "Utgarde Backpacks",
+      "note": "No new models: each pack is a runtime copy of the AdventureBackpacks Mistlands prefab, tinted, registered through ABAPI.RegisterBackpack. Prefab names BackpackAshlands and BackpackDeepNorth are permanent; a custom model later must keep them. Removing this mod deletes every such bag AND its contents. Fire resistance (Ashlands) and very-resistant frost (Deep North) are vanilla damage modifiers on the item, because ABAPI.RegisterEffect cannot reach a single backpack in 2.3.x. Enforced through Jotunn NetworkCompatibility (EveryoneMustHaveMod, Minor strictness). Built against AdventureBackpacks 2.3.1 and confirmed registering against 2.3.2 on the server 2026-10-11. Every item name was read from jetragon's game files. Nothing has been tested in game yet."
     },
     {
       "thunderstore": "RandyKnapp-EquipmentAndQuickSlots",
@@ -206,15 +220,16 @@
     },
     {
       "thunderstore": "OdinPlus-OdinHorse",
-      "version": "1.7.7",
+      "version": "1.9.0",
       "side": "both",
       "enforced": true,
       "why": "Ground transport: a tameable, rideable, breedable horse with armour and an attachable cart. Added 2026-09-18 because overland travel to the traders and back is the group's standing complaint, and vanilla offers nothing below the Plains lox saddle. Chosen on maintenance rather than features: it is the only mod in this category still shipping, updated 2026-09-15, against a field where the nearest alternatives (BeastsOfBurden 2021, CraftyCartsRemake and ValheimRAFT early 2026) are stale. Declares no dependencies and bundles its assets in a 10.5 MB DLL, so it needs nothing else on the box. Config syncs from the server like ValheimPlus.",
       "artifact_sha256": {
-        "OdinHorse.dll": "110b4d378de2b2e4f08e5cf8cc707f09c029fe806997ff7de243a70eb649df41"
+        "OdinHorse.dll": "88b922b89673489789b187b7ef996ff050c36a9cf8a90d502cab1e3b7bd244c6"
       },
       "plugin_name": "OdinHorse",
       "note": "It DOES enforce an exact version, despite not being Jotunn-based: on 2026-10-02 the operator joined the 1.7.7 server with 1.7.3 still in Gale and was refused with a message that the client had 1.7.3 and needed 1.7.7. So every OdinHorse bump is a two-sided change with a kick window, like AdventureBackpacks. Whether it rejects a client that lacks it entirely is still untested. Its own readme opens by telling you to back up character and world files before installing or updating. 1.7.1 through 1.7.3 are a piecemanager bump and added localisations, with no behaviour change the changelog names.",
+      "upgrade_1_9_0": "Taken 2026-10-11 in pack 1.27.0, the operator asking for every server mod current. Published 2026-10-11 12:15Z, the seventh release in nine days. Adds NEW ITEM PREFABS (craftable jousting lances, nine biome lances), so removing or downgrading it later deletes any lance a player holds. Also mounted combat on Lox, Moose and Asksvin with a new MountSeats.yml, cart size settings, foal colour inheritance, and 'Hide Cape' on by default. Enforced exact version, so every player must take pack 1.27.0 before connecting. Old DLL in /home/steam/valheim/disabled-plugins/bumps-20261011. Not tested in game.",
       "upgrade_1_7_7": "Taken 2026-10-02 in pack 1.21.0, the day 1.7.7 was published. Player-visible changes: the Wait Here key moves from T to Y (1.7.4), horses jump on Jump while riding and Use dismounts (1.7.6), and mounted combat arrives (1.7.5), on by default only for NEW configs (1.7.6, 1.7.7), so this server's existing Raelaziel.OdinHorse.cfg keeps whatever it had. The readme says all players need the mod for mounted combat. OdinHorse 1.7.8 was published at 01:16Z during this deploy (Cart Width/Height settings, a fix for error spam when a ridden horse dies, dual-wield animation compatibility) and is NOT taken yet."
     },
     {
@@ -308,15 +323,16 @@
     },
     {
       "thunderstore": "TastyChickenLegs-TreesReborn",
-      "version": "1.1.3",
+      "version": "1.1.6",
       "side": "both",
       "why": "Replants a sapling where a felled tree's stump is destroyed, so logging does not permanently strip the map. Requested by the operator 2026-09-19; no reason beyond the request was given. Chosen as the only maintained member of its family: it is a rebuild of Aedenthorn's TreeRespawn, and of the surviving forks of that original the freshest is Lyric-TreeRespawn_by_Aedenthorn 0.8.5, last updated 2026-03-10, with most of the rest deprecated, against this one's 2026-09-11. Its readme declares the target as \"Updated for Valheim 1.0\" with no patch number, so the fourth drift check is INDETERMINATE here rather than clean: unlike WiresGrassTweaks there is no number to compare against game_version 1.0.15. Sole declared dependency is BepInExPack 5.4.2202, older than the 5.4.2350 this estate runs.",
       "artifact_sha256": {
-        "TreesReborn.dll": "7ec4769e9bd3b462c457027ca70f2a6194aaa1c8b60f4cab519faca025fef313"
+        "TreesReborn.dll": "1cc93e56dff8d5823470d6010d3b5e0feca562d62f8467064c11c9a9fb9287c8"
       },
       "plugin_name": "TreesReborn",
-      "note": "Ships a plugins/configs/ tree beside the DLL, so a hand install must copy the folder and not just the DLL; same trap as Seasonality's config tree and AdventureBackpacks' Translations folder. ALL FOUR dictionaries must be present, because the mod picks one at RUNTIME by probing BepInEx for a planting mod's GUID: advize.PlantEverything selects tree_dict_Plant_Everything.json, com.Defryder.Plant_all_trees selects tree_dict_Plant_all_trees.json, com.bkeyes93.PlantingPlus selects tree_dict_PlantingPlus.json, and tree_dict.json is the fallback when none is loaded. This estate runs Advize-PlantEverything, so it resolves to the PlantEverything dictionary with no configuration, and that dictionary differs: it maps SwampTree1_Stub to Ancient_Sapling where the fallback maps SwampTree1 to SwampTree1. Shipping only tree_dict.json would leave the selected file missing, which is a silent failure. The mod prints \"Loaded <n> seeds from <file>\" on startup, so the chosen dictionary is verifiable from the server log rather than inferred. Config keys live under [General]: Enabled, RespawnDelay, treeRate, useRandomSapling, checkcraftingtable, noswamptreerespawn, GrowthSpaceRestriction, DebugMode.",
-      "sync": "Bundles ServerSync inside the DLL rather than declaring it as a dependency, so the server holds the config and locks it to clients. The DLL's own text says \"It's required that the mod is installed on the server and all clients\" and carries ServerSync's version-mismatch path (\"Received server version is not equal\"), so treat this as a mod that can refuse a mismatched client and keep the deploy-to-publish window short. ServerSync is not Jotunn's ModCompatibility, and whether a client lacking the mod is actually refused here is UNVERIFIED; the author's statement and the version check are the evidence, not an observation."
+      "note": "Ships a plugins/configs/ tree beside the DLL, so a hand install must copy the folder and not just the DLL; same trap as Seasonality's config tree and AdventureBackpacks' Translations folder. ALL FOUR dictionaries must be present, because the mod picks one at RUNTIME by probing BepInEx for a planting mod's GUID: advize.PlantEverything selects tree_dict_Plant_Everything.json, com.Defryder.Plant_all_trees selects tree_dict_Plant_all_trees.json, com.bkeyes93.PlantingPlus selects tree_dict_PlantingPlus.json, and tree_dict.json is the fallback when none is loaded. This estate runs Advize-PlantEverything, so it resolves to the PlantEverything dictionary with no configuration, and that dictionary differs: it maps SwampTree1_Stub to Ancient_Sapling where the fallback maps SwampTree1 to SwampTree1. Shipping only tree_dict.json would leave the selected file missing, which is a silent failure. The mod logs the dictionary it chose on startup, so the choice is verifiable from the server log rather than inferred: from 1.1.6 the line is \"loadingtree_dict_Plant_Everything.json\" (the file name run straight onto \"loading\"); up to 1.1.3 it was \"Loaded <n> seeds from <file>\". Config keys live under [General]: Enabled, RespawnDelay, treeRate, useRandomSapling, checkcraftingtable, noswamptreerespawn, GrowthSpaceRestriction, DebugMode.",
+      "sync": "Bundles ServerSync inside the DLL rather than declaring it as a dependency, so the server holds the config and locks it to clients. The DLL's own text says \"It's required that the mod is installed on the server and all clients\" and carries ServerSync's version-mismatch path (\"Received server version is not equal\"), so treat this as a mod that can refuse a mismatched client and keep the deploy-to-publish window short. ServerSync is not Jotunn's ModCompatibility, and whether a client lacking the mod is actually refused here is UNVERIFIED; the author's statement and the version check are the evidence, not an observation.",
+      "upgrade_1_1_6": "Taken 2026-10-11 in pack 1.27.0 on the operator's yes. 1.1.4 adds automatic stump removal ('Destroy Stump', read back as true on the box after the boot, the operator wanting it) and a Deep North sapling; 1.1.5 extends Plant Everything coverage to the Mistlands, Ashlands and Deep North; 1.1.6 adds a large timberwood tree. All four dictionaries were replaced from the package and the boot chose the Plant Everything one. The startup line is now 'loadingtree_dict_Plant_Everything.json', not the 'Loaded <n> seeds from <file>' the note above describes. Old DLL and dictionaries in /home/steam/valheim/disabled-plugins/bumps-20261011."
     },
     {
       "thunderstore": "DeathMonger-ForsakenShrines",
