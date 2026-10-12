@@ -7,7 +7,7 @@
   "modpack": {
     "namespace": "valheimsquad",
     "name": "Utgarde_Client_Pack",
-    "version_number": "1.27.0",
+    "version_number": "1.28.0",
     "website_url": "https://github.com/mhaslinsky/palworld-server",
     "description": "Client mods for the Utgarde Valheim server, pinned to the versions the server runs."
   },
@@ -457,25 +457,17 @@
       "why_not_in_pack": "Operator tooling, not something the group plays with. It edits settings that are admin-only to change anyway, so shipping it to every player installs a GUI five people cannot use to change anything. Kept in this manifest rather than left out, because an absent entry reads as an oversight and invites the next session to add it to the pack; admin_only is the recorded decision not to.",
       "plugin_name": null,
       "plugin_name_note": "client-side only, so it never appears in the server's load log"
-    },
-    {
-      "thunderstore": "idontunderstand-ValheimVillages",
-      "version": "0.3.7",
-      "upstream": "https://github.com/myrcutio/valheim_villages",
-      "side": "both",
-      "why": "Villagers who farm, cook, smelt, haul and keep work orders stocked from chests inside a walled village. Requested by the operator 2026-10-09 as a trial: start with one or two villagers and add more only while Runic Storage Network builds stay fast.",
-      "plugin_name": "Valheim Villages",
-      "plugin_version": "0.3.7",
-      "artifact_sha256": {
-        "ValheimVillages.dll": "0068fd9f0ec4eadbb80631f378f5a4dd973fcc03d1b90898090aff43efc098c4"
-      },
-      "risk": "Early access (0.3.x, MIT). On a dedicated server the SERVER owns and runs every villager (VillageOwnership.IsServerAuthority, VillagerZDOOwnershipPatch replaces ZDOMan.ReleaseNearbyZDOS). A villager claims a chest's ownership whenever it takes ingredients or deposits items (ContainerScanner.EnsureOwnership), the same takeover that pushed RSN builds onto the slow path under ServersideQoL AutoSort; vanilla hands the chest back to a nearby player within about 2 seconds. Villagers only use chests inside the village they map, so the operator keeps the RSN inventory core outside village walls. Read from the decompiled DLL, not measured.",
-      "note": "Not enforced: the decompiled DLL declares no version check, so a client without it can join; every player gets it through the pack. Removing it will probably delete placed village registries and villagers, the usual result for a mod that adds pieces; take a backup first.",
-      "unverified": "Everything in game: placing a registry, recruiting a villager, villagers working, and the effect on RSN fast-path builds near village chests."
     }
   ],
   "game_version_note": "Moved from 1.0.16 on 2026-10-06, pulled in by the SteamCMD validate before the 13:31Z start. RSN's startup line reads 'Valheim=1.0.17' and the network version is still 40, so 1.0.16 and 1.0.17 clients both connect. Moved from 1.0.15 at 2026-09-25 19:10:58Z (appmanifest LastUpdated, buildid 25527701), pulled in by the SteamCMD validate that runs before every server start. Nobody noticed until BepInExPack 5.4.2351's 'Valheim Version:' line printed it at 04:25Z on 2026-09-26; the journal's own 'Valheim version: l-1.0.16 (network version 40)' line confirms it on the 02:41Z boot too. The network version stayed at 40, so clients on 1.0.16 connect ('Network version check, their:40, mine:40'). Mods whose readmes declare 1.0.15 are now one patch behind on the fourth drift.",
   "removed_mods": [
+    {
+      "thunderstore": "idontunderstand-ValheimVillages",
+      "version": "0.3.7",
+      "added": "2026-10-09, as a trial",
+      "removed": "2026-10-12 from the manifest and pack 1.28.0. The server copy is still in /home/steam/valheim/BepInEx/plugins/ValheimVillages because the box was asleep; ~/Developer/.orchestration/rsn/remove-villages-server.mts moves it to disabled-plugins at the next wake.",
+      "why": "The operator decided the group will not use it. No villagers or village registries were ever placed (operator, 2026-10-12), so nothing in the world depends on it. The decompiled DLL declares no version check, so a client on pack 1.28.0 should still join while the server copy remains."
+    },
     {
       "thunderstore": "Searica-AdvancedTerrainModifiers",
       "version": "1.5.5",
