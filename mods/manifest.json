@@ -7,7 +7,7 @@
   "modpack": {
     "namespace": "valheimsquad",
     "name": "Utgarde_Client_Pack",
-    "version_number": "1.28.0",
+    "version_number": "1.30.0",
     "website_url": "https://github.com/mhaslinsky/palworld-server",
     "description": "Client mods for the Utgarde Valheim server, pinned to the versions the server runs."
   },
@@ -172,15 +172,27 @@
     },
     {
       "thunderstore": "valheimsquad-UtgardeBackpacks",
-      "version": "0.1.0",
+      "version": "0.3.1",
       "side": "both",
       "enforced": true,
       "why": "Adds an Ashlands and a Deep North backpack to AdventureBackpacks, whose author has not shipped tiers past the Mistlands. Operator spec, 2026-10-11: each tier bigger than the last (Ashlands 24 to 40 slots and +40 carry per level, Deep North 28 to 48 slots and +50 per level), and feather fall from quality 1 on both, because once the Mistlands pack gives it, it must never go away. Our own package: source in the local repo ~/Developer/UtgardeBackpacks, published under the estate's Thunderstore team.",
       "artifact_sha256": {
-        "UtgardeBackpacks.dll": "a0d66f75b3f7e3cf387d97a01466d647465fd4a052634f5f57f86989899df078"
+        "UtgardeBackpacks.dll": "3cadea4cd1f0489d854f5a1b1e5b62b419edc679d2745597fb3c2f6d0ef28894"
       },
       "plugin_name": "Utgarde Backpacks",
-      "note": "No new models: each pack is a runtime copy of the AdventureBackpacks Mistlands prefab, tinted, registered through ABAPI.RegisterBackpack. Prefab names BackpackAshlands and BackpackDeepNorth are permanent; a custom model later must keep them. Removing this mod deletes every such bag AND its contents. Fire resistance (Ashlands) and very-resistant frost (Deep North) are vanilla damage modifiers on the item, because ABAPI.RegisterEffect cannot reach a single backpack in 2.3.x. Enforced through Jotunn NetworkCompatibility (EveryoneMustHaveMod, Minor strictness). Built against AdventureBackpacks 2.3.1 and confirmed registering against 2.3.2 on the server 2026-10-11. Every item name was read from jetragon's game files. Nothing has been tested in game yet."
+      "upgrade_0_3_0": "Taken 2026-10-13 in pack 1.29.0. Custom Ashlands and Deep North models and textures (blocky low-res colour with a richer normal map, per the operator), lit by Valheim's Custom/Piece shader so neither pack glows at night, with the shader's displacement features off to stop the motion flicker. Ashlands uses the operator's own inventory icon. Deep North's middle body is still being reworked and ships in a later version. Built on jetragon from UtgardeBackpacks commits 74df927 and 035bd0a; its receipt is assets/release-final-0.3.0.json in that repo. 0.3.0 registered NOTHING on the dedicated server (the model swap threw on a process with no graphics and cancelled registration), so it was replaced the same evening by 0.3.1 in pack 1.30.0: headless processes skip visuals, and a visual failure no longer blocks registration. 0.3.1 was checked against real Valheim run with -batchmode -nographics, which fails on 0.3.0 (commits 8db97f8, 87b7b61; receipt assets/release-final-0.3.1.json).",
+      "note": "Each pack is registered through ABAPI.RegisterBackpack on a runtime copy of the AdventureBackpacks Mistlands prefab, with its own model since 0.2.0. Prefab names BackpackAshlands and BackpackDeepNorth are permanent; a custom model later must keep them. Removing this mod deletes every such bag AND its contents. Fire resistance (Ashlands) and very-resistant frost (Deep North) are vanilla damage modifiers on the item, because ABAPI.RegisterEffect cannot reach a single backpack in 2.3.x. Enforced through Jotunn NetworkCompatibility (EveryoneMustHaveMod, Minor strictness). Built against AdventureBackpacks 2.3.1 and confirmed registering against 2.3.2 on the server 2026-10-11. Every item name was read from jetragon's game files. Nothing has been tested in game yet."
+    },
+    {
+      "thunderstore": "valheimsquad-FlashLight",
+      "version": "1.0.6",
+      "side": "both",
+      "why": "A craftable handheld flashlight (2 Bronze, 1 Crystal, 1 Surtling Core at a level 1 workbench) with adjustable brightness. Made by a member of the group and published under the estate's Thunderstore team; added at the operator's request, 2026-10-13. Its README says to install it on every player and the dedicated server, because it adds a custom item and syncs the beam between players.",
+      "artifact_sha256": {
+        "BepInEx/plugins/MagliteFlashlight/MagliteFlashlight.dll": "195a9c50546158c78829efc1a372ad8c1ce47d8d3c81ef830eaf834cfaa4ccf6"
+      },
+      "plugin_name": "FlashLight",
+      "note": "Plugin GUID local.valheim.magliteflashlight; the DLL references Jotunn NetworkCompatibility, so treat versions as needing to match. Depends on BepInExPack 5.4.2351 and Jotunn 2.30.2, both already pinned. plugin_name is unconfirmed until the server boot log prints it."
     },
     {
       "thunderstore": "RandyKnapp-EquipmentAndQuickSlots",
