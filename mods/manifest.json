@@ -26,9 +26,9 @@
       "stale": "Pack 1.19.0 moves AdventureBackpacks to 2.2.0, which is enforced, so jetragon is refused until Gale updates it. The record above describes 1.18.0."
     },
     "pack": {
-      "at": "2026-10-11T17:38:25Z",
-      "method": "scripts/modpack-publish.mts from branch utgarde-backpacks-pack. Its post-check read 404, the usual per-version lag; the package index then reported 1.27.0 as latest with Vapok-AdventureBackpacks-2.3.2, valheimsquad-UtgardeBackpacks-0.1.0, OdinPlus-OdinHorse-1.9.0 and TastyChickenLegs-TreesReborn-1.1.6 among its dependencies. The time is Thunderstore's own date_created.",
-      "window": "KICKS EVERYONE until they update: AdventureBackpacks, OdinHorse and UtgardeBackpacks all enforce a matching version, so a client on 1.26.0 is refused by a 1.27.0 server."
+      "at": "2026-10-14T05:44:22Z",
+      "method": "scripts/modpack-publish.mts from branch worktree-mods-oct14-bumps, after the server verified CLEAN. Its post-check read 404, the usual per-version lag; the package index then reported 1.32.0 as latest with Vapok-AdventureBackpacks-2.3.4, OdinPlus-OdinHorse-1.9.1, RustyMods-Seasonality-3.8.4 and Skarif-BuildOnShip-3.6.3 among its dependencies. The time is Thunderstore's own date_created.",
+      "window": "KICKS EVERYONE until they update: AdventureBackpacks and OdinHorse both enforce a matching version, so a client on 1.31.0 is refused by the 1.32.0 server."
     }
   },
   "mods": [
