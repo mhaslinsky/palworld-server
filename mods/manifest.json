@@ -7,7 +7,7 @@
   "modpack": {
     "namespace": "valheimsquad",
     "name": "Utgarde_Client_Pack",
-    "version_number": "1.30.0",
+    "version_number": "1.31.0",
     "website_url": "https://github.com/mhaslinsky/palworld-server",
     "description": "Client mods for the Utgarde Valheim server, pinned to the versions the server runs."
   },
@@ -172,15 +172,16 @@
     },
     {
       "thunderstore": "valheimsquad-UtgardeBackpacks",
-      "version": "0.3.1",
+      "version": "1.0.0",
       "side": "both",
       "enforced": true,
       "why": "Adds an Ashlands and a Deep North backpack to AdventureBackpacks, whose author has not shipped tiers past the Mistlands. Operator spec, 2026-10-11: each tier bigger than the last (Ashlands 24 to 40 slots and +40 carry per level, Deep North 28 to 48 slots and +50 per level), and feather fall from quality 1 on both, because once the Mistlands pack gives it, it must never go away. Our own package: source in the local repo ~/Developer/UtgardeBackpacks, published under the estate's Thunderstore team.",
       "artifact_sha256": {
-        "UtgardeBackpacks.dll": "3cadea4cd1f0489d854f5a1b1e5b62b419edc679d2745597fb3c2f6d0ef28894"
+        "UtgardeBackpacks.dll": "b9673636d268437aad4557b1cad2e928cb679dd6e9b4547a35b57f7ac63c148c"
       },
       "plugin_name": "Utgarde Backpacks",
       "upgrade_0_3_0": "Taken 2026-10-13 in pack 1.29.0. Custom Ashlands and Deep North models and textures (blocky low-res colour with a richer normal map, per the operator), lit by Valheim's Custom/Piece shader so neither pack glows at night, with the shader's displacement features off to stop the motion flicker. Ashlands uses the operator's own inventory icon. Deep North's middle body is still being reworked and ships in a later version. Built on jetragon from UtgardeBackpacks commits 74df927 and 035bd0a; its receipt is assets/release-final-0.3.0.json in that repo. 0.3.0 registered NOTHING on the dedicated server (the model swap threw on a process with no graphics and cancelled registration), so it was replaced the same evening by 0.3.1 in pack 1.30.0: headless processes skip visuals, and a visual failure no longer blocks registration. 0.3.1 was checked against real Valheim run with -batchmode -nographics, which fails on 0.3.0 (commits 8db97f8, 87b7b61; receipt assets/release-final-0.3.1.json).",
+      "upgrade_1_0_0": "Taken 2026-10-14 in pack 1.31.0: the first full release (operator: version 1 is the one with the finished Deep North pack). Same as 0.3.1 except Deep North's round fur body is replaced with a boxier leather sack with folds and a seam. Checked with the same set as 0.3.1, including the -batchmode -nographics startup, plus a mesh check that fails on 0.3.1.",
       "note": "Each pack is registered through ABAPI.RegisterBackpack on a runtime copy of the AdventureBackpacks Mistlands prefab, with its own model since 0.2.0. Prefab names BackpackAshlands and BackpackDeepNorth are permanent; a custom model later must keep them. Removing this mod deletes every such bag AND its contents. Fire resistance (Ashlands) and very-resistant frost (Deep North) are vanilla damage modifiers on the item, because ABAPI.RegisterEffect cannot reach a single backpack in 2.3.x. Enforced through Jotunn NetworkCompatibility (EveryoneMustHaveMod, Minor strictness). Built against AdventureBackpacks 2.3.1 and confirmed registering against 2.3.2 on the server 2026-10-11. Every item name was read from jetragon's game files. Nothing has been tested in game yet."
     },
     {
