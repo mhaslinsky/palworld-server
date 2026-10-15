@@ -7,17 +7,17 @@
   "modpack": {
     "namespace": "valheimsquad",
     "name": "Utgarde_Client_Pack",
-    "version_number": "1.33.0",
+    "version_number": "1.34.0",
     "website_url": "https://github.com/mhaslinsky/palworld-server",
     "description": "Client mods for the Utgarde Valheim server, pinned to the versions the server runs."
   },
   "verified": {
     "server": {
-      "at": "2026-10-15T01:01:44Z",
-      "method": "scripts/mods-verify.mts against the full boot log (fetched gzipped under the SSM cap) after two restarts, both while stopped and with nobody online: the first added Tunnelheim 1.0.0 and ElementalFalls 1.6.5 and changed two ValheimPlus [Building]/[GridAlignment] keys behind backup world/linux/20261015T004943Z.tgz (BACKUP_VERIFIED); the second swapped FlashLight for HeadLamp 1.4.0. CLEAN, 'Tunnelheim 1.0.0 loaded. The pickaxe digs tunnels.', 'Registered CookieMilk.ElementalFalls ConfigSync RPC', 'Loading [Head Lamp 1.4.0]', 'Chainloader startup complete (24 loaded, 0 skipped, 0 failed)'.",
+      "at": "2026-10-15T01:16:19Z",
+      "method": "scripts/mods-verify.mts against the full boot log after removing ElementalFalls, a restart behind backup world/linux/20261015T011446Z.tgz (BACKUP_VERIFIED) that dropped the two players online at the operator's request. Earlier the same evening: Tunnelheim 1.0.0 added, two ValheimPlus [Building]/[GridAlignment] keys changed behind world/linux/20261015T004943Z.tgz, and FlashLight swapped for HeadLamp 1.4.0. 'Chainloader startup complete (23 loaded, 0 skipped, 0 failed)'. CLEAN at 24.",
       "game": "l-1.0.17, network version 40, BepInExPack 5.4.2351.",
-      "errors": "6 Exception lines and 21 error lines. New: two IndexOutOfRangeException from ElementalFalls' AudioMan_Awake_Postfix (no audio on a headless server). Every other line was on the boot before the change: RSN 'Native relay/core materials failed' (_TriplanarMap), the video-decode shader warnings, AsyncResourceUpload, the intro cinematic, and ValheimPlus 'Failed to apply Player_UpdatePlacementGhost_Transpile' (the documented BuildOnShip free-rotation conflict).",
-      "unverified": "Everything in game: tunnelling, the hoe's rock tools, ElementalFalls pieces, the head lamp, the 25 m comfort radius. Carried over from 1.32.0: OdinHorse 1.9.1 water fix, Seasonality 3.8.4 Deep North ice shore, AdventureBackpacks 2.3.4 with both Utgarde packs, ServersideQoL AutoStore.",
+      "errors": "4 Exception lines and 19 error lines, none from a mod added tonight: RSN 'Native relay/core materials failed' (_TriplanarMap), the video-decode shader warnings, AsyncResourceUpload, the intro cinematic, and ValheimPlus 'Failed to apply Player_UpdatePlacementGhost_Transpile' (the documented BuildOnShip free-rotation conflict). The ElementalFalls AudioMan exceptions left with the mod.",
+      "unverified": "Everything in game: tunnelling, the hoe's rock tools, the head lamp, the 25 m comfort radius, and that the vanilla hammer works again once a client drops ElementalFalls. Carried over from 1.32.0: OdinHorse 1.9.1 water fix, Seasonality 3.8.4 Deep North ice shore, AdventureBackpacks 2.3.4 with both Utgarde packs, ServersideQoL AutoStore.",
       "idle": "valheim.service active and enabled, valheim-idle.timer enabled, after the restart."
     },
     "client_jetragon": {
@@ -26,9 +26,9 @@
       "stale": "Pack 1.19.0 moves AdventureBackpacks to 2.2.0, which is enforced, so jetragon is refused until Gale updates it. The record above describes 1.18.0."
     },
     "pack": {
-      "at": "2026-10-15T01:04:11Z",
-      "method": "scripts/modpack-publish.mts from branch worktree-tunnelheim-elementalfalls-comfort, after the server verified CLEAN. Its post-check read 404, the usual per-version lag; the package index then reported 1.33.0 as latest with Alpus-HeadLamp-1.4.0, Tunnelheim-Tunnelheim-1.0.0 and CookieMilk-ElementalFalls-1.6.5 among its dependencies and valheimsquad-FlashLight gone. The time is Thunderstore's own date_created.",
-      "window": "KICKS EVERYONE until they update: Tunnelheim enforces a matching version through Jotunn, so a client on 1.32.0 without it is refused by the 1.33.0 server. Gale may leave FlashLight installed after the update; remove it by hand."
+      "at": "2026-10-15T01:17:31Z",
+      "method": "scripts/modpack-publish.mts from branch worktree-tunnelheim-elementalfalls-comfort after the server verified CLEAN at 24. Its post-check read 404, the usual per-version lag; the package index then reported 1.34.0 as latest with no ElementalFalls dependency. 1.33.0 (01:04:11Z) carried ElementalFalls and is superseded. The time is Thunderstore's own date_created.",
+      "window": "Tunnelheim enforces a matching version, so a client without it is refused. A client that still has ElementalFalls connects but every hammer menu stays empty until it is disabled in the mod manager, which pack updates do not do on their own."
     }
   },
   "mods": [
@@ -275,17 +275,6 @@
       },
       "plugin_name": "Tunnelheim",
       "note": "REMOVING IT DELETES EVERY TUNNEL: they are stored as objects only this mod understands, so without it the game restores the original ground as each area loads. Enforced through Jotunn (its readme: everyone, the server included, needs the same version). Installed as the package's plugins/ValheimTunneling folder, which holds the DLL and a tunneling_shaders bundle. World-shaping settings (build height, ore veins, falling trees) follow the server's sam.valheim.tunneling.cfg; mushroom crops must match on every side. It changes gameplay beyond digging: vanilla ore deposits appear in tunnel walls in ore biomes. Its readme says Plateautem fills tunnels, and PlanBuild, World Edit Commands and Infinity Hammer deletes can double hoe edits; none of those run here. First boot 2026-10-15 00:50Z logged 'Tunnelheim 1.0.0 loaded. The pickaxe digs tunnels.' and registered every piece; 'works on this graphics card: False' for its shader is the headless server. Its default F7 (round or square digs) collided with ValheimPlus and SkeletonCrew; see the key remap in mods/README.md. Nothing tested in game yet."
-    },
-    {
-      "thunderstore": "CookieMilk-ElementalFalls",
-      "version": "1.6.5",
-      "side": "both",
-      "why": "Added 2026-10-15 at the operator's request for base decoration: a separate crafted hammer places waterfalls, geysers, puddles, sludges, straight and turning rivers (swimmable or not) and waterwheels. Chosen over BuildWater (pre-1.0, one like, last updated seven months ago) and ArcaneDecor WaterGardens (hours old, AI generated, from the author of the Runic mods this estate has had to patch). 62K downloads and 95 dependant packs at the time.",
-      "artifact_sha256": {
-        "ElementalFalls/ElementalFalls.dll": "6f15ead40d77232607b95776e7d6c17072030adb3145217a4fd341f88eb102ea"
-      },
-      "plugin_name": "ElementalFalls",
-      "note": "Published 2026-02-26 and declares no target game build, so it predates Valheim 1.0 and runs here untested by its author on l-1.0.17. Declares no dependencies; its assets ride inside a 41.7 MB DLL. It uses ServerSync ('CookieMilk.ElementalFalls ConfigSync' and 'PieceManager ConfigSync' registered on the first boot), so the server's config wins; whether it refuses a client on another version is not established. Only the water pieces are decoration: the fire, frost, poison and lightning variants deal elemental damage to whoever touches them. Every boot logs IndexOutOfRangeException in ElementalFalls.Patches.Misc+AudioPatches.AudioMan_Awake_Postfix, twice on 2026-10-15; the server has no audio, so whether it also throws on a client is unknown until a player's log is read. Nothing tested in game yet."
     },
     {
       "thunderstore": "RustyMods-Seasonality",
@@ -539,6 +528,12 @@
       "version": "1.0.6",
       "removed": "2026-10-15 01:00Z; server folder MagliteFlashlight moved to /home/steam/valheim/disabled-plugins/flashlight-20261015",
       "why": "Its author, a member of the group, stopped maintaining it; Alpus-HeadLamp replaces it at the operator's request. It added a craftable flashlight item, so any flashlight a player was carrying is gone once their client and the server drop the mod."
+    },
+    {
+      "thunderstore": "CookieMilk-ElementalFalls",
+      "version": "1.6.5",
+      "removed": "2026-10-15 01:15Z, about 25 minutes after it went in; server folder ElementalFalls moved to /home/steam/valheim/disabled-plugins/elementalfalls-20261015, behind backup world/linux/20261015T011446Z.tgz",
+      "why": "It broke every hammer on the client. Its bundled PieceManager patches PieceTable.UpdateAvailable (PiecePrefabManager.UpdateAvailable_Prefix and _Postfix) against the pre-1.0 field type List<List<Piece>> m_availablePieces; on l-1.0.17 that field is HashSet<Piece>. The client logged 'MissingFieldException: Field not found: ... PieceTable.m_availablePieces' on equipping the hammer, the build menu stayed empty, and Hud.UpdateBuild then threw ArgumentOutOfRangeException every frame (1179 in one session). Proven by reading the field reference out of the installed DLL with Mono.Cecil against the game's assembly_valheim.dll; Seasonality and Jotunn reference the same field as HashSet<Piece>. The server boot looked clean because a dedicated server never opens a build menu, so a mod that touches building needs a client test before it ships. 1.6.5 (2026-02-26) is its latest version. No pieces could have been placed, since its own hammer was broken too."
     }
   ]
 }
