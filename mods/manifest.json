@@ -7,17 +7,17 @@
   "modpack": {
     "namespace": "valheimsquad",
     "name": "Utgarde_Client_Pack",
-    "version_number": "1.32.0",
+    "version_number": "1.36.0",
     "website_url": "https://github.com/mhaslinsky/palworld-server",
     "description": "Client mods for the Utgarde Valheim server, pinned to the versions the server runs."
   },
   "verified": {
     "server": {
-      "at": "2026-10-14T05:42:00Z",
-      "method": "scripts/mods-verify.mts against the full boot log (fetched gzipped under the SSM cap) after the pack 1.32.0 batch: ServersideQoL 2.3.1, OdinHorse 1.9.1, Seasonality 3.8.4, AdventureBackpacks 2.3.4, and ValheimVillages moved to disabled-plugins/bumps-20261014. ~/Developer/.orchestration/rsn/install-bumps-20261014-server.mts hash-checked every live file before touching anything and the new ones afterwards. Backup of record world/linux/20261014T054019Z.tgz (BACKUP_VERIFIED, taken with nobody online). CLEAN at 23, 'Loaded 1 patcher method from [ServersideQoL.Patchers 2.3.1.0]', 'Registered BackpackAshlands and BackpackDeepNorth with AdventureBackpacks.', 'Chainloader startup complete (22 loaded, 0 skipped, 0 failed)'.",
-      "game": "l-1.0.16, network version 40, BepInExPack 5.4.2351.",
-      "errors": "4 Exception lines and 17 error lines, every one headless graphics noise or a known conflict: RSN 'Native relay/core materials failed; bundle materials retained' (_TriplanarMap missing on a server with no shaders), the video-decode shader warnings, AsyncResourceUpload, the intro cinematic, and ValheimPlus 'Failed to apply Player_UpdatePlacementGhost_Transpile' (the documented BuildOnShip free-rotation conflict). The ValheimVillages 'Base prefab ... not found' lines from earlier boots are gone.",
-      "unverified": "Everything in game: OdinHorse 1.9.1 water fix, Seasonality 3.8.4 Deep North ice shore, AdventureBackpacks 2.3.4 with both Utgarde packs equipped, and ServersideQoL AutoStore still storing. BuildOnShip stays at 3.6.3 (3.7.0 reworked ship piece saving; needs a built ship checked in game first).",
+      "at": "2026-10-15T23:12:00Z",
+      "method": "scripts/mods-verify.mts against the full boot log (fetched gzipped under the SSM cap) after UtgardeBackpacks 1.0.0 to 1.1.0, installed by ~/Developer/.orchestration/rsn/install-utgarde-030-server.mts behind backup world/linux/20261015T230405Z.tgz (BACKUP_VERIFIED) with one player online, dropped by the restart because the operator chose install now. The script hash-checked the DLL before and after (db5a13f9...), and sha256sum on the box matched. 'Loading [Utgarde Backpacks 1.1.0]', 'Backpack motion EnableSway=True CapeCloth=True', 'Registered BackpackAshlands and BackpackDeepNorth with AdventureBackpacks.', 'Chainloader startup complete (24 loaded, 0 skipped, 0 failed)'; CLEAN at 25. Utgarde error lines: 0.",
+      "game": "l-1.0.17, network version 40, BepInExPack 5.4.2351.",
+      "errors": "4 Exception lines, the same count as the previous boot: RSN 'Native relay/core materials failed' (_TriplanarMap), the video-decode shader warnings, AsyncResourceUpload, the intro cinematic, and ValheimPlus 'Failed to apply Player_UpdatePlacementGhost_Transpile' (the documented BuildOnShip free-rotation conflict).",
+      "unverified": "Everything in game, including UtgardeBackpacks 1.1.0: the Deep North inventory icon, the cape cloth on a moving player, and the cape after a portal (the harness shows one reset frame of 62 to 90 mm). Carried from the previous record: the resized hoe brush and the new hoe and cultivator tools next to Tunnelheim's, two players terraforming one zone with the fork, PlantEasily grids and its keypad toggles, World Edit Commands on the admin client. Carried over: tunnelling, the head lamp, the 25 m comfort radius, OdinHorse 1.9.1 water fix, Seasonality 3.8.4 Deep North ice shore, AdventureBackpacks 2.3.4 with both Utgarde packs, ServersideQoL AutoStore.",
       "idle": "valheim.service active and enabled, valheim-idle.timer enabled, after the restart."
     },
     "client_jetragon": {
@@ -26,9 +26,9 @@
       "stale": "Pack 1.19.0 moves AdventureBackpacks to 2.2.0, which is enforced, so jetragon is refused until Gale updates it. The record above describes 1.18.0."
     },
     "pack": {
-      "at": "2026-10-14T05:44:22Z",
-      "method": "scripts/modpack-publish.mts from branch worktree-mods-oct14-bumps, after the server verified CLEAN. Its post-check read 404, the usual per-version lag; the package index then reported 1.32.0 as latest with Vapok-AdventureBackpacks-2.3.4, OdinPlus-OdinHorse-1.9.1, RustyMods-Seasonality-3.8.4 and Skarif-BuildOnShip-3.6.3 among its dependencies. The time is Thunderstore's own date_created.",
-      "window": "KICKS EVERYONE until they update: AdventureBackpacks and OdinHorse both enforce a matching version, so a client on 1.31.0 is refused by the 1.32.0 server."
+      "at": "2026-10-15T23:13:04Z",
+      "method": "scripts/modpack-publish.mts from branch utgarde-backpacks-pack-1360, stacked on worktree-tunnelheim-elementalfalls-comfort, after the server verified CLEAN at 25. The dependency list was diffed against the live 1.35.0 first: the only change is valheimsquad-UtgardeBackpacks 1.0.0 to 1.1.0. Its post-check read 404, the usual per-version lag; the package index then reported 1.36.0 as latest with valheimsquad-UtgardeBackpacks-1.1.0. The time is Thunderstore's own date_created.",
+      "window": "KICKS EVERYONE until they update: UtgardeBackpacks is enforced (Jotunn, Minor strictness), so a client on pack 1.35.0 or earlier holds UtgardeBackpacks 1.0.0 and is refused by the 1.1.0 server. The server moved at 2026-10-15T23:04Z and the pack followed about nine minutes later, so the window was open for that time. A client that updates the pack in Gale may need to update UtgardeBackpacks by itself, as with earlier packs."
     }
   },
   "mods": [
@@ -63,7 +63,8 @@
       "config_craft_from_chest": "Set on the box 2026-09-26 05:30Z at the operator's request: [CraftFromChest] range 20 -> 50, allowCraftingFromCarts and allowCraftingFromShips false -> true. enabled, checkFromWorkbench (range measured from the workbench when inside its area) and ignorePrivateAreaCheck = false (wards still block other bases) unchanged. Edited while stopped, read back after the restart unchanged; [Server] serverSyncsConfig = true pushes it to clients, so no pack change. Backup beside the file as org.bepinex.plugins.valheim_plus.cfg.pre-cfc50.<stamp>. Craft From Backpack is a different mod's setting (AdventureBackpacks 2.2.0, client-local and on by default). SUPERSEDED 2026-10-04 06:48Z: [CraftFromChest] enabled true -> false, edited while stopped behind backup world/linux/20261004T064700Z.tgz, file kept as .pre-rsn.20261004T064819Z. Rerit-RunicStorageNetwork replaces it, because two craft-from-chest systems patch the same requirement checks and RSN's own guard does not recognise this one. The range keys above are left as they were, so turning it back on restores the old behaviour.",
       "config_rested": "Set on the box 2026-10-02 at the operator's request: [Player] restSecondsPerComfortLevel 60 -> 120. [Player] was already enabled (cropNotifier lives there), and serverSyncsConfig pushes it to every player. It changes only the per-comfort-level term: on the Valheim wiki's formula of 8 minutes at comfort 1 plus one step per further level, comfort 18 goes from 25 to 42 minutes and comfort 21 from 28 to 48. The 8-minute base does not scale, so a low-comfort campfire gains little. The operator chose 120 over 150 (50 minutes at comfort 18) to keep it a little lower.",
       "config_experience": "Set on the box 2026-10-04 03:33Z at the operator's request: every [Experience] skill modifier 50 -> 100, which configures skill gain at 2x instead of 1.5x. That is the configured value, not an observed one: the faster gain is unverified in game until a player sees it. The section holds 23 skill keys, all of which were 50. ValheimPlus applies the modifier to RaiseSkill's factor from the server-synced config. This server has no Configuration Manager, so ValheimPlus reads the file only at launch: verified backup world/linux/20261004T033304Z.tgz, edited while stopped, read back after the restart as 23 keys at 100. Backup beside the file as org.bepinex.plugins.valheim_plus.cfg.pre-skill2x.20261004T033322Z. RAISED 2026-10-11 at the operator's request (blood magic only reached 51 after hours at 2x, end game): every skill modifier 100 -> 300, so 4x gain, since the modifier is a percentage added to the base. Written 03:55Z while the server ran (backup beside the file as .pre-skill4x.20261011T035504Z; 23 keys read back at 300), then a restart with nobody online behind backup world/linux/20261011T043852Z.tgz. The boot log shows all 23 keys '0 -> 300', bloodMagic included. The faster gain is unverified in game.",
-      "config_capacity": "Set on the box 2026-10-09 03:07Z at the operator's request, as a stand-in for ServersideQoL's chest-feeding features: [Smelter] and [Furnace] maximumOre 50 -> 1000, maximumCoal 100 -> 2000; [Kiln] maximumWood 100 -> 1000. Five sections switched on (they shipped enabled = false) with their capacities raised and every other key left at its labelled default: [EitrRefinery] maximumSap and maximumSoftTissue 20 -> 1000, [SpinningWheel] maximumFlax 50 -> 1000, [Windmill] maximumBarley 50 -> 1000, [FrigidKiln] maximumIce 25 -> 1000, [FrostFoundry] maximumFrozenFuel 20 -> 1000. Edited while stopped behind backup world/linux/20261009T030729Z.tgz, read back after the restart; old file kept as org.bepinex.plugins.valheim_plus.cfg.pre-capacity.20261009T030736Z. Unverified in game: that each machine accepts the new amount."
+      "config_capacity": "Set on the box 2026-10-09 03:07Z at the operator's request, as a stand-in for ServersideQoL's chest-feeding features: [Smelter] and [Furnace] maximumOre 50 -> 1000, maximumCoal 100 -> 2000; [Kiln] maximumWood 100 -> 1000. Five sections switched on (they shipped enabled = false) with their capacities raised and every other key left at its labelled default: [EitrRefinery] maximumSap and maximumSoftTissue 20 -> 1000, [SpinningWheel] maximumFlax 50 -> 1000, [Windmill] maximumBarley 50 -> 1000, [FrigidKiln] maximumIce 25 -> 1000, [FrostFoundry] maximumFrozenFuel 20 -> 1000. Edited while stopped behind backup world/linux/20261009T030729Z.tgz, read back after the restart; old file kept as org.bepinex.plugins.valheim_plus.cfg.pre-capacity.20261009T030736Z. Unverified in game: that each machine accepts the new amount.",
+      "config_comfort_keys": "Set on the box 2026-10-15 00:50Z at the operator's request, edited while stopped behind backup world/linux/20261015T004943Z.tgz, old file kept as org.bepinex.plugins.valheim_plus.cfg.pre-comfort-keys.20261015T005000Z. [Building] pieceComfortRadius 10 -> 25, so comfort pieces count from 25 m instead of the vanilla 10 m; [Building] was already enabled and serverSyncsConfig pushes it to every player. [GridAlignment] alignToggle F5 -> F10, because F5 is Valheim's own console key and the 2026-09-11 rebind that dodged F7 had landed on it. Part of a client key remap recorded in mods/README.md. Unverified in game: that comfort counts from 25 m."
     },
     {
       "thunderstore": "ValheimModding-Jotunn",
@@ -86,6 +87,19 @@
       },
       "plugin_name": "PlantEverything",
       "upgrade_1_21_3": "Compiled against Valheim 1.0.15 and BepInEx 5.4.2351, which closes this mod's gap against game_version; it declares BepInExPack 5.4.2351, which is why it moved with the loader. Also refines initialisation during config sync. The package ships the DLL as Advize_PlantEverything.dll; the key above keeps the name recorded for it earlier. It embeds ServerSync, which can refuse a client below a minimum version, but no version literal appears in the DLL's strings, so no minimum is set and a 1.21.2 client should still connect. That is read from the binary, not tested."
+    },
+    {
+      "thunderstore": "Advize-PlantEasily",
+      "version": "2.3.0",
+      "side": "client",
+      "why": "Added 2026-10-15 for mass planting: the cultivator plants any number of rows and columns at once with correct spacing and grid snapping (Right Ctrl plus arrow keys), and can replant on harvest. Same author as PlantEverything.",
+      "artifact_sha256": {
+        "Advize_PlantEasily.dll": "d5ad697931c97e86dbc72afa3b9bcac90f3ae249c3a50fe7ad94302c4c2b8416"
+      },
+      "plugin_name": null,
+      "plugin_name_note": "client-side only, so it never appears in the server's load log",
+      "drift_target_build": "INDETERMINATE: its Thunderstore readme declares no target Valheim build. The earlier check was field references against assembly_valheim 1.0.17 (68, none broken); the server moved to l-1.0.20 on 2026-10-15, so that check needs repeating against the new assembly.",
+      "note": "Its readme says not to install it on a dedicated server unless ConditionalConfigSync is used; it is not. UseDurability and UseStamina are always server controlled per its readme, which with no server copy means the defaults. Incompatible with FarmGrid, MassFarming and Farming, none of which run here. Its F6, F8 and F10 toggles all collide with live ValheimPlus keys; see the key map in mods/README.md. Field references checked against assembly_valheim 1.0.17: 68, none broken."
     },
     {
       "thunderstore": "ValheimModding-YamlDotNet",
@@ -174,28 +188,29 @@
     },
     {
       "thunderstore": "valheimsquad-UtgardeBackpacks",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "side": "both",
       "enforced": true,
       "why": "Adds an Ashlands and a Deep North backpack to AdventureBackpacks, whose author has not shipped tiers past the Mistlands. Operator spec, 2026-10-11: each tier bigger than the last (Ashlands 24 to 40 slots and +40 carry per level, Deep North 28 to 48 slots and +50 per level), and feather fall from quality 1 on both, because once the Mistlands pack gives it, it must never go away. Our own package: source in the local repo ~/Developer/UtgardeBackpacks, published under the estate's Thunderstore team.",
       "artifact_sha256": {
-        "UtgardeBackpacks.dll": "b9673636d268437aad4557b1cad2e928cb679dd6e9b4547a35b57f7ac63c148c"
+        "UtgardeBackpacks.dll": "db5a13f99e9f9c10e747ac4af1df31f6c040dd7c849fdd1753da65b28f800d31"
       },
       "plugin_name": "Utgarde Backpacks",
       "upgrade_0_3_0": "Taken 2026-10-13 in pack 1.29.0. Custom Ashlands and Deep North models and textures (blocky low-res colour with a richer normal map, per the operator), lit by Valheim's Custom/Piece shader so neither pack glows at night, with the shader's displacement features off to stop the motion flicker. Ashlands uses the operator's own inventory icon. Deep North's middle body is still being reworked and ships in a later version. Built on jetragon from UtgardeBackpacks commits 74df927 and 035bd0a; its receipt is assets/release-final-0.3.0.json in that repo. 0.3.0 registered NOTHING on the dedicated server (the model swap threw on a process with no graphics and cancelled registration), so it was replaced the same evening by 0.3.1 in pack 1.30.0: headless processes skip visuals, and a visual failure no longer blocks registration. 0.3.1 was checked against real Valheim run with -batchmode -nographics, which fails on 0.3.0 (commits 8db97f8, 87b7b61; receipt assets/release-final-0.3.1.json).",
       "upgrade_1_0_0": "Taken 2026-10-14 in pack 1.31.0: the first full release (operator: version 1 is the one with the finished Deep North pack). Same as 0.3.1 except Deep North's round fur body is replaced with a boxier leather sack with folds and a seam. Checked with the same set as 0.3.1, including the -batchmode -nographics startup, plus a mesh check that fails on 0.3.1.",
+      "upgrade_1_1_0": "Taken 2026-10-15 in pack 1.36.0, on the operator's request: Deep North gets its own inventory icon (the operator's art), Deep North's cape cloth is on by default, and the Thunderstore page has images. Cloth uses a new key, [Motion] CapeCloth (default true), because 1.0.x wrote EnableCapeCloth = false into every config it ran with, so a changed default under the old key would have reached no existing install. Cape clearance on the v5d bag with cloth on was never measured before this: 0 mm settled in walk, run, turn and jump against a 20 mm gate, and the gate fails at 109.6 mm with the bag colliders removed. One frame of 62 to 90 mm shows right after an anchor teleport that crosses the ResetCloth thresholds (src/BackpackCapeCloth.cs:78); portal behaviour in game is unverified. Built on jetragon from release/1.1.0 in the local repo (commits 7682389, 7ad048f, 0fff69d, 72c9183; receipt assets/release-final-1.1.0.json); the isolated -batchmode -nographics startup registered both packs with 0 Utgarde errors. Installed on the server 2026-10-15T23:04Z with ONE player online (the operator chose install now), after a verified backup, world/linux/20261015T230405Z.tgz; the 1.0.0 DLL is kept in disabled-plugins. The operator skipped the in-game test.",
       "note": "Each pack is registered through ABAPI.RegisterBackpack on a runtime copy of the AdventureBackpacks Mistlands prefab, with its own model since 0.2.0. Prefab names BackpackAshlands and BackpackDeepNorth are permanent; a custom model later must keep them. Removing this mod deletes every such bag AND its contents. Fire resistance (Ashlands) and very-resistant frost (Deep North) are vanilla damage modifiers on the item, because ABAPI.RegisterEffect cannot reach a single backpack in 2.3.x. Enforced through Jotunn NetworkCompatibility (EveryoneMustHaveMod, Minor strictness). Built against AdventureBackpacks 2.3.1 and confirmed registering against 2.3.2 on the server 2026-10-11. Every item name was read from jetragon's game files. Nothing has been tested in game yet."
     },
     {
-      "thunderstore": "valheimsquad-FlashLight",
-      "version": "1.0.6",
+      "thunderstore": "Alpus-HeadLamp",
+      "version": "1.4.0",
       "side": "both",
-      "why": "A craftable handheld flashlight (2 Bronze, 1 Crystal, 1 Surtling Core at a level 1 workbench) with adjustable brightness. Made by a member of the group and published under the estate's Thunderstore team; added at the operator's request, 2026-10-13. Its README says to install it on every player and the dedicated server, because it adds a custom item and syncs the beam between players.",
+      "why": "Replaces FlashLight on 2026-10-15: the group member who made FlashLight is no longer maintaining it and pointed the operator at this one. A light on the player's head toggled by a hotkey, with no item to craft or carry. 12K downloads; 1.4.0 was published 2026-09-10, after Valheim 1.0.",
       "artifact_sha256": {
-        "BepInEx/plugins/MagliteFlashlight/MagliteFlashlight.dll": "195a9c50546158c78829efc1a372ad8c1ce47d8d3c81ef830eaf834cfaa4ccf6"
+        "HeadLamp/HeadLamp.dll": "c77ffad54a29f12ac6c4798e9091de2406cfa7a864bc88dba56ba656471591bc"
       },
-      "plugin_name": "FlashLight",
-      "note": "Plugin GUID local.valheim.magliteflashlight; the DLL references Jotunn NetworkCompatibility, so treat versions as needing to match. Depends on BepInExPack 5.4.2351 and Jotunn 2.30.2, both already pinned. plugin_name is unconfirmed until the server boot log prints it."
+      "plugin_name": "Head Lamp",
+      "note": "Declares BepInExPack 5.4.2350 and Jotunn 2.30.0, both satisfied by the pins here. The server's HeadLamp.cfg ships 'Enable Settings Sync With Server = true', so light colour, intensity, range and angle come from the server; the hotkey stays per player. The 1.4.0 default hotkey is BackQuote (its readme still says Q), which collides with SkeletonCrew's command button, so the key remap in mods/README.md moves it to L, the key FlashLight used. Whether it refuses a client on another version is not established. First boot 2026-10-15 01:00Z logged 'Loading [Head Lamp 1.4.0]'. Not tested in game."
     },
     {
       "thunderstore": "RandyKnapp-EquipmentAndQuickSlots",
@@ -262,6 +277,31 @@
       "plugin_version": "4.0.0",
       "note": "The DLL's BepInPlugin attribute is com.custom.shipbuildmod, ShipBuildMod, 4.0.0, so the log shows 4.0.0 against Thunderstore's 3.4.3. Read off the DLL, then confirmed on the first server boot with it (2026-09-25 05:37Z), which logged 'Loading [ShipBuildMod 4.0.0]' and the mod's own 'ShipBuildMod v4.0.0 loaded successfully.' It declares no BepInProcess restriction, so it loads under the dedicated server. It carries no ServerSync and no Jotunn NetworkCompatibility, so nothing refuses a client that lacks it; what such a client sees on a built-on ship is UNVERIFIED. The ship link is stored in ZDO fields (ShipBuild_ParentUUID, ShipBuild_ShipUUID, ShipBuild_LocalPos, ShipBuild_LocalRot), so assume removing the mod strands built pieces and take a world backup before uninstalling. Ship portals are ordinary portal pieces, so PortalProgression's ore gate should apply to them unchanged; UNVERIFIED.",
       "upgrade_3_6_3": "Taken 2026-10-02 in pack 1.21.0. The changelog is thin: 3.5.0 says 'Fix 20.09.26. Ship control', 3.6.0 has no entry, and 3.6.1 to 3.6.3 each say 'nothing'. The DLL still declares ShipBuildMod 4.0.0, so the log line does not move. The free placement rotation conflict above is not mentioned upstream and is assumed to persist."
+    },
+    {
+      "thunderstore": "Tunnelheim-Tunnelheim",
+      "version": "1.0.0",
+      "side": "both",
+      "enforced": true,
+      "why": "Added 2026-10-15 at the operator's request, knowing it is new (published 2026-10-09) and AI generated: the vanilla pickaxe digs real tunnels in any direction, the hoe shapes rock, and it adds ladders, fuel-free crystal and glow-moss lights, and mushroom farming under a roof. Built against BepInExPack 5.4.2351 and Jotunn 2.30.2, both already pinned here.",
+      "artifact_sha256": {
+        "ValheimTunneling/ValheimTunneling.dll": "b2988964ac19c26f71ad7a492bd3d91923f576665c8d4a058fc515c720e76d33"
+      },
+      "plugin_name": "Tunnelheim",
+      "note": "REMOVING IT DELETES EVERY TUNNEL: they are stored as objects only this mod understands, so without it the game restores the original ground as each area loads. Enforced through Jotunn (its readme: everyone, the server included, needs the same version). Installed as the package's plugins/ValheimTunneling folder, which holds the DLL and a tunneling_shaders bundle. World-shaping settings (build height, ore veins, falling trees) follow the server's sam.valheim.tunneling.cfg; mushroom crops must match on every side. It changes gameplay beyond digging: vanilla ore deposits appear in tunnel walls in ore biomes. Its readme says Plateautem fills tunnels, and PlanBuild, World Edit Commands and Infinity Hammer deletes can double hoe edits when undone; World Edit Commands runs on the admin client since 2026-10-15, so avoid its undo near tunnels. First boot 2026-10-15 00:50Z logged 'Tunnelheim 1.0.0 loaded. The pickaxe digs tunnels.' and registered every piece; 'works on this graphics card: False' for its shader is the headless server. Its default F7 (round or square digs) collided with ValheimPlus and SkeletonCrew; see the key remap in mods/README.md. Nothing tested in game yet."
+    },
+    {
+      "thunderstore": "Ostrix-AdvancedTerrainModifiersCompatible",
+      "version": "1.4.8",
+      "side": "both",
+      "why": "Added 2026-10-15 for the operator's island rework: the hoe and cultivator brush resizes with a held key plus the scroll wheel (server cap Max Radius), sharpness flattens the brush, and it adds square grid-aligned hoe and cultivator tools, a shovel that lowers ground and a terrain reset tool.",
+      "why_this_fork": "Searica-AdvancedTerrainModifiers was pulled on 2026-10-07 (see removed_mods) after two players saw different heights in one place. Read from the DLLs with Mono.Cecil on 2026-10-15: Searica 1.5.6 still claims zone ownership in a TerrainComp.ApplyOperation prefix on every terrain edit, vanilla ones included, and still applies the brush radius from the executing machine's scroll state. This fork claims ownership only for operations that carry its own settings (its tools, or a resized brush), serialises the radius, power and delta into the operation so the zone owner applies the editor's brush, rejects malformed values, and checks wards against the whole brush. It still claims ownership for its own edits, so two players terraforming the same zone at once remain untested.",
+      "artifact_sha256": {
+        "AdvancedTerrainModifiers/TerrainTools.dll": "ed620c20d5186c6e65740b9906b0806f43d0f96392421687f0fa656df7e99e0a"
+      },
+      "plugin_name": "AdvancedTerrainModifiers",
+      "drift_target_build": "INDETERMINATE by the readme, which says only 'targets Valheim 1.0' with no patch number. The earlier check was field references against assembly_valheim 1.0.17 (343, none broken); the server moved to l-1.0.20 on 2026-10-15, so that check needs repeating against the new assembly.",
+      "note": "Keeps Searica's plugin GUID (Searica.Valheim.TerrainTools), so it reads the server's existing Searica.Valheim.TerrainTools.cfg from the 1.5.5 trial; a copy was taken as .pre-ostrix.20261015T0320Z. Never load it alongside the Searica package. Based on Searica 1.4.1, so it lacks the 1.5.x precision raise tool. Installed on the server as plugins/AdvancedTerrainModifiers with its Translations folder. Field references checked against assembly_valheim 1.0.17 with Mono.Cecil: 343, none broken. It and Tunnelheim both add hoe tools; check the hoe menu in game. Its readme says ValheimPlus freezes the terrain tool ghost animation, so the brush preview may not show the new size."
     },
     {
       "thunderstore": "RustyMods-Seasonality",
@@ -466,6 +506,20 @@
       "upgrade_1_115_0": "Taken 2026-10-02. Adds a setting to disable the help command and fixes the alternative biome text using the wrong coordinate."
     },
     {
+      "thunderstore": "JereKuusela-World_Edit_Commands",
+      "version": "1.81.0",
+      "side": "client",
+      "admin_only": true,
+      "why": "Added 2026-10-15 for the operator's island rework: admin console commands that remove objects (trees, rocks) and level or reshape terrain over an area. Its readme: install on the admin client, with Server Devcommands (already on the server, and pulled onto the client as its dependency).",
+      "why_not_in_pack": "Every command needs admin rights, so shipping it to the group installs commands nobody else can run. The operator installs it in Gale by hand, like the Configuration Manager.",
+      "artifact_sha256": {
+        "WorldEditCommands.dll": "cc69251a4d4ce821e15e9b481de898141978e4e383386962c3a8492393afb726"
+      },
+      "plugin_name": null,
+      "plugin_name_note": "admin client only, so it never appears in the server's load log",
+      "note": "Tunnelheim's readme: it stops World Edit Commands deleting tunnels, but undoing such a delete can leave a second copy of an area's tunnel data so that area's hoe edits apply twice. Do not use its undo near tunnels. Objects it removes drop nothing. Field references checked against assembly_valheim 1.0.17: 729, none broken."
+    },
+    {
       "thunderstore": "Azumatt-Official_BepInEx_ConfigurationManager",
       "version": "18.4.1",
       "side": "client",
@@ -509,6 +563,18 @@
       "version": "2.2.0",
       "removed": "2026-10-09 16:23Z; server DLLs and deps.json moved to /home/steam/valheim/disabled-plugins/ServersideQoL-trim.20261009T162337Z",
       "why": "The operator reported smelter feeding was not working, and it was the last ServersideQoL module taking chests (anything within 4 m of a station) away from clients, which Runic Storage Network waits on. Smelters now hold 1000 ore through ValheimPlus, so hand-loading is rare."
+    },
+    {
+      "thunderstore": "valheimsquad-FlashLight",
+      "version": "1.0.6",
+      "removed": "2026-10-15 01:00Z; server folder MagliteFlashlight moved to /home/steam/valheim/disabled-plugins/flashlight-20261015",
+      "why": "Its author, a member of the group, stopped maintaining it; Alpus-HeadLamp replaces it at the operator's request. It added a craftable flashlight item, so any flashlight a player was carrying is gone once their client and the server drop the mod."
+    },
+    {
+      "thunderstore": "CookieMilk-ElementalFalls",
+      "version": "1.6.5",
+      "removed": "2026-10-15 01:15Z, about 25 minutes after it went in; server folder ElementalFalls moved to /home/steam/valheim/disabled-plugins/elementalfalls-20261015, behind backup world/linux/20261015T011446Z.tgz",
+      "why": "It broke every hammer on the client. Its bundled PieceManager patches PieceTable.UpdateAvailable (PiecePrefabManager.UpdateAvailable_Prefix and _Postfix) against the pre-1.0 field type List<List<Piece>> m_availablePieces; on l-1.0.17 that field is HashSet<Piece>. The client logged 'MissingFieldException: Field not found: ... PieceTable.m_availablePieces' on equipping the hammer, the build menu stayed empty, and Hud.UpdateBuild then threw ArgumentOutOfRangeException every frame (1179 in one session). Proven by reading the field reference out of the installed DLL with Mono.Cecil against the game's assembly_valheim.dll; Seasonality and Jotunn reference the same field as HashSet<Piece>. The server boot looked clean because a dedicated server never opens a build menu, so a mod that touches building needs a client test before it ships. 1.6.5 (2026-02-26) is its latest version. No pieces could have been placed, since its own hammer was broken too."
     }
   ]
 }
