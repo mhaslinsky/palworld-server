@@ -7,17 +7,17 @@
   "modpack": {
     "namespace": "valheimsquad",
     "name": "Utgarde_Client_Pack",
-    "version_number": "1.34.0",
+    "version_number": "1.35.0",
     "website_url": "https://github.com/mhaslinsky/palworld-server",
     "description": "Client mods for the Utgarde Valheim server, pinned to the versions the server runs."
   },
   "verified": {
     "server": {
-      "at": "2026-10-15T01:16:19Z",
-      "method": "scripts/mods-verify.mts against the full boot log after removing ElementalFalls, a restart behind backup world/linux/20261015T011446Z.tgz (BACKUP_VERIFIED) that dropped the two players online at the operator's request. Earlier the same evening: Tunnelheim 1.0.0 added, two ValheimPlus [Building]/[GridAlignment] keys changed behind world/linux/20261015T004943Z.tgz, and FlashLight swapped for HeadLamp 1.4.0. 'Chainloader startup complete (23 loaded, 0 skipped, 0 failed)'. CLEAN at 24.",
+      "at": "2026-10-15T03:21:29Z",
+      "method": "scripts/mods-verify.mts against the full boot log after adding AdvancedTerrainModifiersCompatible 1.4.8 (Ostrix fork), a restart behind backup world/linux/20261015T031657Z.tgz (BACKUP_VERIFIED) with one player online, the operator, who asked for it. 'Chainloader startup complete (24 loaded, 0 skipped, 0 failed)'; CLEAN at 25. MaxRadius was then raised from 10 to 20 in Searica.Valheim.TerrainTools.cfg and the mod logged 'Reloading config file' without a restart.",
       "game": "l-1.0.17, network version 40, BepInExPack 5.4.2351.",
-      "errors": "4 Exception lines and 19 error lines, none from a mod added tonight: RSN 'Native relay/core materials failed' (_TriplanarMap), the video-decode shader warnings, AsyncResourceUpload, the intro cinematic, and ValheimPlus 'Failed to apply Player_UpdatePlacementGhost_Transpile' (the documented BuildOnShip free-rotation conflict). The ElementalFalls AudioMan exceptions left with the mod.",
-      "unverified": "Everything in game: tunnelling, the hoe's rock tools, the head lamp, the 25 m comfort radius, and that the vanilla hammer works again once a client drops ElementalFalls. Carried over from 1.32.0: OdinHorse 1.9.1 water fix, Seasonality 3.8.4 Deep North ice shore, AdventureBackpacks 2.3.4 with both Utgarde packs, ServersideQoL AutoStore.",
+      "errors": "4 Exception lines, the same count as the previous boot: RSN 'Native relay/core materials failed' (_TriplanarMap), the video-decode shader warnings, AsyncResourceUpload, the intro cinematic, and ValheimPlus 'Failed to apply Player_UpdatePlacementGhost_Transpile' (the documented BuildOnShip free-rotation conflict).",
+      "unverified": "Everything in game: the resized hoe brush and the new hoe and cultivator tools next to Tunnelheim's, two players terraforming one zone with the fork, PlantEasily grids and its keypad toggles, World Edit Commands on the admin client. Carried over: tunnelling, the head lamp, the 25 m comfort radius, OdinHorse 1.9.1 water fix, Seasonality 3.8.4 Deep North ice shore, AdventureBackpacks 2.3.4 with both Utgarde packs, ServersideQoL AutoStore.",
       "idle": "valheim.service active and enabled, valheim-idle.timer enabled, after the restart."
     },
     "client_jetragon": {
@@ -26,9 +26,9 @@
       "stale": "Pack 1.19.0 moves AdventureBackpacks to 2.2.0, which is enforced, so jetragon is refused until Gale updates it. The record above describes 1.18.0."
     },
     "pack": {
-      "at": "2026-10-15T01:17:31Z",
-      "method": "scripts/modpack-publish.mts from branch worktree-tunnelheim-elementalfalls-comfort after the server verified CLEAN at 24. Its post-check read 404, the usual per-version lag; the package index then reported 1.34.0 as latest with no ElementalFalls dependency. 1.33.0 (01:04:11Z) carried ElementalFalls and is superseded. The time is Thunderstore's own date_created.",
-      "window": "Tunnelheim enforces a matching version, so a client without it is refused. A client that still has ElementalFalls connects but every hammer menu stays empty until it is disabled in the mod manager, which pack updates do not do on their own."
+      "at": "2026-10-15T03:28:44Z",
+      "method": "scripts/modpack-publish.mts from branch worktree-tunnelheim-elementalfalls-comfort after the server verified CLEAN at 25. Its post-check read 404, the usual per-version lag; the package index then reported 1.35.0 as latest. The time is Thunderstore's own date_created.",
+      "window": "Adds Ostrix-AdvancedTerrainModifiersCompatible and Advize-PlantEasily. Neither is version-enforced, so a 1.34.0 client still joins and simply lacks the new tools. A client that still has Searica-AdvancedTerrainModifiers enabled must disable it: the fork keeps the same plugin GUID and the two must not load together. World Edit Commands is admin_only and not in the pack."
     }
   },
   "mods": [
@@ -87,6 +87,18 @@
       },
       "plugin_name": "PlantEverything",
       "upgrade_1_21_3": "Compiled against Valheim 1.0.15 and BepInEx 5.4.2351, which closes this mod's gap against game_version; it declares BepInExPack 5.4.2351, which is why it moved with the loader. Also refines initialisation during config sync. The package ships the DLL as Advize_PlantEverything.dll; the key above keeps the name recorded for it earlier. It embeds ServerSync, which can refuse a client below a minimum version, but no version literal appears in the DLL's strings, so no minimum is set and a 1.21.2 client should still connect. That is read from the binary, not tested."
+    },
+    {
+      "thunderstore": "Advize-PlantEasily",
+      "version": "2.3.0",
+      "side": "client",
+      "why": "Added 2026-10-15 for mass planting: the cultivator plants any number of rows and columns at once with correct spacing and grid snapping (Right Ctrl plus arrow keys), and can replant on harvest. Same author as PlantEverything.",
+      "artifact_sha256": {
+        "Advize_PlantEasily.dll": "d5ad697931c97e86dbc72afa3b9bcac90f3ae249c3a50fe7ad94302c4c2b8416"
+      },
+      "plugin_name": null,
+      "plugin_name_note": "client-side only, so it never appears in the server's load log",
+      "note": "Its readme says not to install it on a dedicated server unless ConditionalConfigSync is used; it is not. UseDurability and UseStamina are always server controlled per its readme, which with no server copy means the defaults. Incompatible with FarmGrid, MassFarming and Farming, none of which run here. Its F6, F8 and F10 toggles all collide with live ValheimPlus keys; see the key map in mods/README.md. Field references checked against assembly_valheim 1.0.17: 68, none broken."
     },
     {
       "thunderstore": "ValheimModding-YamlDotNet",
@@ -274,7 +286,19 @@
         "ValheimTunneling/ValheimTunneling.dll": "b2988964ac19c26f71ad7a492bd3d91923f576665c8d4a058fc515c720e76d33"
       },
       "plugin_name": "Tunnelheim",
-      "note": "REMOVING IT DELETES EVERY TUNNEL: they are stored as objects only this mod understands, so without it the game restores the original ground as each area loads. Enforced through Jotunn (its readme: everyone, the server included, needs the same version). Installed as the package's plugins/ValheimTunneling folder, which holds the DLL and a tunneling_shaders bundle. World-shaping settings (build height, ore veins, falling trees) follow the server's sam.valheim.tunneling.cfg; mushroom crops must match on every side. It changes gameplay beyond digging: vanilla ore deposits appear in tunnel walls in ore biomes. Its readme says Plateautem fills tunnels, and PlanBuild, World Edit Commands and Infinity Hammer deletes can double hoe edits; none of those run here. First boot 2026-10-15 00:50Z logged 'Tunnelheim 1.0.0 loaded. The pickaxe digs tunnels.' and registered every piece; 'works on this graphics card: False' for its shader is the headless server. Its default F7 (round or square digs) collided with ValheimPlus and SkeletonCrew; see the key remap in mods/README.md. Nothing tested in game yet."
+      "note": "REMOVING IT DELETES EVERY TUNNEL: they are stored as objects only this mod understands, so without it the game restores the original ground as each area loads. Enforced through Jotunn (its readme: everyone, the server included, needs the same version). Installed as the package's plugins/ValheimTunneling folder, which holds the DLL and a tunneling_shaders bundle. World-shaping settings (build height, ore veins, falling trees) follow the server's sam.valheim.tunneling.cfg; mushroom crops must match on every side. It changes gameplay beyond digging: vanilla ore deposits appear in tunnel walls in ore biomes. Its readme says Plateautem fills tunnels, and PlanBuild, World Edit Commands and Infinity Hammer deletes can double hoe edits when undone; World Edit Commands runs on the admin client since 2026-10-15, so avoid its undo near tunnels. First boot 2026-10-15 00:50Z logged 'Tunnelheim 1.0.0 loaded. The pickaxe digs tunnels.' and registered every piece; 'works on this graphics card: False' for its shader is the headless server. Its default F7 (round or square digs) collided with ValheimPlus and SkeletonCrew; see the key remap in mods/README.md. Nothing tested in game yet."
+    },
+    {
+      "thunderstore": "Ostrix-AdvancedTerrainModifiersCompatible",
+      "version": "1.4.8",
+      "side": "both",
+      "why": "Added 2026-10-15 for the operator's island rework: the hoe and cultivator brush resizes with a held key plus the scroll wheel (server cap Max Radius), sharpness flattens the brush, and it adds square grid-aligned hoe and cultivator tools, a shovel that lowers ground and a terrain reset tool.",
+      "why_this_fork": "Searica-AdvancedTerrainModifiers was pulled on 2026-10-07 (see removed_mods) after two players saw different heights in one place. Read from the DLLs with Mono.Cecil on 2026-10-15: Searica 1.5.6 still claims zone ownership in a TerrainComp.ApplyOperation prefix on every terrain edit, vanilla ones included, and still applies the brush radius from the executing machine's scroll state. This fork claims ownership only for operations that carry its own settings (its tools, or a resized brush), serialises the radius, power and delta into the operation so the zone owner applies the editor's brush, rejects malformed values, and checks wards against the whole brush. It still claims ownership for its own edits, so two players terraforming the same zone at once remain untested.",
+      "artifact_sha256": {
+        "AdvancedTerrainModifiers/TerrainTools.dll": "ed620c20d5186c6e65740b9906b0806f43d0f96392421687f0fa656df7e99e0a"
+      },
+      "plugin_name": "AdvancedTerrainModifiers",
+      "note": "Keeps Searica's plugin GUID (Searica.Valheim.TerrainTools), so it reads the server's existing Searica.Valheim.TerrainTools.cfg from the 1.5.5 trial; a copy was taken as .pre-ostrix.20261015T0320Z. Never load it alongside the Searica package. Based on Searica 1.4.1, so it lacks the 1.5.x precision raise tool. Installed on the server as plugins/AdvancedTerrainModifiers with its Translations folder. Field references checked against assembly_valheim 1.0.17 with Mono.Cecil: 343, none broken. It and Tunnelheim both add hoe tools; check the hoe menu in game. Its readme says ValheimPlus freezes the terrain tool ghost animation, so the brush preview may not show the new size."
     },
     {
       "thunderstore": "RustyMods-Seasonality",
@@ -477,6 +501,20 @@
         "ServerDevcommands.dll": "f41812ac8c7c759ca60e84beef716c438fb766adda592f8a9365a86514bbda15"
       },
       "upgrade_1_115_0": "Taken 2026-10-02. Adds a setting to disable the help command and fixes the alternative biome text using the wrong coordinate."
+    },
+    {
+      "thunderstore": "JereKuusela-World_Edit_Commands",
+      "version": "1.81.0",
+      "side": "client",
+      "admin_only": true,
+      "why": "Added 2026-10-15 for the operator's island rework: admin console commands that remove objects (trees, rocks) and level or reshape terrain over an area. Its readme: install on the admin client, with Server Devcommands (already on the server, and pulled onto the client as its dependency).",
+      "why_not_in_pack": "Every command needs admin rights, so shipping it to the group installs commands nobody else can run. The operator installs it in Gale by hand, like the Configuration Manager.",
+      "artifact_sha256": {
+        "WorldEditCommands.dll": "cc69251a4d4ce821e15e9b481de898141978e4e383386962c3a8492393afb726"
+      },
+      "plugin_name": null,
+      "plugin_name_note": "admin client only, so it never appears in the server's load log",
+      "note": "Tunnelheim's readme: it stops World Edit Commands deleting tunnels, but undoing such a delete can leave a second copy of an area's tunnel data so that area's hoe edits apply twice. Do not use its undo near tunnels. Objects it removes drop nothing. Field references checked against assembly_valheim 1.0.17: 729, none broken."
     },
     {
       "thunderstore": "Azumatt-Official_BepInEx_ConfigurationManager",

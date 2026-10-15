@@ -147,10 +147,19 @@ or in the named file under `BepInEx/config/`.
 | AdventureBackpacks (`vapok.mods.adventurebackpacks.cfg`) | Quickdrop Backpack | Y | Y + LeftControl |
 | AdventureBackpacks | Wisplight Effect Key Toggle | L | K |
 | OdinHorse (`Raelaziel.OdinHorse.cfg`) | Saddlebags Key | B | N |
+| PlantEasily (`advize.PlantEasily.cfg`, `[Controls]`) | ToggleAutoReplantKey | F6 | Keypad5 |
+| PlantEasily | EnableSnappingKey | F10 | Keypad6 |
+| PlantEasily | EnableModKey | F8 | Keypad9 |
 
 ValheimPlus keys come from the server's config: advanced building mode stays on F1 and F3,
-advanced editing mode reset is on F7, and grid alignment is `X` with its toggle on F10
-(formerly F5, Valheim's console key). Quickdrop moved because OdinHorse's Wait Here is a
+advanced editing mode reset is on F7 and abort on F8, and grid alignment is `X` with its
+toggle on F10 (formerly F5, Valheim's console key) and default-alignment change on F6.
+PlantEasily's three toggles sat on F6, F8 and F10, so they moved to the keypad.
+
+These keep their defaults and only act with the matching tool out: AdvancedTerrainModifiers
+resizes the hoe or cultivator brush with LeftAlt plus the scroll wheel and changes its
+sharpness with LeftControl plus the scroll wheel; PlantEasily grows or shrinks the planting
+grid with RightControl plus the arrow keys and bulk-harvests with LeftShift plus Use. Quickdrop moved because OdinHorse's Wait Here is a
 held Y, which also dropped the backpack. Some keys stay shared on purpose because each use
 happens in a different situation: V (quick slot 2 and build rotation), LeftAlt, LeftShift
 and LeftCtrl.
