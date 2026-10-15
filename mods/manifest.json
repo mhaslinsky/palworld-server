@@ -7,17 +7,17 @@
   "modpack": {
     "namespace": "valheimsquad",
     "name": "Utgarde_Client_Pack",
-    "version_number": "1.35.0",
+    "version_number": "1.36.0",
     "website_url": "https://github.com/mhaslinsky/palworld-server",
     "description": "Client mods for the Utgarde Valheim server, pinned to the versions the server runs."
   },
   "verified": {
     "server": {
-      "at": "2026-10-15T03:21:29Z",
-      "method": "scripts/mods-verify.mts against the full boot log after adding AdvancedTerrainModifiersCompatible 1.4.8 (Ostrix fork), a restart behind backup world/linux/20261015T031657Z.tgz (BACKUP_VERIFIED) with one player online, the operator, who asked for it. 'Chainloader startup complete (24 loaded, 0 skipped, 0 failed)'; CLEAN at 25. MaxRadius was then raised from 10 to 20 in Searica.Valheim.TerrainTools.cfg and the mod logged 'Reloading config file' without a restart.",
+      "at": "2026-10-15T23:12:00Z",
+      "method": "scripts/mods-verify.mts against the full boot log (fetched gzipped under the SSM cap) after UtgardeBackpacks 1.0.0 to 1.1.0, installed by ~/Developer/.orchestration/rsn/install-utgarde-030-server.mts behind backup world/linux/20261015T230405Z.tgz (BACKUP_VERIFIED) with one player online, dropped by the restart because the operator chose install now. The script hash-checked the DLL before and after (db5a13f9...), and sha256sum on the box matched. 'Loading [Utgarde Backpacks 1.1.0]', 'Backpack motion EnableSway=True CapeCloth=True', 'Registered BackpackAshlands and BackpackDeepNorth with AdventureBackpacks.', 'Chainloader startup complete (24 loaded, 0 skipped, 0 failed)'; CLEAN at 25. Utgarde error lines: 0.",
       "game": "l-1.0.17, network version 40, BepInExPack 5.4.2351.",
       "errors": "4 Exception lines, the same count as the previous boot: RSN 'Native relay/core materials failed' (_TriplanarMap), the video-decode shader warnings, AsyncResourceUpload, the intro cinematic, and ValheimPlus 'Failed to apply Player_UpdatePlacementGhost_Transpile' (the documented BuildOnShip free-rotation conflict).",
-      "unverified": "Everything in game: the resized hoe brush and the new hoe and cultivator tools next to Tunnelheim's, two players terraforming one zone with the fork, PlantEasily grids and its keypad toggles, World Edit Commands on the admin client. Carried over: tunnelling, the head lamp, the 25 m comfort radius, OdinHorse 1.9.1 water fix, Seasonality 3.8.4 Deep North ice shore, AdventureBackpacks 2.3.4 with both Utgarde packs, ServersideQoL AutoStore.",
+      "unverified": "Everything in game, including UtgardeBackpacks 1.1.0: the Deep North inventory icon, the cape cloth on a moving player, and the cape after a portal (the harness shows one reset frame of 62 to 90 mm). Carried from the previous record: the resized hoe brush and the new hoe and cultivator tools next to Tunnelheim's, two players terraforming one zone with the fork, PlantEasily grids and its keypad toggles, World Edit Commands on the admin client. Carried over: tunnelling, the head lamp, the 25 m comfort radius, OdinHorse 1.9.1 water fix, Seasonality 3.8.4 Deep North ice shore, AdventureBackpacks 2.3.4 with both Utgarde packs, ServersideQoL AutoStore.",
       "idle": "valheim.service active and enabled, valheim-idle.timer enabled, after the restart."
     },
     "client_jetragon": {
@@ -26,9 +26,9 @@
       "stale": "Pack 1.19.0 moves AdventureBackpacks to 2.2.0, which is enforced, so jetragon is refused until Gale updates it. The record above describes 1.18.0."
     },
     "pack": {
-      "at": "2026-10-15T03:28:44Z",
-      "method": "scripts/modpack-publish.mts from branch worktree-tunnelheim-elementalfalls-comfort after the server verified CLEAN at 25. Its post-check read 404, the usual per-version lag; the package index then reported 1.35.0 as latest. The time is Thunderstore's own date_created.",
-      "window": "Adds Ostrix-AdvancedTerrainModifiersCompatible and Advize-PlantEasily. Neither is version-enforced, so a 1.34.0 client still joins and simply lacks the new tools. A client that still has Searica-AdvancedTerrainModifiers enabled must disable it: the fork keeps the same plugin GUID and the two must not load together. World Edit Commands is admin_only and not in the pack."
+      "at": "2026-10-15T23:13:04Z",
+      "method": "scripts/modpack-publish.mts from branch utgarde-backpacks-pack-1360, stacked on worktree-tunnelheim-elementalfalls-comfort, after the server verified CLEAN at 25. The dependency list was diffed against the live 1.35.0 first: the only change is valheimsquad-UtgardeBackpacks 1.0.0 to 1.1.0. Its post-check read 404, the usual per-version lag; the package index then reported 1.36.0 as latest with valheimsquad-UtgardeBackpacks-1.1.0. The time is Thunderstore's own date_created.",
+      "window": "KICKS EVERYONE until they update: UtgardeBackpacks is enforced (Jotunn, Minor strictness), so a client on pack 1.35.0 or earlier holds UtgardeBackpacks 1.0.0 and is refused by the 1.1.0 server. The server moved at 2026-10-15T23:04Z and the pack followed about nine minutes later, so the window was open for that time. A client that updates the pack in Gale may need to update UtgardeBackpacks by itself, as with earlier packs."
     }
   },
   "mods": [
@@ -187,16 +187,17 @@
     },
     {
       "thunderstore": "valheimsquad-UtgardeBackpacks",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "side": "both",
       "enforced": true,
       "why": "Adds an Ashlands and a Deep North backpack to AdventureBackpacks, whose author has not shipped tiers past the Mistlands. Operator spec, 2026-10-11: each tier bigger than the last (Ashlands 24 to 40 slots and +40 carry per level, Deep North 28 to 48 slots and +50 per level), and feather fall from quality 1 on both, because once the Mistlands pack gives it, it must never go away. Our own package: source in the local repo ~/Developer/UtgardeBackpacks, published under the estate's Thunderstore team.",
       "artifact_sha256": {
-        "UtgardeBackpacks.dll": "b9673636d268437aad4557b1cad2e928cb679dd6e9b4547a35b57f7ac63c148c"
+        "UtgardeBackpacks.dll": "db5a13f99e9f9c10e747ac4af1df31f6c040dd7c849fdd1753da65b28f800d31"
       },
       "plugin_name": "Utgarde Backpacks",
       "upgrade_0_3_0": "Taken 2026-10-13 in pack 1.29.0. Custom Ashlands and Deep North models and textures (blocky low-res colour with a richer normal map, per the operator), lit by Valheim's Custom/Piece shader so neither pack glows at night, with the shader's displacement features off to stop the motion flicker. Ashlands uses the operator's own inventory icon. Deep North's middle body is still being reworked and ships in a later version. Built on jetragon from UtgardeBackpacks commits 74df927 and 035bd0a; its receipt is assets/release-final-0.3.0.json in that repo. 0.3.0 registered NOTHING on the dedicated server (the model swap threw on a process with no graphics and cancelled registration), so it was replaced the same evening by 0.3.1 in pack 1.30.0: headless processes skip visuals, and a visual failure no longer blocks registration. 0.3.1 was checked against real Valheim run with -batchmode -nographics, which fails on 0.3.0 (commits 8db97f8, 87b7b61; receipt assets/release-final-0.3.1.json).",
       "upgrade_1_0_0": "Taken 2026-10-14 in pack 1.31.0: the first full release (operator: version 1 is the one with the finished Deep North pack). Same as 0.3.1 except Deep North's round fur body is replaced with a boxier leather sack with folds and a seam. Checked with the same set as 0.3.1, including the -batchmode -nographics startup, plus a mesh check that fails on 0.3.1.",
+      "upgrade_1_1_0": "Taken 2026-10-15 in pack 1.36.0, on the operator's request: Deep North gets its own inventory icon (the operator's art), Deep North's cape cloth is on by default, and the Thunderstore page has images. Cloth uses a new key, [Motion] CapeCloth (default true), because 1.0.x wrote EnableCapeCloth = false into every config it ran with, so a changed default under the old key would have reached no existing install. Cape clearance on the v5d bag with cloth on was never measured before this: 0 mm settled in walk, run, turn and jump against a 20 mm gate, and the gate fails at 109.6 mm with the bag colliders removed. One frame of 62 to 90 mm shows right after an anchor teleport that crosses the ResetCloth thresholds (src/BackpackCapeCloth.cs:78); portal behaviour in game is unverified. Built on jetragon from release/1.1.0 in the local repo (commits 7682389, 7ad048f, 0fff69d, 72c9183; receipt assets/release-final-1.1.0.json); the isolated -batchmode -nographics startup registered both packs with 0 Utgarde errors. Installed on the server 2026-10-15T23:04Z with ONE player online (the operator chose install now), after a verified backup, world/linux/20261015T230405Z.tgz; the 1.0.0 DLL is kept in disabled-plugins. The operator skipped the in-game test.",
       "note": "Each pack is registered through ABAPI.RegisterBackpack on a runtime copy of the AdventureBackpacks Mistlands prefab, with its own model since 0.2.0. Prefab names BackpackAshlands and BackpackDeepNorth are permanent; a custom model later must keep them. Removing this mod deletes every such bag AND its contents. Fire resistance (Ashlands) and very-resistant frost (Deep North) are vanilla damage modifiers on the item, because ABAPI.RegisterEffect cannot reach a single backpack in 2.3.x. Enforced through Jotunn NetworkCompatibility (EveryoneMustHaveMod, Minor strictness). Built against AdventureBackpacks 2.3.1 and confirmed registering against 2.3.2 on the server 2026-10-11. Every item name was read from jetragon's game files. Nothing has been tested in game yet."
     },
     {
