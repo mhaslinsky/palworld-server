@@ -149,10 +149,11 @@ or in the named file under `BepInEx/config/`.
 | OdinHorse (`Raelaziel.OdinHorse.cfg`) | Saddlebags Key | B | N |
 
 ValheimPlus keys come from the server's config: advanced building mode stays on F1 and F3,
-advanced editing mode reset on F7, and grid alignment is `X` with its toggle on F10 (it was
-on F5, Valheim's console key). Quickdrop moved because OdinHorse's Wait Here is a held Y,
-which also dropped the backpack. Keys still shared on purpose, because each works in a
-different situation: V (quick slot 2 and build rotation), LeftAlt, LeftShift and LeftCtrl.
+advanced editing mode reset is on F7, and grid alignment is `X` with its toggle on F10
+(formerly F5, Valheim's console key). Quickdrop moved because OdinHorse's Wait Here is a
+held Y, which also dropped the backpack. Some keys stay shared on purpose because each use
+happens in a different situation: V (quick slot 2 and build rotation), LeftAlt, LeftShift
+and LeftCtrl.
 
 ## What is installed where
 
