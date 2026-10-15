@@ -128,6 +128,32 @@ growth times are SECONDS; every pickable `*RespawnTime` is MINUTES, matching van
 `Pickable.m_respawnTimeMinutes`. A berry bush at 300 is five hours, not five minutes. Read
 the comment above the key rather than comparing two numbers.
 
+## Key map
+
+The pack ships no config files, so every player starts on each mod's default keys, and
+several defaults collide. These are the keys the operator's profile uses since 2026-10-15.
+Each player sets them once in the Configuration Manager (F4 after this change, F1 before)
+or in the named file under `BepInEx/config/`.
+
+| Mod (config file) | Setting | Default | Use |
+| --- | --- | --- | --- |
+| SkeletonCrew (`com.vash.skeletoncrew.cfg`) | MenuKey | F1 | Keypad1 |
+| SkeletonCrew | SelectionKey | F3 | Keypad2 |
+| SkeletonCrew | CycleSummonTypeKey | F7 | Keypad3 |
+| SkeletonCrew | StanceKey | Backslash | Keypad4 |
+| Configuration Manager (`com.bepis.bepinex.configurationmanager.cfg`) | Show config manager | F1 | F4 |
+| Tunnelheim (`sam.valheim.tunneling.cfg`) | SquareDigKey | F7 | F9 |
+| Head Lamp (`HeadLamp.cfg`) | Hotkey Trigger Lamp | BackQuote | L |
+| AdventureBackpacks (`vapok.mods.adventurebackpacks.cfg`) | Quickdrop Backpack | Y | Y + LeftControl |
+| AdventureBackpacks | Wisplight Effect Key Toggle | L | K |
+| OdinHorse (`Raelaziel.OdinHorse.cfg`) | Saddlebags Key | B | N |
+
+ValheimPlus keys come from the server's config: advanced building mode stays on F1 and F3,
+advanced editing mode reset on F7, and grid alignment is `X` with its toggle on F10 (it was
+on F5, Valheim's console key). Quickdrop moved because OdinHorse's Wait Here is a held Y,
+which also dropped the backpack. Keys still shared on purpose, because each works in a
+different situation: V (quick slot 2 and build rotation), LeftAlt, LeftShift and LeftCtrl.
+
 ## What is installed where
 
 ```bash
