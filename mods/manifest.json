@@ -98,6 +98,7 @@
       },
       "plugin_name": null,
       "plugin_name_note": "client-side only, so it never appears in the server's load log",
+      "drift_target_build": "INDETERMINATE: its Thunderstore readme declares no target Valheim build. The earlier check was field references against assembly_valheim 1.0.17 (68, none broken); the server moved to l-1.0.20 on 2026-10-15, so that check needs repeating against the new assembly.",
       "note": "Its readme says not to install it on a dedicated server unless ConditionalConfigSync is used; it is not. UseDurability and UseStamina are always server controlled per its readme, which with no server copy means the defaults. Incompatible with FarmGrid, MassFarming and Farming, none of which run here. Its F6, F8 and F10 toggles all collide with live ValheimPlus keys; see the key map in mods/README.md. Field references checked against assembly_valheim 1.0.17: 68, none broken."
     },
     {
@@ -299,6 +300,7 @@
         "AdvancedTerrainModifiers/TerrainTools.dll": "ed620c20d5186c6e65740b9906b0806f43d0f96392421687f0fa656df7e99e0a"
       },
       "plugin_name": "AdvancedTerrainModifiers",
+      "drift_target_build": "INDETERMINATE by the readme, which says only 'targets Valheim 1.0' with no patch number. The earlier check was field references against assembly_valheim 1.0.17 (343, none broken); the server moved to l-1.0.20 on 2026-10-15, so that check needs repeating against the new assembly.",
       "note": "Keeps Searica's plugin GUID (Searica.Valheim.TerrainTools), so it reads the server's existing Searica.Valheim.TerrainTools.cfg from the 1.5.5 trial; a copy was taken as .pre-ostrix.20261015T0320Z. Never load it alongside the Searica package. Based on Searica 1.4.1, so it lacks the 1.5.x precision raise tool. Installed on the server as plugins/AdvancedTerrainModifiers with its Translations folder. Field references checked against assembly_valheim 1.0.17 with Mono.Cecil: 343, none broken. It and Tunnelheim both add hoe tools; check the hoe menu in game. Its readme says ValheimPlus freezes the terrain tool ghost animation, so the brush preview may not show the new size."
     },
     {
