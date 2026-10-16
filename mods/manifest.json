@@ -7,7 +7,7 @@
   "modpack": {
     "namespace": "valheimsquad",
     "name": "Utgarde_Client_Pack",
-    "version_number": "1.36.0",
+    "version_number": "1.37.0",
     "website_url": "https://github.com/mhaslinsky/palworld-server",
     "description": "Client mods for the Utgarde Valheim server, pinned to the versions the server runs."
   },
@@ -17,7 +17,7 @@
       "method": "scripts/mods-verify.mts against the full boot log (fetched gzipped under the SSM cap) after UtgardeBackpacks 1.0.0 to 1.1.0, installed by ~/Developer/.orchestration/rsn/install-utgarde-030-server.mts behind backup world/linux/20261015T230405Z.tgz (BACKUP_VERIFIED) with one player online, dropped by the restart because the operator chose install now. The script hash-checked the DLL before and after (db5a13f9...), and sha256sum on the box matched. 'Loading [Utgarde Backpacks 1.1.0]', 'Backpack motion EnableSway=True CapeCloth=True', 'Registered BackpackAshlands and BackpackDeepNorth with AdventureBackpacks.', 'Chainloader startup complete (24 loaded, 0 skipped, 0 failed)'; CLEAN at 25. Utgarde error lines: 0.",
       "game": "l-1.0.17, network version 40, BepInExPack 5.4.2351.",
       "errors": "4 Exception lines, the same count as the previous boot: RSN 'Native relay/core materials failed' (_TriplanarMap), the video-decode shader warnings, AsyncResourceUpload, the intro cinematic, and ValheimPlus 'Failed to apply Player_UpdatePlacementGhost_Transpile' (the documented BuildOnShip free-rotation conflict).",
-      "unverified": "Everything in game, including UtgardeBackpacks 1.1.0: the Deep North inventory icon, the cape cloth on a moving player, and the cape after a portal (the harness shows one reset frame of 62 to 90 mm). Carried from the previous record: the resized hoe brush and the new hoe and cultivator tools next to Tunnelheim's, two players terraforming one zone with the fork, PlantEasily grids and its keypad toggles, World Edit Commands on the admin client. Carried over: tunnelling, the head lamp, the 25 m comfort radius, OdinHorse 1.9.1 water fix, Seasonality 3.8.4 Deep North ice shore, AdventureBackpacks 2.3.4 with both Utgarde packs, ServersideQoL AutoStore.",
+      "unverified": "Everything in game, including UtgardeBackpacks 1.1.0: the Deep North inventory icon, the cape cloth on a moving player, and the cape after a portal (the harness shows one reset frame of 62 to 90 mm). Carried from the previous record: the resized hoe brush and the new hoe and cultivator tools next to Tunnelheim's, two players terraforming one zone with the fork, PlantEasily grids and its keypad toggles, World Edit Commands on the admin client. Carried over: tunnelling, the head lamp, the 25 m comfort radius, OdinHorse 1.9.1 water fix, Seasonality 3.8.4 Deep North ice shore, AdventureBackpacks 2.3.4 with both Utgarde packs, ServersideQoL AutoStore. CultivatedGroundFix 1.0.0 (client-only): confirmed in game on the operator's jetragon client (single planting and the PlantEasily F9 grid); not tested on any other client, and whether a client without it sees a plant as unhealthy is unverified.",
       "idle": "valheim.service active and enabled, valheim-idle.timer enabled, after the restart."
     },
     "client_jetragon": {
@@ -26,9 +26,9 @@
       "stale": "Pack 1.19.0 moves AdventureBackpacks to 2.2.0, which is enforced, so jetragon is refused until Gale updates it. The record above describes 1.18.0."
     },
     "pack": {
-      "at": "2026-10-15T23:13:04Z",
-      "method": "scripts/modpack-publish.mts from branch utgarde-backpacks-pack-1360, stacked on worktree-tunnelheim-elementalfalls-comfort, after the server verified CLEAN at 25. The dependency list was diffed against the live 1.35.0 first: the only change is valheimsquad-UtgardeBackpacks 1.0.0 to 1.1.0. Its post-check read 404, the usual per-version lag; the package index then reported 1.36.0 as latest with valheimsquad-UtgardeBackpacks-1.1.0. The time is Thunderstore's own date_created.",
-      "window": "KICKS EVERYONE until they update: UtgardeBackpacks is enforced (Jotunn, Minor strictness), so a client on pack 1.35.0 or earlier holds UtgardeBackpacks 1.0.0 and is refused by the 1.1.0 server. The server moved at 2026-10-15T23:04Z and the pack followed about nine minutes later, so the window was open for that time. A client that updates the pack in Gale may need to update UtgardeBackpacks by itself, as with earlier packs."
+      "at": "2026-10-16T05:47:35Z",
+      "method": "scripts/modpack-publish.mts from branch worktree-cultivated-ground-fix-pack, after valheimsquad-CultivatedGroundFix 1.0.0 was published (2026-10-16T05:42:11Z) and its download was byte-identical to the local zip (DLL sha256 87acf224...). The dependency list was diffed against the live 1.36.0 first: the only change is the added valheimsquad-CultivatedGroundFix-1.0.0. Both the mod and the pack read 404 at the post-check, the usual per-version lag; the package index then reported 1.37.0 as latest with 30 dependencies including the new mod. The time is Thunderstore's own date_created.",
+      "window": "None. CultivatedGroundFix is client-only and not enforced, so a client on pack 1.36.0 still connects; it only keeps the cultivated-ground bug near Tunnelheim digs until it updates. The server was not touched."
     }
   },
   "mods": [
@@ -528,6 +528,18 @@
       "why_not_in_pack": "Operator tooling, not something the group plays with. It edits settings that are admin-only to change anyway, so shipping it to every player installs a GUI five people cannot use to change anything. Kept in this manifest rather than left out, because an absent entry reads as an oversight and invites the next session to add it to the pack; admin_only is the recorded decision not to.",
       "plugin_name": null,
       "plugin_name_note": "client-side only, so it never appears in the server's load log"
+    },
+    {
+      "thunderstore": "valheimsquad-CultivatedGroundFix",
+      "version": "1.0.0",
+      "side": "client",
+      "why": "Added 2026-10-16 after cultivated ground stopped counting as cultivated near Tunnelheim tunnels: ground that looked cultivated still refused crops with 'requires cultivated soil', in a spotty pattern, and recultivating did not help. Our own package: source in the local directory ~/Developer/.orchestration/cultivated-ground-fix, published under the estate's Thunderstore team.",
+      "artifact_sha256": {
+        "CultivatedGroundFix.dll": "87acf224b859fe1633141b07f2b365465ff51cf8525567cb04c6ebe9fba65cb4"
+      },
+      "plugin_name": null,
+      "plugin_name_note": "client-side only, so it never appears in the server's load log",
+      "note": "Cause, from a probe plugin run on the operator's client on 2026-10-16: Tunnelheim's Postfix on Heightmap.IsCultivated discards the game's answer inside its 16 m voxel columns and returns whether the FIRST non-zero paint mark scanning down a 3 m column (0.5 m cells, 7 cells) is code 2. After digging and flattening with the pickaxe, 564 of 600 logged cells held a stale dirt mark (code 1) at the top of the window above six cultivated marks (window [1,2,2,2,2,2,2]) while the game's own answer was true, so cultivated ground read as dirt. This mod runs after Tunnelheim and returns true when a cultivated mark sits within 1.5 m above or below the queried point. A 0.5 m window was tried first and failed for the PlantEasily grid (F9), which probes at other heights; the 1.5 m window turned its red cells white. Confirmed by the operator in game: single planting and the PlantEasily grid both work. It reads Tunnelheim's internals (VoxelWorld.IsVoxelColumnAt, ChunkOf, s_chunks, chunk Paint) by reflection and disables itself with a logged error if they change. The server is not touched: plants are checked on clients, but that is unverified, so a client without the mod could still see a plant it owns as unhealthy. It does not remove the stale marks, so a Tunnelheim fix upstream would make it redundant. Not reported upstream yet."
     }
   ],
   "game_version_note": "Moved from 1.0.16 on 2026-10-06, pulled in by the SteamCMD validate before the 13:31Z start. RSN's startup line reads 'Valheim=1.0.17' and the network version is still 40, so 1.0.16 and 1.0.17 clients both connect. Moved from 1.0.15 at 2026-09-25 19:10:58Z (appmanifest LastUpdated, buildid 25527701), pulled in by the SteamCMD validate that runs before every server start. Nobody noticed until BepInExPack 5.4.2351's 'Valheim Version:' line printed it at 04:25Z on 2026-09-26; the journal's own 'Valheim version: l-1.0.16 (network version 40)' line confirms it on the 02:41Z boot too. The network version stayed at 40, so clients on 1.0.16 connect ('Network version check, their:40, mine:40'). Mods whose readmes declare 1.0.15 are now one patch behind on the fourth drift.",
