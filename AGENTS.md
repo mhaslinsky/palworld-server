@@ -88,8 +88,8 @@ successfully only for `Status=Success`, `ResponseCode=0`, and a stdout line
 `BACKUP_VERIFIED <key> <size>`. `BACKUP_DEGRADED` is not success. The box sleeps when idle.
 If it is `stopped`, start it yourself with
 `aws ec2 start-instances --instance-ids <id> --profile aidb-personal --region us-east-1` (the
-owner has said not to ask) and wait for `box-command.mts state` to report `running` before sending
-a command. For any other state, wait and check again.
+owner has said not to ask) and wait for `node scripts/box-command.mts state` to report `running`
+before sending a command. For any other state, wait and check again.
 
 This creates, integrity-checks, uploads, and verifies a backup, rather than only reading
 the save mtime. Prefer keeping runtime-tunable values OUT of `user_data` entirely (SSM,
