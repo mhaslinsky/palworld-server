@@ -85,9 +85,11 @@ Valheim saves on its configured interval and on the SIGINT shutdown path in
 The script resolves the instance tagged `Name=palworld-server`, requires exactly one match
 in `running` state, sends the backup over SSM Run Command, and polls the invocation. It exits
 successfully only for `Status=Success`, `ResponseCode=0`, and a stdout line
-`BACKUP_VERIFIED <key> <size>`. `BACKUP_DEGRADED` is not success. The box sleeps when idle;
-for a `stopped` result, do not send a command or start the box. Stop and ask the owner to wake it.
-For any other state, wait and check again.
+`BACKUP_VERIFIED <key> <size>`. `BACKUP_DEGRADED` is not success. The box sleeps when idle.
+If it is `stopped`, start it yourself with
+`aws ec2 start-instances --instance-ids <id> --profile aidb-personal --region us-east-1` (the
+owner has said not to ask) and wait for `node scripts/box-command.mts state` to report `running`
+before sending a command. For any other state, wait and check again.
 
 This creates, integrity-checks, uploads, and verifies a backup, rather than only reading
 the save mtime. Prefer keeping runtime-tunable values OUT of `user_data` entirely (SSM,
