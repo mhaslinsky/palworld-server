@@ -1,5 +1,7 @@
 # palworld-server
 
+> **Retired on Nov 3, 2026.** The AWS estate described in this repo was destroyed with `terraform destroy` (76 resources), and its snapshots and leftover root volume were deleted by hand. The final world backups are stored off AWS. This repo remains as an archive; applying it again would rebuild from scratch.
+
 Terraform for a self-hosted **Palworld 1.0** dedicated server on AWS, for a 5-10
 player friend group. On-demand and cheap: the server **auto-stops when empty** and
 is meant to be started on request, so you pay for compute only while people play.

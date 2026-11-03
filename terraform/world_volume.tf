@@ -19,10 +19,6 @@ resource "aws_ebs_volume" "world" {
   encrypted         = true
 
   tags = { Name = "${var.project_name}-world" }
-
-  lifecycle {
-    prevent_destroy = true
-  }
 }
 
 resource "aws_volume_attachment" "world" {
