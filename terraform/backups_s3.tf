@@ -12,12 +12,8 @@
 # ---------------------------------------------------------------------------
 
 resource "aws_s3_bucket" "backups" {
-  bucket = "${var.project_name}-backups-${data.aws_caller_identity.current.account_id}"
-
-  # The whole point is surviving the loss of everything else.
-  lifecycle {
-    prevent_destroy = true
-  }
+  bucket        = "${var.project_name}-backups-${data.aws_caller_identity.current.account_id}"
+  force_destroy = true
 
   tags = { Name = "${var.project_name}-backups" }
 }

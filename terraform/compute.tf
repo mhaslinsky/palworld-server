@@ -86,9 +86,5 @@ resource "aws_instance" "server" {
   # on the box (SSM) or do a DELIBERATE, backup-first replacement.
   user_data_replace_on_change = false
 
-  lifecycle {
-    prevent_destroy = true
-  }
-
   tags = { Name = var.project_name }
 }
